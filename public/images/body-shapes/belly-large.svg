@@ -1,0 +1,5 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Large belly silhouette -->
+  <path d="M24 20 L24 35 Q32 40 40 35 L40 20 L40 50 L24 50 Z" fill="#e5e7eb" stroke="#9ca3af" stroke-width="2"/>
+  <circle cx="32" cy="12" r="4" fill="#e5e7eb" stroke="#9ca3af" stroke-width="2"/>
+</svg>

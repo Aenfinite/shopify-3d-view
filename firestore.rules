@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow read access to all products
+    match /products/{productId} {
+      allow read: if true;
+    }
+    
+    // Allow read access to all fabrics
+    match /fabrics/{fabricId} {
+      allow read: if true;
+    }
+    
+    // Allow read access to all styles
+    match /styles/{styleId} {
+      allow read: if true;
+    }
+    
+    // Allow read access to all models
+    match /models/{modelId} {
+      allow read: if true;
+    }
+    
+    // Allow read access to all measurement guides
+    match /measurement_guides/{guideId} {
+      allow read: if true;
+    }
+    
+    // Admin access - require authentication and admin claim
+    match /{document=**} {
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+    
+    // User data - allow users to read/write their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow users to read/write their own saved customizations
+      match /saved_customizations/{customizationId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+}
