@@ -395,6 +395,8 @@ export function FullscreenConfigurator({
       <div className="absolute inset-0">
         <ModelViewer
           modelUrl={getModelUrl()}
+          useGLTF={productType === "jacket"}
+          gltfModelPath={productType === "jacket" ? "/models/jackets/basic-jacket.gltf" : undefined}
           customizations={{
             color: configuratorState.fabricColor,
             fabricType: configuratorState.fabricType,

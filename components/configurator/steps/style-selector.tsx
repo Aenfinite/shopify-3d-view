@@ -7,12 +7,14 @@ import { Badge } from "@/components/ui/badge"
 import { Info } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Skeleton } from "@/components/ui/skeleton"
+import { FrontStyleSelector } from "./front-style-selector"
 
 export function StyleSelector() {
   const { selectedStyles, setStyleOption, styleOptions, loading } = useConfigurator()
 
   // Style categories
   const categories = [
+    { id: "frontStyle", name: "Front Style" },
     { id: "collar", name: "Collar" },
     { id: "cuff", name: "Cuff" },
     { id: "placket", name: "Placket" },
@@ -27,7 +29,7 @@ export function StyleSelector() {
 
   return (
     <div className="space-y-4">
-      <Tabs defaultValue="collar">
+      <Tabs defaultValue="frontStyle">
         <TabsList className="flex overflow-x-auto hide-scrollbar">
           {categories.map((category) => (
             <TabsTrigger key={category.id} value={category.id} className="flex-shrink-0">
@@ -43,11 +45,16 @@ export function StyleSelector() {
 
         {categories.map((category) => (
           <TabsContent key={category.id} value={category.id} className="mt-4">
-            <StyleCategorySelector
-              category={category.id}
-              options={styleOptions[category.id] || []}
-              selectedOption={selectedStyles[category.id]}
-              onSelect={(option) => setStyleOption(category.id, option)}
+            {category.id === "frontStyle" ? (
+              <FrontStyleSelector />
+            ) : (
+              <StyleCategorySelector
+                category={category.id}
+                options={styleOptions[category.id] || []}
+                selectedOption={selectedStyles[category.id]}
+                onSelect={(option) => setStyleOption(category.id, option)}
+              ></StyleCategorySelector>
+            )}
             />
           </TabsContent>
         ))}

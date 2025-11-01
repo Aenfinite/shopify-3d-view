@@ -22,8 +22,12 @@ interface ConfiguratorContextType {
   setCurrentStep: (step: number) => void
   selectedFabric: FabricOption | null
   setSelectedFabric: (fabric: FabricOption) => void
+  frontStyle: "2button" | "3button" | "6d2"
+  setFrontStyle: (style: "2button" | "3button" | "6d2") => void
   selectedStyles: Record<string, StyleOption>
   setStyleOption: (category: string, option: StyleOption) => void
+  jacketCustomizations: BasicJacketCustomization
+  updateJacketCustomizations: (customizations: BasicJacketCustomization) => void
   fitPreference: string
   setFitPreference: (preference: string) => void
   bodyShape: {
@@ -61,8 +65,46 @@ export function ConfiguratorProvider({ children, initialMode, productId }: Confi
   const [mode, setMode] = useState<ConfiguratorMode>(initialMode)
   const [currentStep, setCurrentStep] = useState(0)
   const [selectedFabric, setSelectedFabric] = useState<FabricOption | null>(null)
+  const [frontStyle, setFrontStyle] = useState<"2button" | "3button" | "6d2">("2button")
   const [selectedStyles, setSelectedStyles] = useState<Record<string, StyleOption>>({})
+  const [jacketCustomizations, setJacketCustomizations] = useState<BasicJacketCustomization>({
+    frontStyle: "2button"
+  })
+  const [isStyleChanging, setIsStyleChanging] = useState(false)
+
+  // Handle style changes
+  const handleStyleChange = (newStyle: "2button" | "3button" | "6d2") => {
+    setIsStyleChanging(true)
+    setFrontStyle(newStyle)
+    setJacketCustomizations(prev => ({
+      ...prev,
+      frontStyle: newStyle
+    }))
+    setTimeout(() => setIsStyleChanging(false), 100)
+  }
+
+  // Override setFrontStyle to use handleStyleChange
+  const originalSetFrontStyle = setFrontStyle
+  const wrappedSetFrontStyle = (style: "2button" | "3button" | "6d2") => {
+    handleStyleChange(style)
+  }
+  
+  // Ensure style and customizations stay in sync
+  useEffect(() => {
+    if (jacketCustomizations.frontStyle !== frontStyle) {
+      setJacketCustomizations(prev => ({
+        ...prev,
+        frontStyle
+      }))
+    }
+  }, [frontStyle])
   const [fitPreference, setFitPreference] = useState<string>("")
+
+  // Function to update jacket customizations
+  const updateJacketCustomizations = (customizations: BasicJacketCustomization) => {
+    console.log('🔄 Updating jacket customizations:', customizations)
+    setJacketCustomizations(customizations)
+  }
   const [bodyShape, setBodyShape] = useState<{
     shoulderType: string
     backShape: string
@@ -151,6 +193,7 @@ export function ConfiguratorProvider({ children, initialMode, productId }: Confi
         mode,
         productId,
         fabric: selectedFabric,
+        frontStyle,
         styles: selectedStyles,
         size: selectedSize,
         measurements,
@@ -189,6 +232,7 @@ export function ConfiguratorProvider({ children, initialMode, productId }: Confi
     return prepareLineItemProperties({
       mode,
       fabric: selectedFabric,
+      frontStyle,
       styles: selectedStyles,
       size: selectedSize,
       measurements,
@@ -260,8 +304,12 @@ export function ConfiguratorProvider({ children, initialMode, productId }: Confi
     setCurrentStep,
     selectedFabric,
     setSelectedFabric,
+    frontStyle,
+    setFrontStyle,
     selectedStyles,
     setStyleOption,
+    jacketCustomizations,
+    updateJacketCustomizations,
     fitPreference,
     setFitPreference,
     bodyShape,

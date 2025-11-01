@@ -1392,6 +1392,7 @@ export function WireframeConfigurator({
         <div className="absolute inset-0 w-full h-full">
           <ModelViewer
             modelUrl={getModelUrl()}
+            useModularJacket={productType === "jacket"}
             customizations={{
               color: configuratorState.fabricColor,
               fabricColor: configuratorState.fabricColor,

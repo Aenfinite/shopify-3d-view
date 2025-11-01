@@ -5,6 +5,10 @@ import { StepByStepConfigurator } from "./configurator/step-by-step-configurator
 import { Card, CardContent } from "@/components/ui/card"
 import { Loader2, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import ModularJacketViewer from "./modular-jacket-viewer-r3f"
+import FabricColorController from "./configurator/fabric-color-controller"
+import { BasicJacketCustomization } from "@/lib/3d/modular-jacket-loader"
+import { useJacketConfigurator } from "@/hooks/use-jacket-configurator"
 
 interface Product {
   id: string
@@ -24,6 +28,14 @@ export function ProductCustomizer({ productId }: ProductCustomizerProps) {
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // Use the jacket configurator hook for enhanced functionality
+  const {
+    jacketCustomizations,
+    updateJacketCustomizations,
+    getCustomizationPrice,
+    isConfiguratorConnected
+  } = useJacketConfigurator()
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -34,15 +46,15 @@ export function ProductCustomizer({ productId }: ProductCustomizerProps) {
         // Simulate API call - replace with your actual product fetching logic
         await new Promise((resolve) => setTimeout(resolve, 1000))
 
-        // Sample product data - replace with actual data fetching
+        // Updated product data for jacket
         const sampleProduct: Product = {
           id: productId,
-          name: "Custom Dress Shirt",
-          description: "Premium custom-tailored dress shirt with unlimited customization options",
-          basePrice: 89,
-          category: "shirts",
+          name: "Custom Suit Jacket",
+          description: "Premium custom-tailored suit jacket with real-time 3D visualization and color customization",
+          basePrice: 299,
+          category: "jackets",
           images: ["/placeholder.svg?height=400&width=400"],
-          modelUrl: "sample-shirt",
+          modelUrl: "modular-jacket",
         }
 
         setProduct(sampleProduct)
@@ -89,7 +101,61 @@ export function ProductCustomizer({ productId }: ProductCustomizerProps) {
     )
   }
 
-  // Use the beautiful step-by-step configurator for ALL products
+  // Show jacket customizer for jacket products
+  if (product.category === "jackets" || product.modelUrl === "modular-jacket") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="container mx-auto px-4 py-8">
+          <div className="mb-8 text-center">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">{product.name}</h1>
+            <p className="text-gray-600 max-w-2xl mx-auto">{product.description}</p>
+          </div>
+          
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* 3D Jacket Viewer */}
+            <div className="lg:col-span-2">
+              <Card className="h-[600px]">
+                <CardContent className="p-0 h-full">
+                  <ModularJacketViewer 
+                    customizations={jacketCustomizations}
+                    frontStyle={jacketCustomizations.frontStyle || "2button"}
+                    className="w-full h-full rounded-lg"
+                  />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Color Controller */}
+            <div className="lg:col-span-1">
+              <FabricColorController
+                onCustomizationChange={updateJacketCustomizations}
+                className="sticky top-8"
+              />
+              
+              {/* Price Display */}
+              <Card className="mt-6">
+                <CardContent className="p-6">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 mb-2">
+                      {isConfiguratorConnected ? "Configurator Price" : "Starting Price"}
+                    </p>
+                    <p className="text-3xl font-bold text-gray-800">
+                      ${getCustomizationPrice()}
+                    </p>
+                    <button className="w-full mt-4 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                      Add to Cart
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Use the step-by-step configurator for other products
   return (
     <StepByStepConfigurator
       productId={product.id}

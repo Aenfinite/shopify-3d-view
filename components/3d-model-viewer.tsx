@@ -4,12 +4,20 @@ import { Suspense, useRef, useEffect, useState } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { OrbitControls, Environment, Html } from "@react-three/drei"
 import * as THREE from "three"
+import { GLTFModelViewer, JacketCustomization } from "./gltf-model-viewer"
+import { StandardJacketViewer } from "./standard-jacket-viewer"
+import { ModularJacketViewer, BasicJacketCustomization } from "./modular-jacket-viewer"
+import ModularJacketViewerR3F from "./modular-jacket-viewer-r3f"
 
 interface ModelViewerProps {
   modelUrl: string
   customizations?: Record<string, any>
   layerControls?: Record<string, string[]>
   className?: string
+  useGLTF?: boolean  // New flag to enable GLTF models
+  gltfModelPath?: string  // Path to GLTF model
+  useStandardJacket?: boolean  // Flag for standard jacket model (for testing)
+  useModularJacket?: boolean  // Flag for modular jacket system (NEW)
 }
 
 // Enhanced 3D Model Component with ALL customization support
@@ -1253,6 +1261,10 @@ export function ModelViewer({
   customizations = {},
   layerControls = {},
   className = "w-full h-full",
+  useGLTF = false,
+  gltfModelPath,
+  useStandardJacket = false,
+  useModularJacket = true, // Default to modular jacket for jackets
 }: ModelViewerProps) {
   const [error, setError] = useState<string | null>(null)
 
@@ -1265,9 +1277,101 @@ export function ModelViewer({
 
   const modelType = getModelType(modelUrl)
 
+  // If using modular jacket system (NEW - for your component-based jackets)
+  if (useModularJacket && modelType === "sample-jacket") {
+    const basicCustomizations: BasicJacketCustomization = {
+      fabricColor: customizations.fabricColor || customizations.color || "#000080",
+      fabricType: customizations.fabricType || "wool",
+      buttonColor: customizations.buttonColor || "#333333",
+      threadColor: customizations.threadColor || "#000000",
+      liningColor: customizations.liningColor,
+      frontStyle: customizations.frontStyle as "2button" | "3button" | "6d2" | undefined,
+      frontPocket: customizations.frontPocket || customizations.front_pocket || customizations["front-pocket"],
+      chestPocket: customizations.chestPocket || customizations.chest_pocket || customizations["chest-pocket"],
+      sleeveButtons: customizations.sleeveButtons || customizations.sleeve_buttons || customizations["jacket-sleeve-buttons"],
+      ventStyle: customizations.ventStyle || customizations.vent_style || customizations["jacket-vent-style"],
+    }
+
+    // Extract frontStyle from customizations, default to 2button
+    const frontStyle = (customizations.frontStyle || "2button") as "2button" | "3button" | "6d2"
+    
+    console.log("🎨 ModelViewer passing to ModularJacketViewerR3F:", {
+      frontStyle,
+      frontStyleFromCustomizations: customizations.frontStyle,
+      frontPocket: basicCustomizations.frontPocket,
+      chestPocket: basicCustomizations.chestPocket,
+      sleeveButtons: basicCustomizations.sleeveButtons,
+      ventStyle: basicCustomizations.ventStyle,
+      allPocketVariations: {
+        frontPocket: customizations.frontPocket,
+        front_pocket: customizations.front_pocket,
+        "front-pocket": customizations["front-pocket"]
+      },
+      allCustomizationsReceived: customizations,
+      basicCustomizations
+    })
+
+    console.log("⚠️ CRITICAL: Is frontPocket defined?", basicCustomizations.frontPocket !== undefined)
+    console.log("⚠️ CRITICAL: frontPocket value:", basicCustomizations.frontPocket)
+    console.log("⚠️ CRITICAL: sleeveButtons value:", basicCustomizations.sleeveButtons)
+    console.log("⚠️ CRITICAL: ventStyle value:", basicCustomizations.ventStyle)
+
+    return (
+      <ModularJacketViewerR3F
+        customizations={basicCustomizations}
+        frontStyle={frontStyle}
+        className={className}
+      />
+    )
+  }
+
+  // If using standard jacket (for single GLTF testing)
+  if (useStandardJacket && modelType === "sample-jacket" && gltfModelPath) {
+    const basicCustomizations: BasicJacketCustomization = {
+      fabricColor: customizations.fabricColor || customizations.color,
+      fabricType: customizations.fabricType,
+      buttonColor: customizations.buttonColor || "#333333",
+      liningColor: customizations.liningColor,
+    }
+
+    return (
+      <StandardJacketViewer
+        modelPath={gltfModelPath}
+        customizations={basicCustomizations}
+        className={className}
+      />
+    )
+  }
+
+  // If GLTF is enabled and we have a jacket, use advanced GLTF viewer
+  if (useGLTF && modelType === "sample-jacket" && gltfModelPath) {
+    // Convert customizations to JacketCustomization format
+    const jacketCustomizations: JacketCustomization = {
+      fabricColor: customizations.fabricColor || customizations.color,
+      fabricType: customizations.fabricType,
+      lapelStyle: customizations.lapelStyle,
+      sleeveStyle: customizations.sleeveStyle,
+      frontStyle: customizations.frontStyle,
+      pocketStyle: customizations.pocketStyle,
+      buttonStyle: customizations.buttonStyle,
+      collarStyle: customizations.collarStyle,
+      liningColor: customizations.liningColor,
+      ventStyle: customizations.ventStyle,
+    }
+
+    return (
+      <GLTFModelViewer
+        modelPath={gltfModelPath}
+        customizations={jacketCustomizations}
+        className={className}
+        fallbackToGeometry={true}
+      />
+    )
+  }
+
   if (error) {
     return (
-      <div className={`€{className} flex items-center justify-center bg-gray-100`}>
+      <div className={`${className} flex items-center justify-center bg-gray-100`}>
         <div className="text-center">
           <div className="text-red-500 text-4xl mb-4">⚠️</div>
           <div className="text-gray-600">Failed to load 3D model</div>

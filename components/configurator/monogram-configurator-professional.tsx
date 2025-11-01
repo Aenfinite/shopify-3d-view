@@ -107,10 +107,10 @@ export function MonogramConfigurator({
     
     reader.onload = (e) => {
       const imageUrl = e.target?.result as string
-      const newColorId = `custom-€{Date.now()}`
+  const newColorId = `custom-${Date.now()}`
       const newCustomColor: ThreadColor = {
         id: newColorId,
-        name: `Custom Color €{customColors.length + 1}`,
+  name: `Custom Color ${customColors.length + 1}`,
         color: "#000000", // Fallback color
         image: imageUrl
       }
@@ -196,7 +196,7 @@ export function MonogramConfigurator({
                   style: selectedStyle,
                   color: selectedColor
                 })}
-                className={`p-4 border-2 rounded-lg cursor-pointer transition-all hover:shadow-md €{
+                className={`p-4 border-2 rounded-lg cursor-pointer transition-all hover:shadow-md ${
                   selectedMonogram === position.id
                     ? "border-blue-500 bg-blue-50 shadow-md"
                     : "border-gray-200 hover:border-gray-300"
@@ -241,6 +241,8 @@ export function MonogramConfigurator({
                 }}
                 maxLength={4}
                 className="text-center font-bold text-xl h-12 border-2"
+                onFocus={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
               />
               <p className="text-sm text-gray-600">
                 Enter your initials or preferred text (maximum 4 characters)
@@ -260,7 +262,7 @@ export function MonogramConfigurator({
                       style: style.id,
                       color: selectedColor
                     })}
-                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all hover:shadow-md €{
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all hover:shadow-md ${
                       selectedStyle === style.id
                         ? "border-blue-500 bg-blue-50 shadow-md"
                         : "border-gray-200 hover:border-gray-300"
@@ -273,7 +275,7 @@ export function MonogramConfigurator({
                       </div>
                       <div className="flex items-center gap-3">
                         <span 
-                          className={`text-3xl €{getStyleFont(style.id)}`}
+                          className={`text-3xl ${getStyleFont(style.id)}`}
                           style={{ 
                             color: getSelectedColor(),
                             textShadow: getSelectedColorImage() ? "2px 2px 4px rgba(0,0,0,0.3)" : "none"
@@ -313,7 +315,7 @@ export function MonogramConfigurator({
                         color: color.id
                       })
                     }}
-                    className={`relative p-3 border-2 rounded-lg cursor-pointer transition-all hover:shadow-md €{
+                    className={`relative p-3 border-2 rounded-lg cursor-pointer transition-all hover:shadow-md ${
                       selectedColor === color.id
                         ? "border-blue-500 bg-blue-50 shadow-md"
                         : "border-gray-200 hover:border-gray-300"
@@ -345,7 +347,7 @@ export function MonogramConfigurator({
                     {customColors.map((color) => (
                       <div
                         key={color.id}
-                        className={`relative p-3 border-2 rounded-lg cursor-pointer transition-all hover:shadow-md €{
+                        className={`relative p-3 border-2 rounded-lg cursor-pointer transition-all hover:shadow-md ${
                           selectedColor === color.id
                             ? "border-blue-500 bg-blue-50 shadow-md"
                             : "border-gray-200 hover:border-gray-300"
@@ -424,26 +426,55 @@ export function MonogramConfigurator({
               </div>
             </div>
 
-            {/* Preview */}
+            {/* Preview - Monogram on Jacket Image */}
             {localText && (
-              <div className="bg-gray-50 p-6 rounded-lg border">
-                <Label className="text-base font-medium mb-3 block">Preview</Label>
-                <div className="text-center">
-                  <div 
-                    className={`text-6xl €{getStyleFont(selectedStyle)}`}
-                    style={{ 
-                      color: getSelectedColor(),
-                      textShadow: getSelectedColorImage() ? "3px 3px 6px rgba(0,0,0,0.3)" : "2px 2px 4px rgba(0,0,0,0.1)"
-                    }}
-                  >
-                    {localText}
+              <div className="space-y-3">
+                <Label className="text-base font-medium">Monogram Preview on Jacket</Label>
+                <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden shadow-sm">
+                  <div className="relative h-80 overflow-hidden">
+                    {/* Background jacket image */}
+                    <img 
+                      src="/images/threadmonogram.png" 
+                      alt="Jacket with Monogram" 
+                      className="w-full h-full object-cover"
+                    />
+                    
+                    {/* Monogram text overlay - positioned on the chest pocket area */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div 
+                        className={`${getStyleFont(selectedStyle)}`}
+                        style={{ 
+                          color: getSelectedColor(),
+                          fontSize: 'clamp(2rem, 8vw, 4rem)', // Responsive font size
+                          textShadow: getSelectedColorImage() 
+                            ? "2px 2px 4px rgba(0,0,0,0.5)" 
+                            : "1px 1px 3px rgba(0,0,0,0.3)",
+                          fontWeight: selectedStyle === 'block-bold' ? 'bold' : 'normal',
+                          letterSpacing: '0.05em',
+                          transform: 'translateX(10%) translateY(-5%)', // Adjust position to align with chest pocket
+                        }}
+                      >
+                        {localText}
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-600 mt-3">
-                    {monogramPositions.find(p => p.id === selectedMonogram)?.name} • {" "}
-                    {monogramStyles.find(s => s.id === selectedStyle)?.name} • {" "}
-                    {allThreadColors.find(c => c.id === selectedColor)?.name}
-                  </p>
+                  <div className="bg-gray-50 px-4 py-3 border-t border-gray-200">
+                    <div className="text-sm text-gray-700 space-y-1">
+                      <div className="font-medium">
+                        <span className="text-gray-500">Position:</span> {monogramPositions.find(p => p.id === selectedMonogram)?.name}
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Style:</span> {monogramStyles.find(s => s.id === selectedStyle)?.name}
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Thread:</span> {allThreadColors.find(c => c.id === selectedColor)?.name}
+                      </div>
+                    </div>
+                  </div>
                 </div>
+                <p className="text-xs text-gray-600">
+                  This is how your monogram will appear on the jacket
+                </p>
               </div>
             )}
           </>

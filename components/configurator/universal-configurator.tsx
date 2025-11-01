@@ -150,14 +150,23 @@ export function UniversalConfigurator({
         setLoading(true)
         setError(null)
 
-        console.log(`Loading customization options for product: €{productId}`)
+        console.log(`Loading customization options for product: ${productId}`)
         const options = await getCustomizationOptions(productId)
 
-        console.log(`Loaded €{options.length} customization options:`, options)
+        console.log(`Loaded ${options.length} customization options:`, options)
+        
+        // Log specifically if front-pocket option exists
+        const frontPocketOption = options.find(opt => opt.id === "front-pocket")
+        if (frontPocketOption) {
+          console.log("✅ front-pocket option found:", frontPocketOption)
+        } else {
+          console.warn("⚠️ front-pocket option NOT FOUND in loaded options")
+        }
+        
         setCustomizationOptions(options)
 
         if (options.length === 0) {
-          setError(`No customization options found for product €{productId}`)
+          setError(`No customization options found for product ${productId}`)
         }
       } catch (err) {
         console.error("Error loading customization options:", err)
@@ -239,7 +248,7 @@ export function UniversalConfigurator({
     color?: string,
     layerControls?: any,
   ) => {
-    console.log(`Selecting option: €{optionId}, value: €{value}, color: €{color}`)
+    console.log(`🖱️ CLICK: Selecting option: ${optionId}, value: ${value}, color: ${color}`)
     setConfiguratorState((prev) => {
       const newState = {
         ...prev,
@@ -252,7 +261,7 @@ export function UniversalConfigurator({
           layerControls,
         },
       }
-      console.log("Updated configurator state:", newState)
+      console.log("✅ Updated configurator state:", newState)
       return newState
     })
   }
@@ -378,9 +387,27 @@ export function UniversalConfigurator({
 
         // Handle jacket-specific customizations
         if (option.id === "jacket-front-style") {
-          customizations.frontStyle = value.value
-          customizations.front_style = value.value
-          customizations["jacket-front-style"] = value.value
+          // Normalize front style value to match expected values
+          let normalizedValue = value.value
+          const valueLower = value.value.toLowerCase()
+          
+          // Check for double-breasted FIRST (2×3 buttons contains "2" and "3")
+          if (valueLower.includes("×") || valueLower.includes("x") || valueLower.includes("double") || valueLower.includes("6d2") || valueLower === "2×3 buttons") {
+            normalizedValue = "6d2"
+          } else if (valueLower.includes("three") || valueLower.includes("3 button")) {
+            normalizedValue = "3button"
+          } else if (valueLower.includes("two") || valueLower.includes("2 button")) {
+            normalizedValue = "2button"
+          }
+          
+          console.log("🎯 Front style selected:", {
+            original: value.value,
+            normalized: normalizedValue
+          })
+          
+          customizations.frontStyle = normalizedValue
+          customizations.front_style = normalizedValue
+          customizations["jacket-front-style"] = normalizedValue
         } else if (option.id === "jacket-sleeve-buttons") {
           customizations.sleeveButtons = value.value
           customizations.sleeve_buttons = value.value
@@ -393,13 +420,33 @@ export function UniversalConfigurator({
           customizations.buttonstyle = value.value
           customizations.buttonStyle = value.value // Camel case version
         } else if (option.id === "front-pocket") {
+          console.log("🎒 Setting front pocket:", value.value)
           customizations.frontPocket = value.value
           customizations.front_pocket = value.value
           customizations["front-pocket"] = value.value
+          // Force update timestamp to trigger re-render
+          customizations.pocketUpdateTime = Date.now()
         } else if (option.id === "chest-pocket") {
+          console.log("👔 Setting chest pocket:", value.value)
           customizations.chestPocket = value.value
           customizations.chest_pocket = value.value
           customizations["chest-pocket"] = value.value
+          // Force update timestamp to trigger re-render
+          customizations.pocketUpdateTime = Date.now()
+        } else if (option.id === "jacket-sleeve-buttons") {
+          console.log("🔘 Setting sleeve buttons:", value.value)
+          customizations.sleeveButtons = value.value
+          customizations.sleeve_buttons = value.value
+          customizations["jacket-sleeve-buttons"] = value.value
+          // Force update timestamp to trigger re-render
+          customizations.sleeveUpdateTime = Date.now()
+        } else if (option.id === "jacket-vent-style") {
+          console.log("🎽 Setting vent style:", value.value)
+          customizations.ventStyle = value.value
+          customizations.vent_style = value.value
+          customizations["jacket-vent-style"] = value.value
+          // Force update timestamp to trigger re-render
+          customizations.ventUpdateTime = Date.now()
         }
 
         // Handle ALL other style customizations by mapping option names to customization keys
@@ -543,6 +590,11 @@ export function UniversalConfigurator({
     }
 
     console.log("Generated customizations for 3D model:", customizations)
+    console.log("🔍 Front style in customizations:", {
+      frontStyle: customizations.frontStyle,
+      front_style: customizations.front_style,
+      jacketFrontStyle: customizations["jacket-front-style"]
+    })
     return customizations
   }
   // Helper function to get monogram color value
@@ -666,12 +718,14 @@ export function UniversalConfigurator({
 
   const getFabricAvailableColors = (fabricId: string): string[] => {
     const fabricColors: { [key: string]: string[] } = {
-      "wool-blend": ["charcoal", "navy", "black", "brown", "gray"],
-      "premium-wool": ["charcoal", "navy", "black", "brown"],
-      "cashmere-blend": ["charcoal", "navy", "brown", "camel"],
-      "summer-wool": ["light-gray", "navy", "charcoal", "beige"],
-      "tweed": ["brown", "gray", "forest-green"],
-      "linen-blend": ["beige", "light-blue", "white", "light-gray"]
+      "wool-blend": ["charcoal", "navy", "black", "brown", "gray", "forest-green", "burgundy", "midnight-blue", "olive", "slate"],
+      "premium-wool": ["charcoal", "navy", "black", "brown", "camel", "midnight-blue", "chocolate-brown"],
+      "cashmere-blend": ["charcoal", "navy", "brown", "camel", "burgundy", "tan"],
+      "summer-wool": ["light-gray", "navy", "charcoal", "beige", "tan", "slate"],
+      "tweed": ["brown", "gray", "forest-green", "olive", "chocolate-brown"],
+      "linen-blend": ["beige", "light-blue", "white", "light-gray", "cream", "mint-green", "peach"],
+      "cotton": ["white", "sky-blue", "pink", "lavender", "mint-green", "peach"],
+      "blend": ["charcoal", "burgundy", "heather-gray", "maroon", "cream", "beige"]
     }
     return fabricColors[fabricId] || []
   }
@@ -1213,7 +1267,12 @@ export function UniversalConfigurator({
                             {currentStepData.values.map((value) => (
                               <div
                                 key={value.id}
-                                onClick={() =>
+                                data-option-id={currentStepData.id}
+                                data-value-id={value.id}
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  console.log(`🔘 COMPONENT BUTTON CLICKED! ID: ${currentStepData.id}, Value: ${value.value}, Name: ${value.name}`)
                                   selectOption(
                                     currentStepData.id,
                                     value.id,
@@ -1222,10 +1281,11 @@ export function UniversalConfigurator({
                                     value.color,
                                     value.layerControls,
                                   )
-                                }
+                                }}
+                                style={{ cursor: 'pointer', userSelect: 'none' }}
                                 className={`
                                   group relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 transform hover:scale-[1.02] 
-                                  €{
+                                  ${
                                     configuratorState[currentStepData.id]?.valueId === value.id
                                       ? "border-blue-500 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 shadow-lg ring-2 ring-blue-200/50 scale-[1.02]"
                                       : "border-gray-200 hover:border-blue-300 hover:shadow-lg bg-white hover:bg-gradient-to-br hover:from-gray-50 hover:to-white"
@@ -1369,7 +1429,10 @@ export function UniversalConfigurator({
           {/* 3D Model Viewer - FULL HEIGHT with better styling */}
           <div className="absolute inset-0 w-full h-full rounded-lg lg:rounded-none overflow-hidden">
             <ModelViewer
+              key={`model-${configuratorState["jacket-front-style"]?.valueId || 'default'}-${configuratorState["front-pocket"]?.valueId || 'no-pocket'}-${configuratorState["chest-pocket"]?.valueId || 'no-chest'}-${configuratorState["jacket-sleeve-buttons"]?.valueId || 'default-sleeve'}-${configuratorState["jacket-vent-style"]?.valueId || 'default-vent'}`}
               modelUrl={getModelUrl()}
+              useGLTF={productType === "jacket"}
+              gltfModelPath={productType === "jacket" ? "/models/jackets/basic-jacket.gltf" : undefined}
               customizations={generateCustomizations()}
               layerControls={generateLayerControls()}
             />

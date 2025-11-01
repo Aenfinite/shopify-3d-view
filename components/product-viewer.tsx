@@ -2,10 +2,10 @@
 
 import { useRef, useState, useEffect } from "react"
 import { Canvas } from "@react-three/fiber"
-import { OrbitControls, Environment, useGLTF, useTexture, Html, PerspectiveCamera } from "@react-three/drei"
-import { useConfigurator } from "@/context/configurator-context"
+import { OrbitControls, Environment, PerspectiveCamera } from "@react-three/drei"
 import { Button } from "@/components/ui/button"
 import { Maximize2, Minimize2, RotateCcw } from "lucide-react"
+import { JacketModel } from "./configurator/jacket-model"
 
 export function ProductViewer() {
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -59,7 +59,7 @@ export function ProductViewer() {
         <PerspectiveCamera makeDefault position={[0, 0, 2.5]} fov={50} />
         <ambientLight intensity={0.5} />
         <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
-        <GarmentModel />
+        <JacketModel />
         <OrbitControls
           className="orbit-controls"
           enablePan={false}
@@ -71,74 +71,5 @@ export function ProductViewer() {
         <Environment preset="studio" />
       </Canvas>
     </div>
-  )
-}
-
-function GarmentModel() {
-  const { selectedFabric, selectedStyles, mode } = useConfigurator()
-
-  // This would be replaced with your actual 3D model
-  // For now we'll use a placeholder shirt model
-  const { scene } = useGLTF("/placeholder.svg?height=500&width=500")
-
-  // Load fabric texture if selected
-  const defaultTextureUrl = "/placeholder.svg?height=200&width=200"
-  const textureUrl = selectedFabric?.textureUrl || defaultTextureUrl
-  const fabricTexture = useTexture(textureUrl)
-
-  // Apply textures and style changes to the model
-  useEffect(() => {
-    if (!scene) return
-
-    // Apply fabric texture
-    if (fabricTexture) {
-      scene.traverse((child: any) => {
-        if (child.isMesh) {
-          child.material.map = fabricTexture
-          child.material.needsUpdate = true
-        }
-      })
-    }
-
-    // Apply style changes
-    // This would involve showing/hiding or swapping different parts of the model
-    // based on the selected styles
-  }, [scene, fabricTexture, selectedStyles])
-
-  // Placeholder for actual 3D model
-  return (
-    <group position={[0, -1, 0]}>
-      {/* This would be your actual 3D model */}
-      <mesh receiveShadow castShadow>
-        <boxGeometry args={[1, 1.5, 0.1]} />
-        <meshStandardMaterial color={selectedFabric?.color || "#cccccc"} map={fabricTexture || undefined} />
-      </mesh>
-
-      {/* Placeholder for style elements */}
-      {selectedStyles.collar && (
-        <mesh position={[0, 0.8, 0.06]} receiveShadow castShadow>
-          <boxGeometry args={[0.8, 0.1, 0.05]} />
-          <meshStandardMaterial color="#aaaaaa" />
-        </mesh>
-      )}
-
-      {selectedStyles.cuff && (
-        <>
-          <mesh position={[-0.6, 0, 0.06]} receiveShadow castShadow>
-            <boxGeometry args={[0.1, 0.2, 0.05]} />
-            <meshStandardMaterial color="#aaaaaa" />
-          </mesh>
-          <mesh position={[0.6, 0, 0.06]} receiveShadow castShadow>
-            <boxGeometry args={[0.1, 0.2, 0.05]} />
-            <meshStandardMaterial color="#aaaaaa" />
-          </mesh>
-        </>
-      )}
-
-      {/* Display a label for the mode */}
-      <Html position={[0, -1, 0.1]}>
-        <div className="bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium">{mode} Mode</div>
-      </Html>
-    </group>
   )
 }
