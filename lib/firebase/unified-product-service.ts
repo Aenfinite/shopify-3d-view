@@ -97,3 +97,19 @@ export async function getProductsWithCustomization(): Promise<Product[]> {
 
   return SAMPLE_PRODUCTS.filter((product) => Object.keys(SAMPLE_PRODUCTS_WITH_CUSTOMIZATION).includes(product.id))
 }
+
+export async function getAllProducts(): Promise<Product[]> {
+  // Simulate API delay
+  await new Promise((resolve) => setTimeout(resolve, 100))
+
+  return SAMPLE_PRODUCTS
+}
+
+export function getSystemStatus() {
+  return {
+    firebaseConnected: false,
+    usingMockData: true,
+    totalProducts: SAMPLE_PRODUCTS.length,
+    lastSync: new Date().toISOString()
+  }
+}

@@ -128,3 +128,18 @@ export async function addCustomizationOption(option: Omit<CustomizationOption, "
     throw error
   }
 }
+
+export async function getModels(): Promise<Model3D[]> {
+  try {
+    const snapshot = await retryOperation(() => getDocs(collection(db, "models3d")))
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate() || new Date(),
+      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
+    })) as Model3D[]
+  } catch (error) {
+    console.warn("Firebase unavailable for models list:", error)
+    return []
+  }
+}
