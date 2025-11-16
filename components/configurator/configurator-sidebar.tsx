@@ -126,7 +126,7 @@ export function ConfiguratorSidebar() {
             <span className="text-sm text-muted-foreground">
               Step {currentStep + 1} of {totalSteps + 1}
             </span>
-            <span className="text-sm font-medium">€${currentPrice.toFixed(2)}</span>
+            <span className="text-sm font-medium">€{currentPrice.toFixed(2)}</span>
           </div>
           <Progress value={((currentStep + 1) / (totalSteps + 1)) * 100} className="h-1" />
         </div>

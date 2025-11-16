@@ -60,8 +60,6 @@ export function EmbroideredMonogramStep({
   threadColor,
   onUpdate,
 }: EmbroideredMonogramStepProps) {
-  const [showPreview, setShowPreview] = useState(true)
-
   const selectedThreadColor = THREAD_COLORS.find((c) => c.id === threadColor) || THREAD_COLORS[0]
   const selectedFont = FONT_OPTIONS.find((f) => f.id === monogramFont) || FONT_OPTIONS[0]
 
@@ -78,21 +76,20 @@ export function EmbroideredMonogramStep({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Type className="w-5 h-5 text-blue-600" />
-          <h3 className="font-medium text-blue-800">Embroidered Monogram Option (Inside Left of Jacket)</h3>
+    <div className="space-y-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="flex items-center gap-2 mb-1">
+          <Type className="w-4 h-4 text-blue-600" />
+          <h3 className="font-medium text-blue-800 text-sm">Embroidered Monogram Option</h3>
         </div>
-        <p className="text-sm text-blue-700">
-          Add a personalized touch to your jacket with our custom embroidered monogram. 
-          Choose from two elegant font styles — England Hand DB for a classic cursive look or Arial for a clean, modern feel.
+        <p className="text-xs text-blue-700">
+          Add a personalized touch with custom embroidered monogram inside the jacket.
         </p>
       </div>
 
       {/* Enable/Disable Monogram */}
       <div>
-        <h4 className="text-lg font-semibold mb-4">Add Embroidered Monogram?</h4>
+        <h4 className="text-base font-semibold mb-3">Add Embroidered Monogram?</h4>
         <RadioGroup
           value={monogramEnabled ? "yes" : "no"}
           onValueChange={(value) => onUpdate({ monogramEnabled: value === "yes" })}
@@ -132,7 +129,7 @@ export function EmbroideredMonogramStep({
                   <p className="text-sm text-gray-600">Personal embroidery inside the jacket</p>
                 </div>
                 <Badge variant="outline" className="text-green-600 border-green-600">
-                  From €6.50
+                  with a surcharge
                 </Badge>
               </div>
             </Label>
@@ -143,20 +140,18 @@ export function EmbroideredMonogramStep({
       {/* Monogram Configuration */}
       {monogramEnabled && (
         <>
-          <Separator />
-
           {/* Monogram Type */}
           <div>
-            <h4 className="text-lg font-semibold mb-4">Choose Monogram Type</h4>
+            <h4 className="text-base font-semibold mb-3">Choose Monogram Type</h4>
             <RadioGroup
               value={monogramType}
               onValueChange={(value: "initials" | "fullname") => onUpdate({ monogramType: value })}
               className="space-y-3"
             >
               <div>
-                <RadioGroupItem value="initials" id="initials" className="sr-only" />
+                <RadioGroupItem value="initials" id="initials-radio" className="sr-only" />
                 <Label
-                  htmlFor="initials"
+                  htmlFor="initials-radio"
                   className={`
                     block cursor-pointer rounded-lg border-2 p-4 transition-all hover:bg-gray-50
                     €{monogramType === "initials" ? "border-blue-500 bg-blue-50" : "border-gray-200"}
@@ -168,16 +163,16 @@ export function EmbroideredMonogramStep({
                       <p className="text-sm text-gray-600">Example: A.F.</p>
                     </div>
                     <Badge variant="outline" className="text-green-600 border-green-600">
-                      USD €6.50
+                      €6.50
                     </Badge>
                   </div>
                 </Label>
               </div>
 
               <div>
-                <RadioGroupItem value="fullname" id="fullname" className="sr-only" />
+                <RadioGroupItem value="fullname" id="fullname-radio" className="sr-only" />
                 <Label
-                  htmlFor="fullname"
+                  htmlFor="fullname-radio"
                   className={`
                     block cursor-pointer rounded-lg border-2 p-4 transition-all hover:bg-gray-50
                     €{monogramType === "fullname" ? "border-blue-500 bg-blue-50" : "border-gray-200"}
@@ -189,7 +184,7 @@ export function EmbroideredMonogramStep({
                       <p className="text-sm text-gray-600">Perfect for adding a unique and personal element</p>
                     </div>
                     <Badge variant="outline" className="text-green-600 border-green-600">
-                      USD €10.00
+                      €10.00
                     </Badge>
                   </div>
                 </Label>
@@ -199,23 +194,48 @@ export function EmbroideredMonogramStep({
 
           {/* Text Input */}
           <div>
-            <Label htmlFor="monogram-text" className="text-lg font-semibold">
+            <div className="text-base font-semibold mb-2">
               Enter {monogramType === "initials" ? "Initials" : "Full Name"}
-            </Label>
-            <div className="mt-2">
-              <Input
+            </div>
+            <div className="mt-2 relative">
+              <input
                 id="monogram-text"
-                value={monogramText}
+                type="text"
+                value={monogramText || ""}
                 onChange={(e) => {
                   const text = e.target.value.toUpperCase()
-                  if (validateText(text, monogramType)) {
-                    onUpdate({ monogramText: text })
+                  const maxLen = monogramType === "initials" ? 2 : 15
+                  if (text.length <= maxLen) {
+                    onUpdate({ text: text, monogramText: text })
                   }
+                }}
+                onFocus={(e) => {
+                  e.stopPropagation()
+                }}
+                onKeyDown={(e) => {
+                  e.stopPropagation()
+                }}
+                onClick={(e) => {
+                  e.stopPropagation()
                 }}
                 placeholder={monogramType === "initials" ? "AF" : "JOHN DOE"}
                 maxLength={monogramType === "initials" ? 2 : 15}
-                className="text-center text-lg font-medium"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-center text-lg font-medium pr-10 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                autoComplete="off"
               />
+              {monogramText && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onUpdate({ text: "", monogramText: "" })
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 z-10"
+                  type="button"
+                >
+                  ✕
+                </button>
+              )}
               <p className="text-sm text-gray-500 mt-1 text-center">
                 {monogramText.length}/{monogramType === "initials" ? 2 : 15} characters
               </p>
@@ -224,7 +244,7 @@ export function EmbroideredMonogramStep({
 
           {/* Font Selection */}
           <div>
-            <h4 className="text-lg font-semibold mb-4">Choose Font Style</h4>
+            <h4 className="text-base font-semibold mb-3">Choose Font Style</h4>
             <RadioGroup
               value={monogramFont}
               onValueChange={(value: "england" | "arial") => onUpdate({ monogramFont: value })}
@@ -255,8 +275,8 @@ export function EmbroideredMonogramStep({
 
           {/* Thread Color Selection */}
           <div>
-            <h4 className="text-lg font-semibold mb-4">Choose Thread Color</h4>
-            <p className="text-sm text-gray-600 mb-4">12 different color options available</p>
+            <h4 className="text-base font-semibold mb-3">Choose Thread Color</h4>
+            <p className="text-xs text-gray-600 mb-3">12 different color options available</p>
             <div className="grid grid-cols-4 gap-3">
               {THREAD_COLORS.map((color) => (
                 <button
@@ -283,46 +303,6 @@ export function EmbroideredMonogramStep({
               ))}
             </div>
           </div>
-
-          {/* Preview Card */}
-          {monogramText && (
-            <Card className="bg-gradient-to-br from-gray-100 to-gray-200">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Palette className="w-5 h-5" />
-                  Monogram Preview
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-white rounded-lg p-8 text-center border-2 border-dashed border-gray-300">
-                  <div className="mb-4">
-                    <div className="text-sm text-gray-600 mb-2">Inside Left Jacket</div>
-                    <div 
-                      className="text-4xl"
-                      style={{ 
-                        color: selectedThreadColor.color,
-                        fontFamily: selectedFont.id === 'england' 
-                          ? "'Brush Script MT', 'Lucida Handwriting', cursive" 
-                          : "Arial, sans-serif",
-                        fontWeight: selectedFont.id === 'england' ? 'bold' : '600',
-                        fontStyle: selectedFont.id === 'england' ? 'italic' : 'normal'
-                      }}
-                    >
-                      {monogramText}
-                    </div>
-                  </div>
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <div>Font: {selectedFont.name}</div>
-                    <div>Thread: {selectedThreadColor.name}</div>
-                    <div className="flex items-center justify-center gap-1">
-                      <DollarSign className="w-4 h-4" />
-                      <span className="font-semibold text-green-600">USD €{getPrice().toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </>
       )}
     </div>

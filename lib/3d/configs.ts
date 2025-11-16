@@ -48,7 +48,7 @@ export const jacketConfigs: Record<FrontStyle, JacketConfig> = {
       sleeveWorkingButtons: "/models/jackets/Sleeve/Working/4Button/S4.gltf",
       sleeveLastButton: "/models/jackets/Sleeve/Working/LastButton/S4.gltf",
       sleeveButtonThread: "/models/jackets/Sleeve/Working/Thread/LastThread.gltf",
-      sleeve4ButtonThread: "/models/jackets/Sleeve/Working/Thread/4Button.gltf",
+      sleeve4ButtonThread: "/models/jackets/Sleeve/Working/Thrad/4Button.gltf",
       centerVent: "/models/jackets/Vent/NoVent.gltf"
     }
   }
@@ -57,11 +57,11 @@ export const jacketConfigs: Record<FrontStyle, JacketConfig> = {
 // Pocket style configurations - maps pocket selection to GLTF files
 export const pocketConfigs: Record<string, { frontPocket: string; chestPocket?: string }> = {
   'flap-pocket': {
-    frontPocket: "/models/jackets/Pocket/PK-1.gltf", // Flap pocket uses PK-7
+    frontPocket: "/models/jackets/Pocket/PK-1.gltf", // Flap pocket uses PK-9
     chestPocket: "/models/jackets/Pocket/ChestPocket.gltf"
   },
   'patch-pocket': {
-    frontPocket: "/models/jackets/Pocket/PK-7.gltf", // Patch pocket uses PK-1
+    frontPocket: "/models/jackets/Pocket/PK-9.gltf", // Patch pocket uses PK-1
     chestPocket: "/models/jackets/Pocket/ChestPocket.gltf"
   }
 };
@@ -69,7 +69,7 @@ export const pocketConfigs: Record<string, { frontPocket: string; chestPocket?: 
 // Chest pocket configurations
 export const chestPocketConfigs: Record<string, string> = {
   'piping-pocket': "/models/jackets/Pocket/ChestPocket.gltf",  // Piping pocket
-  'patch-pocket-chest': "/models/jackets/Pocket/ChestPatch.gltf"  // Patch pocket for chest
+  'patch-pocket-chest': "/models/jackets/Pocket/ChestPatch2.gltf"  // Patch pocket for chest
 };
 
 // Sleeve button configurations

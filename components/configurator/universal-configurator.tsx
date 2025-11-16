@@ -31,6 +31,22 @@ import { EmbroideredMonogramStep } from "./steps/embroidered-monogram-step"
 import { FabricTypeSelector } from "./fabric-type-selector"
 import { FabricColorSelector } from "./fabric-color-selector"
 
+// Thread colors for monogram preview
+const THREAD_COLORS = [
+  { id: "navy", name: "Navy Blue", color: "#1e3a8a" },
+  { id: "black", name: "Black", color: "#000000" },
+  { id: "white", name: "White", color: "#ffffff" },
+  { id: "gold", name: "Gold", color: "#fbbf24" },
+  { id: "silver", name: "Silver", color: "#9ca3af" },
+  { id: "red", name: "Red", color: "#dc2626" },
+  { id: "green", name: "Forest Green", color: "#166534" },
+  { id: "brown", name: "Brown", color: "#92400e" },
+  { id: "purple", name: "Purple", color: "#7c3aed" },
+  { id: "burgundy", name: "Burgundy", color: "#991b1b" },
+  { id: "royal", name: "Royal Blue", color: "#2563eb" },
+  { id: "charcoal", name: "Charcoal", color: "#374151" },
+]
+
 interface UniversalConfiguratorProps {
   productId: string
   productName: string
@@ -142,6 +158,7 @@ export function UniversalConfigurator({
   const [error, setError] = useState<string | null>(null)
   const [showCheckoutModal, setShowCheckoutModal] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [cameraRotationY, setCameraRotationY] = useState(0) // Camera Y-axis rotation for viewing different parts
 
   // Load customization options
   useEffect(() => {
@@ -227,6 +244,51 @@ export function UniversalConfigurator({
     const totalCompleted = completedCustomizations + (fitPreferenceCompleted ? 1 : 0) + (measurementCompleted ? 1 : 0)
     return totalSteps > 0 ? Math.round((totalCompleted / totalSteps) * 100) : 0
   }
+
+  // Smart camera positioning based on customization step
+  useEffect(() => {
+    if (!currentStepData?.id) {
+      setCameraRotationY(0)
+      return
+    }
+
+    const optionId = currentStepData.id.toLowerCase()
+    
+    // Define camera angles for different parts (in radians)
+    const cameraAngles: Record<string, number> = {
+      // Back view for vents (180°)
+      'jacket-vent-style': Math.PI,
+      
+      // Slight angle for sleeve buttons (45° right side)
+      'jacket-sleeve-buttons': Math.PI / 4,
+      'sleeve-buttons': Math.PI / 4,
+      
+      // Front view for front elements (0°)
+      'jacket-front-style': 0,
+      'front-style': 0,
+      'front-pocket': 0,
+      'chest-pocket': 0,
+      
+      // Slight left angle for buttons (315° = -45°)
+      'button-style': -Math.PI / 6,
+      'button-color': -Math.PI / 6,
+      'button-configuration': -Math.PI / 6,
+      
+      // Three-quarter view for lapels (30°)
+      'lapel-style': Math.PI / 6,
+      'lapel': Math.PI / 6,
+      
+      // Front for fabric (0°)
+      'fabric-type': 0,
+      'fabric-color': 0,
+    }
+
+    // Find the appropriate camera angle
+    const angle = cameraAngles[optionId] ?? 0
+    
+    setCameraRotationY(angle)
+    console.log(`📷 Camera rotation for ${optionId}: ${(angle * 180 / Math.PI).toFixed(0)}°`)
+  }, [currentStep, currentStepData])
 
   const nextStep = () => {
     if (currentStep < totalSteps - 1) {
@@ -368,9 +430,17 @@ export function UniversalConfigurator({
         }
 
         // Handle button colors specifically (don't affect garment color)
-        if (option.name.toLowerCase().includes("button") && selection.color) {
-          customizations.buttonColor = selection.color
-          console.log("Setting button color:", selection.color)
+        if (option.name.toLowerCase().includes("button")) {
+          if (selection.color) {
+            customizations.buttonColor = selection.color
+            customizations.threadColor = selection.color // Thread color matches button color
+            console.log("Setting button color and thread color:", selection.color)
+          } else if (value.value === "standard") {
+            // Set to "standard" to trigger fabric color fallback
+            customizations.buttonColor = "standard"
+            customizations.threadColor = "standard"
+            console.log("Setting button and thread to standard (will use fabric color)")
+          }
         }
 
         // Handle monogram thread color specifically (don't affect garment color)
@@ -717,17 +787,20 @@ export function UniversalConfigurator({
   }
 
   const getFabricAvailableColors = (fabricId: string): string[] => {
+    // Only one fabric texture available for testing
+    const textureOptions = ["texture-1"]
+    
     const fabricColors: { [key: string]: string[] } = {
-      "wool-blend": ["charcoal", "navy", "black", "brown", "gray", "forest-green", "burgundy", "midnight-blue", "olive", "slate"],
-      "premium-wool": ["charcoal", "navy", "black", "brown", "camel", "midnight-blue", "chocolate-brown"],
-      "cashmere-blend": ["charcoal", "navy", "brown", "camel", "burgundy", "tan"],
-      "summer-wool": ["light-gray", "navy", "charcoal", "beige", "tan", "slate"],
-      "tweed": ["brown", "gray", "forest-green", "olive", "chocolate-brown"],
-      "linen-blend": ["beige", "light-blue", "white", "light-gray", "cream", "mint-green", "peach"],
-      "cotton": ["white", "sky-blue", "pink", "lavender", "mint-green", "peach"],
-      "blend": ["charcoal", "burgundy", "heather-gray", "maroon", "cream", "beige"]
+      "wool-blend": ["charcoal", "navy", "black", "brown", "gray", "forest-green", "burgundy", "midnight-blue", "olive", "slate", ...textureOptions],
+      "premium-wool": ["charcoal", "navy", "black", "brown", "camel", "midnight-blue", "chocolate-brown", ...textureOptions],
+      "cashmere-blend": ["charcoal", "navy", "brown", "camel", "burgundy", "tan", ...textureOptions],
+      "summer-wool": ["light-gray", "navy", "charcoal", "beige", "tan", "slate", ...textureOptions],
+      "tweed": ["brown", "gray", "forest-green", "olive", "chocolate-brown", ...textureOptions],
+      "linen-blend": ["beige", "light-blue", "white", "light-gray", "cream", "mint-green", "peach", ...textureOptions],
+      "cotton": ["white", "sky-blue", "pink", "lavender", "mint-green", "peach", ...textureOptions],
+      "blend": ["charcoal", "burgundy", "heather-gray", "maroon", "cream", "beige", ...textureOptions]
     }
-    return fabricColors[fabricId] || []
+    return fabricColors[fabricId] || textureOptions
   }
 
   const getFilteredColors = () => {
@@ -827,7 +900,7 @@ export function UniversalConfigurator({
               </div>
               <div className="text-right flex-shrink-0">
                 <div className="text-xl sm:text-2xl lg:text-xl xl:text-2xl font-bold text-gray-900">
-                  €${currentPrice.toFixed(2)}
+                  €{currentPrice.toFixed(2)}
                 </div>
                 <Badge variant="outline" className="text-xs mt-1 whitespace-nowrap">
                   Step {currentStep + 1} of {totalSteps}
@@ -1076,7 +1149,7 @@ export function UniversalConfigurator({
                   </div>
                 ) : isMeasurementStep ? (
                   <MeasurementStep
-                    sizeType={measurementData.sizeType as "standard" | "custom"}
+                    sizeType={measurementData.sizeType === "standard" ? "standard" : undefined}
                     standardSize={measurementData.standardSize || "m"}
                     fitType={measurementData.fitType || "regular"}
                     customMeasurements={
@@ -1155,45 +1228,57 @@ export function UniversalConfigurator({
                       )}
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
-                      {getFilteredColors().map((color) => (
-                        <div
-                          key={color.id}
-                          onClick={() => {
-                            selectOption(
-                              "fabric-color",
-                              color.id,
-                              0,
-                              color.hex,
-                              color.hex
-                            )
-                          }}
-                          className={`
-                            relative p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all hover:scale-105 hover:shadow-md
-                            €{
-                              configuratorState["fabric-color"]?.valueId === color.id
-                                ? "border-blue-500 ring-2 ring-blue-200 bg-blue-50"
-                                : "border-gray-200 hover:border-gray-300"
-                            }
-                          `}
-                        >
-                          <div className="text-center">
-                            <div
-                              className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-lg mx-auto mb-2 border border-gray-300 shadow-sm"
-                              style={{ backgroundColor: color.hex }}
-                            />
-                            <div className="text-xs sm:text-sm font-medium text-gray-900 truncate leading-tight">
-                              {color.name}
-                            </div>
-                          </div>
-                          {configuratorState["fabric-color"]?.valueId === color.id && (
-                            <div className="absolute -top-1 -right-1">
-                              <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center shadow-md">
-                                <Check className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                      {getFilteredColors().map((color) => {
+                        // Check if this is a texture (starts with / or contains image extension)
+                        const isTexture = color.hex.startsWith('/') || /\.(jpg|jpeg|png|webp)$/i.test(color.hex)
+                        
+                        return (
+                          <div
+                            key={color.id}
+                            onClick={() => {
+                              selectOption(
+                                "fabric-color",
+                                color.id,
+                                0,
+                                color.hex,
+                                color.hex
+                              )
+                            }}
+                            className={`
+                              relative p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all hover:scale-105 hover:shadow-md
+                              ${
+                                configuratorState["fabric-color"]?.valueId === color.id
+                                  ? "border-blue-500 ring-2 ring-blue-200 bg-blue-50"
+                                  : "border-gray-200 hover:border-gray-300"
+                              }
+                            `}
+                          >
+                            <div className="text-center">
+                              <div
+                                className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-lg mx-auto mb-2 border border-gray-300 shadow-sm overflow-hidden"
+                                style={isTexture 
+                                  ? { 
+                                      backgroundImage: `url(${color.hex})`,
+                                      backgroundSize: 'cover',
+                                      backgroundPosition: 'center'
+                                    }
+                                  : { backgroundColor: color.hex }
+                                }
+                              />
+                              <div className="text-xs sm:text-sm font-medium text-gray-900 truncate leading-tight">
+                                {color.name}
                               </div>
                             </div>
-                          )}
-                        </div>
-                      ))}
+                            {configuratorState["fabric-color"]?.valueId === color.id && (
+                              <div className="absolute -top-1 -right-1">
+                                <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center shadow-md">
+                                  <Check className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
                     {getFilteredColors().length === 0 && (
                       <div className="text-center py-8 text-gray-500">
@@ -1435,8 +1520,55 @@ export function UniversalConfigurator({
               gltfModelPath={productType === "jacket" ? "/models/jackets/basic-jacket.gltf" : undefined}
               customizations={generateCustomizations()}
               layerControls={generateLayerControls()}
+              cameraRotationY={cameraRotationY}
             />
           </div>
+
+          {/* Monogram Preview Box - Small box next to sidebar */}
+          {isEmbroideredMonogramStep && monogramData.text && (
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 z-20 ml-2 lg:ml-4">
+              <div className="bg-white rounded-lg shadow-2xl border-2 border-blue-500 p-4 w-80 lg:w-96">
+                <div className="text-center mb-2">
+                  <h4 className="text-sm font-semibold text-gray-900">Monogram Preview</h4>
+                </div>
+                <div className="relative w-full aspect-square bg-gray-50 rounded-lg overflow-hidden">
+                  <img
+                    src="/images/threadmonogram.png"
+                    alt="Jacket with monogram position"
+                    className="w-full h-full object-cover"
+                    style={{ 
+                      transform: 'scale(1.8)',
+                      transformOrigin: 'center'
+                    }}
+                  />
+                  <div 
+                    className="absolute pointer-events-none whitespace-nowrap"
+                    style={{ 
+                      color: THREAD_COLORS.find(c => c.id === monogramData.threadColor)?.color || "#1e3a8a",
+                      fontFamily: monogramData.monogramFont === 'england' 
+                        ? "'Brush Script MT', 'Lucida Handwriting', cursive" 
+                        : "Arial, sans-serif",
+                      fontWeight: monogramData.monogramFont === 'england' ? 'bold' : '600',
+                      fontStyle: monogramData.monogramFont === 'england' ? 'italic' : 'normal',
+                      fontSize: monogramData.text.length <= 2 ? '2rem' : monogramData.text.length > 10 ? '0.65rem' : '0.85rem',
+                      right: '10%',
+                      top: '42%',
+                      transform: 'translateY(-50%)',
+                      maxWidth: '150px',
+                      textAlign: 'right',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}
+                  >
+                    {monogramData.text}
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-gray-600 text-center">
+                  <div>{THREAD_COLORS.find(c => c.id === monogramData.threadColor)?.name || "Navy Blue"} Thread</div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Bottom Instructions - More Responsive */}
           <div className="absolute bottom-3 sm:bottom-4 lg:bottom-6 left-1/2 transform -translate-x-1/2 z-10 px-2 sm:px-4">

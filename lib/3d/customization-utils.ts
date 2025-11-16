@@ -61,9 +61,16 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
           applyMaterialColor(child, customizations.lapelColor)
           return
         } else if (customizations.fabricColor) {
-          // Apply a slightly darker shade for collar/lapel contrast
-          const darkerColor = adjustColorBrightness(customizations.fabricColor, 0.85)
-          applyMaterialColor(child, darkerColor)
+          // Check if fabricColor is a texture or solid color
+          const isTexture = customizations.fabricColor.startsWith('/') || /\.(jpg|jpeg|png|webp)$/i.test(customizations.fabricColor)
+          if (isTexture) {
+            // Apply same texture for collar/lapel
+            applyMaterialColor(child, customizations.fabricColor)
+          } else {
+            // Apply a slightly darker shade for collar/lapel contrast (solid colors only)
+            const darkerColor = adjustColorBrightness(customizations.fabricColor, 0.85)
+            applyMaterialColor(child, darkerColor)
+          }
           return
         }
       }
@@ -104,9 +111,16 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
           if (customizations.lapelColor) {
             applyMaterialColor(child, customizations.lapelColor)
           } else if (customizations.fabricColor) {
-            // Apply a slightly darker shade of fabric color for contrast
-            const darkerColor = adjustColorBrightness(customizations.fabricColor, 0.85)
-            applyMaterialColor(child, darkerColor)
+            // Check if fabricColor is a texture or solid color
+            const isTexture = customizations.fabricColor.startsWith('/') || /\.(jpg|jpeg|png|webp)$/i.test(customizations.fabricColor)
+            if (isTexture) {
+              // Apply same texture for upper lapel
+              applyMaterialColor(child, customizations.fabricColor)
+            } else {
+              // Apply a slightly darker shade of fabric color for contrast (solid colors only)
+              const darkerColor = adjustColorBrightness(customizations.fabricColor, 0.85)
+              applyMaterialColor(child, darkerColor)
+            }
           }
           break
 
@@ -115,23 +129,38 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
           if (customizations.lapelColor) {
             applyMaterialColor(child, customizations.lapelColor)
           } else if (customizations.fabricColor) {
-            // Apply a slightly darker shade of fabric color for contrast
-            const darkerColor = adjustColorBrightness(customizations.fabricColor, 0.85)
-            applyMaterialColor(child, darkerColor)
+            // Check if fabricColor is a texture or solid color
+            const isTexture = customizations.fabricColor.startsWith('/') || /\.(jpg|jpeg|png|webp)$/i.test(customizations.fabricColor)
+            if (isTexture) {
+              // Apply same texture for lower lapel
+              applyMaterialColor(child, customizations.fabricColor)
+            } else {
+              // Apply a slightly darker shade of fabric color for contrast (solid colors only)
+              const darkerColor = adjustColorBrightness(customizations.fabricColor, 0.85)
+              applyMaterialColor(child, darkerColor)
+            }
           }
           break
 
         case ColorCategories.BUTTONS:
           console.log(`🔘 Applying BUTTON color to: ${child.name}`)
-          if (customizations.buttonColor) {
+          // If buttonColor is not set or is "standard", use fabricColor instead
+          if (customizations.buttonColor && customizations.buttonColor !== "standard") {
             applyMaterialColor(child, customizations.buttonColor)
+          } else if (customizations.fabricColor) {
+            // Use fabric color for standard/matching buttons
+            applyMaterialColor(child, customizations.fabricColor)
           }
           break
 
         case ColorCategories.THREAD:
           console.log(`🧵 Applying THREAD color to: ${child.name}`)
-          if (customizations.threadColor) {
+          // If threadColor is not set or is "standard", use fabricColor instead
+          if (customizations.threadColor && customizations.threadColor !== "standard") {
             applyMaterialColor(child, customizations.threadColor)
+          } else if (customizations.fabricColor) {
+            // Use fabric color for standard/matching thread
+            applyMaterialColor(child, customizations.fabricColor)
           }
           break
       }
@@ -142,7 +171,9 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
 }
 
 /**
- * Applies a color to a mesh's material with realistic fabric properties
+ * Applies a color or texture to a mesh's material with realistic fabric properties
+ * @param mesh - The mesh to apply the material to
+ * @param color - Either a hex color string (e.g., "#ff0000") or a texture path (e.g., "/images/fabric/IMG-20250831-WA0001.jpg")
  */
 function applyMaterialColor(mesh: THREE.Mesh, color: string) {
   if (!mesh.material) {
@@ -156,23 +187,68 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string) {
   materials.forEach((material) => {
     if (material instanceof THREE.MeshStandardMaterial) {
       try {
-        const newColor = new THREE.Color(color)
-        material.color.copy(newColor)
+        // Check if this is a texture path (starts with / or contains image extension)
+        const isTexture = color.startsWith('/') || /\.(jpg|jpeg|png|webp)$/i.test(color)
         
-        // Apply professional suit fabric properties with subtle shine
-        material.roughness = 0.55  // Reduced roughness for subtle shine like quality suit fabric
-        material.metalness = 0.05  // Tiny bit of metalness for professional sheen
-        
-        // Enable proper lighting response
-        material.flatShading = false  // Use smooth shading for realistic fabric
-        
-        // Increase environment map for subtle reflections and depth
-        material.envMapIntensity = 0.6  // More environment reflection for professional look
-        
-        material.needsUpdate = true
-        console.log(`✅ Applied realistic fabric color ${color} to ${mesh.name}`)
+        if (isTexture) {
+          // Load and apply texture
+          console.log(`🖼️ Loading fabric texture: ${color} for ${mesh.name}`)
+          const textureLoader = new THREE.TextureLoader()
+          textureLoader.load(
+            color,
+            (texture) => {
+              // Configure texture for realistic fabric appearance
+              texture.wrapS = THREE.RepeatWrapping
+              texture.wrapT = THREE.RepeatWrapping
+              texture.repeat.set(2, 2) // Adjust scale for realistic fabric look
+              
+              material.map = texture
+              material.color.setHex(0xffffff) // Set to white to show texture properly
+              
+              // Apply realistic fabric properties
+              material.roughness = 0.65  // Slightly higher roughness for textured fabric
+              material.metalness = 0.02  // Very subtle metalness
+              material.flatShading = false
+              material.envMapIntensity = 0.5
+              
+              material.needsUpdate = true
+              console.log(`✅ Applied fabric texture to ${mesh.name}`)
+            },
+            undefined,
+            (error) => {
+              console.error(`❌ Error loading texture ${color}:`, error)
+              // Fallback to a neutral color if texture fails
+              material.color.setHex(0x808080)
+              material.needsUpdate = true
+            }
+          )
+        } else {
+          // Apply solid color
+          const newColor = new THREE.Color(color)
+          material.color.copy(newColor)
+          
+          // IMPORTANT: Remove any base textures that might darken the color
+          // This ensures buttons get the actual selected color, not a darkened version
+          if (material.map) {
+            console.log(`🔄 Removing base texture from ${mesh.name} to apply pure color`)
+            material.map = null
+          }
+          
+          // Apply professional suit fabric properties with subtle shine
+          material.roughness = 0.55  // Reduced roughness for subtle shine like quality suit fabric
+          material.metalness = 0.05  // Tiny bit of metalness for professional sheen
+          
+          // Enable proper lighting response
+          material.flatShading = false  // Use smooth shading for realistic fabric
+          
+          // Increase environment map for subtle reflections and depth
+          material.envMapIntensity = 0.6  // More environment reflection for professional look
+          
+          material.needsUpdate = true
+          console.log(`✅ Applied realistic fabric color ${color} to ${mesh.name}`)
+        }
       } catch (error) {
-        console.error(`❌ Error applying color ${color} to ${mesh.name}:`, error)
+        console.error(`❌ Error applying color/texture ${color} to ${mesh.name}:`, error)
       }
     }
   })

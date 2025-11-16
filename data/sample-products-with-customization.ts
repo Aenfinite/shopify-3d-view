@@ -268,6 +268,14 @@ export const SAMPLE_PRODUCTS_WITH_CUSTOMIZATION = {
         { id: "camel", name: "Camel", value: "#C19A6B", price: 5, color: "#C19A6B" },
         { id: "light-blue", name: "Light Blue", value: "#ADD8E6", price: 5, color: "#ADD8E6" },
         { id: "white", name: "White", value: "#FFFFFF", price: 0, color: "#FFFFFF" },
+        // Fabric texture options
+        { id: "texture-1", name: "Fabric Texture 1", value: "/images/fabric/IMG-20250831-WA0001.jpg", price: 15, color: "/images/fabric/IMG-20250831-WA0001.jpg", thumbnail: "/images/fabric/IMG-20250831-WA0001.jpg" },
+        { id: "texture-2", name: "Fabric Texture 2", value: "/images/fabric/IMG-20250831-WA0002.jpg", price: 15, color: "/images/fabric/IMG-20250831-WA0002.jpg", thumbnail: "/images/fabric/IMG-20250831-WA0002.jpg" },
+        { id: "texture-3", name: "Fabric Texture 3", value: "/images/fabric/IMG-20250831-WA0003.jpg", price: 15, color: "/images/fabric/IMG-20250831-WA0003.jpg", thumbnail: "/images/fabric/IMG-20250831-WA0003.jpg" },
+        { id: "texture-4", name: "Fabric Texture 4", value: "/images/fabric/IMG-20250831-WA0004.jpg", price: 15, color: "/images/fabric/IMG-20250831-WA0004.jpg", thumbnail: "/images/fabric/IMG-20250831-WA0004.jpg" },
+        { id: "texture-5", name: "Fabric Texture 5", value: "/images/fabric/IMG-20250831-WA0005.jpg", price: 15, color: "/images/fabric/IMG-20250831-WA0005.jpg", thumbnail: "/images/fabric/IMG-20250831-WA0005.jpg" },
+        { id: "texture-6", name: "Fabric Texture 6", value: "/images/fabric/IMG-20250831-WA0006.jpg", price: 15, color: "/images/fabric/IMG-20250831-WA0006.jpg", thumbnail: "/images/fabric/IMG-20250831-WA0006.jpg" },
+        { id: "texture-7", name: "Fabric Texture 7", value: "/images/fabric/IMG-20250831-WA0007.jpg", price: 15, color: "/images/fabric/IMG-20250831-WA0007.jpg", thumbnail: "/images/fabric/IMG-20250831-WA0007.jpg" },
       ],
     },
     {

@@ -53,7 +53,7 @@ export const meshColorMap: Record<string, typeof ColorCategories[keyof typeof Co
   'curved': ColorCategories.MAIN_FABRIC,
   'front_bottom': ColorCategories.MAIN_FABRIC,
   'novent': ColorCategories.MAIN_FABRIC,
-  'pk-7': ColorCategories.MAIN_FABRIC,
+  'PK-9': ColorCategories.MAIN_FABRIC,
   'pk-1': ColorCategories.MAIN_FABRIC,
   'pk7': ColorCategories.MAIN_FABRIC,
   'pk1': ColorCategories.MAIN_FABRIC,
@@ -175,7 +175,7 @@ export interface JacketConfig {
     sleeveButtonThread: string;
     sleeve4ButtonThread: string;
     centerVent: string; // Re-enabled vent
-    frontPocket?: string; // Optional front pocket (PK-7 for flap, PK-1 for patch)
+    frontPocket?: string; // Optional front pocket (PK-9 for flap, PK-1 for patch)
     chestPocket?: string; // Optional chest pocket
   };
 }

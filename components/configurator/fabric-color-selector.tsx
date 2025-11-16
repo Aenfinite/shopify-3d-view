@@ -81,48 +81,62 @@ export function FabricColorSelector({
 
       {/* Available Colors Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {filteredColors.map((color) => (
-          <Card
-            key={color.id}
-            onClick={() => onColorSelect(color.id, 0)}
-            className={`cursor-pointer transition-all hover:shadow-lg group €{
-              selectedColor === color.id
-                ? "border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-200"
-                : "border-gray-200 hover:border-gray-300"
-            }`}
-          >
-            <CardContent className="p-4 text-center">
-              {/* Color Swatch */}
-              <div 
-                className={`
-                  w-16 h-16 mx-auto rounded-full border-2 mb-3 transition-all
-                  €{selectedColor === color.id 
-                    ? "border-blue-500 scale-110" 
-                    : "border-gray-300 group-hover:border-gray-400"
+        {filteredColors.map((color) => {
+          // Check if this is a texture (starts with / or contains image extension)
+          const isTexture = color.hex.startsWith('/') || /\.(jpg|jpeg|png|webp)$/i.test(color.hex)
+          
+          return (
+            <Card
+              key={color.id}
+              onClick={() => onColorSelect(color.id, 0)}
+              className={`cursor-pointer transition-all hover:shadow-lg group ${
+                selectedColor === color.id
+                  ? "border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-200"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <CardContent className="p-4 text-center">
+                {/* Color/Texture Swatch */}
+                <div 
+                  className={`
+                    w-16 h-16 mx-auto rounded-full border-2 mb-3 transition-all overflow-hidden
+                    ${selectedColor === color.id 
+                      ? "border-blue-500 scale-110" 
+                      : "border-gray-300 group-hover:border-gray-400"
+                    }
+                    flex items-center justify-center
+                  `}
+                  style={isTexture 
+                    ? { 
+                        backgroundImage: `url(${color.hex})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center'
+                      }
+                    : { backgroundColor: color.hex }
                   }
-                  flex items-center justify-center
-                `}
-                style={{ backgroundColor: color.hex }}
-              >
+                >
+                  {selectedColor === color.id && (
+                    <Check className="w-6 h-6 text-white drop-shadow-lg" style={{ 
+                      filter: 'drop-shadow(0 0 3px rgba(0,0,0,0.8))' 
+                    }} />
+                  )}
+                </div>
+
+                {/* Color Name */}
+                <h4 className="font-medium text-gray-900 mb-1 text-sm">
+                  {color.name}
+                </h4>
+
+                {/* Selection Indicator */}
                 {selectedColor === color.id && (
-                  <Check className="w-6 h-6 text-white drop-shadow-lg" />
+                  <Badge variant="default" className="text-xs">
+                    Selected
+                  </Badge>
                 )}
-              </div>
-
-              {/* Color Name */}
-              <h4 className="font-medium text-gray-900 mb-1">
-                {color.name}
-              </h4>
-
-              {/* Selection Indicator */}
-              {selectedColor === color.id && (
-                <Badge variant="default" className="text-xs">
-                  Selected
-                </Badge>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       {/* Fabric + Color Summary */}

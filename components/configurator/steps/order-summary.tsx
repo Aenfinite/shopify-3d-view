@@ -95,7 +95,7 @@ export function OrderSummary() {
                       <p className="text-sm capitalize">{category}</p>
                       <p className="text-xs text-muted-foreground">{option.name}</p>
                     </div>
-                    {option.priceDelta > 0 && <p className="text-sm">+€${option.priceDelta.toFixed(2)}</p>}
+                    {option.priceDelta > 0 && <p className="text-sm">+€{option.priceDelta.toFixed(2)}</p>}
                   </div>
                 ))}
               </div>
@@ -142,7 +142,7 @@ export function OrderSummary() {
           <div className="space-y-1">
             <div className="flex justify-between font-medium">
               <span>Total Price</span>
-              <span>€${currentPrice.toFixed(2)}</span>
+              <span>€{currentPrice.toFixed(2)}</span>
             </div>
             <p className="text-xs text-muted-foreground">Estimated delivery: 2-3 weeks</p>
           </div>

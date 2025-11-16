@@ -18,6 +18,7 @@ interface ModelViewerProps {
   gltfModelPath?: string  // Path to GLTF model
   useStandardJacket?: boolean  // Flag for standard jacket model (for testing)
   useModularJacket?: boolean  // Flag for modular jacket system (NEW)
+  cameraRotationY?: number  // Camera Y-axis rotation for viewing different parts (e.g., back view for vents)
 }
 
 // Enhanced 3D Model Component with ALL customization support
@@ -1244,14 +1245,41 @@ function CustomizableModel({
   return <group ref={meshRef} />
 }
 
-// Camera controller
-function CameraController() {
+// Camera controller with smooth rotation animation
+function CameraController({ rotationY = 0 }: { rotationY?: number }) {
   const { camera } = useThree()
+  const targetRotation = useRef(0)
+  const currentRotation = useRef(0)
 
   useEffect(() => {
     camera.position.set(0, 2, 5)
     camera.lookAt(0, 0, 0)
   }, [camera])
+
+  // Update target rotation when prop changes
+  useEffect(() => {
+    targetRotation.current = rotationY
+    console.log(`📷 Target rotation set to: ${(rotationY * 180 / Math.PI).toFixed(0)}°`)
+  }, [rotationY])
+
+  // Smoothly animate camera to target rotation
+  useFrame(() => {
+    const diff = targetRotation.current - currentRotation.current
+    
+    if (Math.abs(diff) > 0.01) {
+      // Smooth interpolation
+      currentRotation.current += diff * 0.15
+      
+      // Calculate camera position on a circular path
+      const radius = 5
+      const y = 2
+      const x = radius * Math.sin(currentRotation.current)
+      const z = radius * Math.cos(currentRotation.current)
+      
+      camera.position.set(x, y, z)
+      camera.lookAt(0, 0, 0)
+    }
+  })
 
   return null
 }
@@ -1265,6 +1293,7 @@ export function ModelViewer({
   gltfModelPath,
   useStandardJacket = false,
   useModularJacket = true, // Default to modular jacket for jackets
+  cameraRotationY = 0, // Camera Y-axis rotation
 }: ModelViewerProps) {
   const [error, setError] = useState<string | null>(null)
 
@@ -1321,6 +1350,7 @@ export function ModelViewer({
         customizations={basicCustomizations}
         frontStyle={frontStyle}
         className={className}
+        cameraRotationY={cameraRotationY}
       />
     )
   }
@@ -1388,7 +1418,7 @@ export function ModelViewer({
         camera={{ position: [0, 2, 5], fov: 50 }}
         style={{ background: "linear-gradient(to bottom, #f8fafc, #e2e8f0)" }}
       >
-        <CameraController />
+        <CameraController rotationY={cameraRotationY} />
 
         {/* Lighting */}
         <ambientLight intensity={0.6} />

@@ -155,7 +155,7 @@ function OrderRow({ order }: { order: Order }) {
       <TableCell>{order.customerName}</TableCell>
       <TableCell>{order.date.toLocaleDateString()}</TableCell>
       <TableCell>{order.items}</TableCell>
-      <TableCell>€${order.total.toFixed(2)}</TableCell>
+      <TableCell>€{order.total.toFixed(2)}</TableCell>
       <TableCell>
         <Badge variant={variant as any}>{order.status.charAt(0).toUpperCase() + order.status.slice(1)}</Badge>
       </TableCell>

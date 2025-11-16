@@ -1,7 +1,7 @@
 "use client"
 
-import { Suspense, useEffect, useState, useMemo } from "react"
-import { Canvas } from "@react-three/fiber"
+import { Suspense, useEffect, useState, useMemo, useRef } from "react"
+import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { OrbitControls, Environment, Html } from "@react-three/drei"
 import * as THREE from "three"
 import { useJacketPart, preloadAllParts } from "@/lib/3d/jacket-part-loader"
@@ -13,6 +13,7 @@ interface ModularJacketViewerProps {
   customizations?: BasicJacketCustomization
   frontStyle?: "2button" | "3button" | "6d2"
   className?: string
+  cameraRotationY?: number
 }
 
 // Loading indicator component with progress
@@ -297,11 +298,47 @@ function JacketLoadingFallback() {
   )
 }
 
+// Camera controller with smooth rotation animation
+function CameraController({ rotationY = 0 }: { rotationY?: number }) {
+  const { camera } = useThree()
+  const targetRotation = useRef(0)
+  const currentRotation = useRef(0)
+
+  useEffect(() => {
+    camera.position.set(0, 0, 5)
+    camera.lookAt(0, 0, 0)
+  }, [camera])
+
+  useEffect(() => {
+    targetRotation.current = rotationY
+    console.log(`📷 Camera target rotation: ${(rotationY * 180 / Math.PI).toFixed(0)}°`)
+  }, [rotationY])
+
+  useFrame(() => {
+    const diff = targetRotation.current - currentRotation.current
+    
+    if (Math.abs(diff) > 0.01) {
+      currentRotation.current += diff * 0.15
+      
+      const radius = 5
+      const y = 0
+      const x = radius * Math.sin(currentRotation.current)
+      const z = radius * Math.cos(currentRotation.current)
+      
+      camera.position.set(x, y, z)
+      camera.lookAt(0, 0, 0)
+    }
+  })
+
+  return null
+}
+
 // Main Modular Jacket Viewer Component with performance optimizations
 export default function ModularJacketViewer({ 
   customizations = {}, 
   frontStyle = "2button",
-  className = "" 
+  className = "",
+  cameraRotationY = 0
 }: ModularJacketViewerProps) {
   console.log("🎬 Initializing Optimized Modular Jacket Viewer:", {
     initialStyle: frontStyle,
@@ -513,6 +550,7 @@ export default function ModularJacketViewer({
           console.log("🎬 Scene initialized with", scene.children.length, "children")
         }}
       >
+        <CameraController rotationY={cameraRotationY} />
         <Suspense fallback={<JacketLoadingFallback />}>
           {isChangingStyle ? (
             <LoadingOverlay />

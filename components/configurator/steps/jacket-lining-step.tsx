@@ -153,7 +153,7 @@ export function JacketLiningStep({
           <Shirt className="w-6 h-6 text-blue-600" />
           <h3 className="text-lg font-semibold text-blue-900">Jacket Interior Options</h3>
           <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-            €${calculatePrice() >= 0 ? `+${calculatePrice()}` : `${calculatePrice()}`}
+            €{calculatePrice() >= 0 ? `+${calculatePrice()}` : `${calculatePrice()}`}
           </Badge>
         </div>
         <p className="text-sm text-blue-700">
