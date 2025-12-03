@@ -71,8 +71,8 @@ export const pocketConfigs: Record<string, { frontPocket: string; chestPocket?: 
 
 // Chest pocket configurations
 export const chestPocketConfigs: Record<string, string> = {
+  'no-pocket': "",  // No pocket - empty string means no model loaded
   'piping-pocket': "/models/jackets/Pocket/ChestPocket.gltf",  // Piping pocket
-  'patch-pocket-chest': "/models/jackets/Pocket/ChestPatch2.gltf"  // Patch pocket for chest
 };
 
 // Sleeve button configurations

@@ -348,8 +348,8 @@ export const SAMPLE_PRODUCTS_WITH_CUSTOMIZATION = {
       type: "component" as const,
       category: "style",
       values: [
+        { id: "no-pocket", name: "No Pocket", value: "no-pocket", price: 0, thumbnail: "/images/jacket-configuration/chest-pocket/nopocket.png" },
         { id: "piping-pocket", name: "Welt Chest Pocket", value: "piping-pocket", price: 0, thumbnail: "/images/jacket-configuration/chest-pocket/pipingpocket.png" },
-        { id: "patch-pocket-chest", name: "Patch Pocket", value: "patch-pocket-chest", price: 8, thumbnail: "/images/jacket-configuration/chest-pocket/patchpocket.png" },
       ],
     },
     {
