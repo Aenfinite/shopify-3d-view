@@ -15,28 +15,28 @@
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"ChestPocket",
+			"name":"Tessuto",
 			"rotation":[
-				0.7046940922737122,
-				-0.05836363509297371,
-				0.058363646268844604,
-				0.7046940326690674
+				0.02292458526790142,
+				-0.1630253940820694,
+				-0.003789016278460622,
+				0.9863482117652893
 			],
 			"scale":[
-				0.6921109557151794,
-				1,
-				5.438460826873779
+				4.908240795135498,
+				4.908240795135498,
+				4.90824031829834
 			]
 		}
 	],
 	"materials":[
 		{
-			"name":"default.002"
+			"name":"default"
 		}
 	],
 	"meshes":[
 		{
-			"name":"ChestPocket",
+			"name":"Tessuto",
 			"primitives":[
 				{
 					"attributes":{
@@ -54,67 +54,67 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":517,
+			"count":3692,
 			"max":[
-				1.3730376958847046,
-				0.6099764108657837,
-				-0.1439456045627594
+				0.2178443819284439,
+				-0.07013405859470367,
+				0.18822969496250153
 			],
 			"min":[
-				0.7457560300827026,
-				0.19468605518341064,
-				-0.2617942988872528
+				-0.18126904964447021,
+				-0.2775003910064697,
+				-0.024282122030854225
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":517,
+			"count":3692,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":517,
+			"count":3692,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5123,
-			"count":2832,
+			"count":20112,
 			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":6204,
+			"byteLength":44304,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":6204,
-			"byteOffset":6204,
+			"byteLength":44304,
+			"byteOffset":44304,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":4136,
-			"byteOffset":12408,
+			"byteLength":29536,
+			"byteOffset":88608,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":5664,
-			"byteOffset":16544,
+			"byteLength":40224,
+			"byteOffset":118144,
 			"target":34963
 		}
 	],
 	"buffers":[
 		{
-			"byteLength":22208,
+			"byteLength":158368,
 			"uri":"ChestPatch1.bin"
 		}
 	]

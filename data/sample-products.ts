@@ -933,6 +933,51 @@ export const SAMPLE_CUSTOMIZATION_OPTIONS = {
       ],
     },
     {
+      id: "jacket-lining-selection",
+      name: "Jacket Lining",
+      type: "custom" as const,
+      category: "interior",
+      customComponent: "lining-selection",
+      values: [
+        {
+          id: "standard",
+          name: "Standard Lining",
+          value: "standard",
+          thumbnail: "/placeholder.svg?height=50&width=50",
+          price: 0,
+          description: "Premium matching lining",
+          layerControls: {
+            show: ["lining_standard"],
+            hide: ["lining_custom", "lining_none"],
+          },
+        },
+        {
+          id: "custom",
+          name: "Custom Lining",
+          value: "custom",
+          thumbnail: "/images/lining/116_normal.jpg",
+          price: 0,
+          description: "Choose custom coloured, unlined, or quilted",
+          layerControls: {
+            show: ["lining_custom"],
+            hide: ["lining_standard", "lining_none"],
+          },
+        },
+        {
+          id: "none",
+          name: "No Lining",
+          value: "none",
+          thumbnail: "/placeholder.svg?height=50&width=50",
+          price: -15,
+          description: "Unlined body, sleeve lining only",
+          layerControls: {
+            show: ["lining_none"],
+            hide: ["lining_standard", "lining_custom"],
+          },
+        },
+      ],
+    },
+    {
       id: "jacket-sleeve-buttons",
       name: "Sleeve Buttons",
       type: "component" as const,

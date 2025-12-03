@@ -1314,6 +1314,7 @@ export function ModelViewer({
       buttonColor: customizations.buttonColor || "#333333",
       threadColor: customizations.threadColor || "#000000",
       liningColor: customizations.liningColor,
+      liningMeshType: customizations.liningMeshType, // ADD THIS - "unlined", "custom-coloured", or "quilted"
       frontStyle: customizations.frontStyle as "2button" | "3button" | "6d2" | undefined,
       frontPocket: customizations.frontPocket || customizations.front_pocket || customizations["front-pocket"],
       chestPocket: customizations.chestPocket || customizations.chest_pocket || customizations["chest-pocket"],
@@ -1327,6 +1328,8 @@ export function ModelViewer({
     console.log("🎨 ModelViewer passing to ModularJacketViewerR3F:", {
       frontStyle,
       frontStyleFromCustomizations: customizations.frontStyle,
+      liningColor: basicCustomizations.liningColor,
+      liningMeshType: basicCustomizations.liningMeshType,
       frontPocket: basicCustomizations.frontPocket,
       chestPocket: basicCustomizations.chestPocket,
       sleeveButtons: basicCustomizations.sleeveButtons,

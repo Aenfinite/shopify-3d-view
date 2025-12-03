@@ -21,7 +21,8 @@ export const ColorCategories = {
   LOWER_LAPEL: 'lower_lapel',
   MAIN_FABRIC: 'main_fabric',
   BUTTONS: 'buttons',
-  THREAD: 'thread'
+  THREAD: 'thread',
+  LINING: 'lining'
 } as const
 
 // Map mesh IDs to color categories - centralized color management
@@ -61,6 +62,10 @@ export const meshColorMap: Record<string, typeof ColorCategories[keyof typeof Co
   'front_pocket': ColorCategories.MAIN_FABRIC,
   'chest_pocket': ColorCategories.MAIN_FABRIC,
   'chestpocket': ColorCategories.MAIN_FABRIC,
+  'chestpatch1': ColorCategories.MAIN_FABRIC,
+  'chestpatch2': ColorCategories.MAIN_FABRIC,
+  'chestpatch': ColorCategories.MAIN_FABRIC,
+  'tessuto': ColorCategories.MAIN_FABRIC,  // ChestPatch1 mesh name
   
   // Button meshes - specific names from S4.gltf files
   'button': ColorCategories.BUTTONS,
@@ -83,6 +88,15 @@ export const meshColorMap: Record<string, typeof ColorCategories[keyof typeof Co
   'button002': ColorCategories.BUTTONS,
   'button003': ColorCategories.BUTTONS,
   'button004': ColorCategories.BUTTONS,
+  's4.002': ColorCategories.BUTTONS,  // 3-button jacket buttons
+  's4002': ColorCategories.BUTTONS,  // 3-button without dot
+  's14_circle.008': ColorCategories.BUTTONS,  // 6D2 double-breasted main
+  's14_circle.009': ColorCategories.BUTTONS,  // 6D2 double-breasted mesh
+  's14_circle008': ColorCategories.BUTTONS,  // 6D2 without dot
+  's14_circle009': ColorCategories.BUTTONS,  // 6D2 without dot
+  's14_circle': ColorCategories.BUTTONS,  // 6D2 pattern
+  's14circle': ColorCategories.BUTTONS,  // 6D2 without underscore
+  's14': ColorCategories.BUTTONS,  // 6D2 button variations
   
   // Thread meshes - MUST be listed AFTER buttons to prevent button_thread confusion
   'thread': ColorCategories.THREAD,
@@ -93,20 +107,56 @@ export const meshColorMap: Record<string, typeof ColorCategories[keyof typeof Co
   '2_Thread': ColorCategories.THREAD,
   '3_Thread': ColorCategories.THREAD,
   '4_Thread': ColorCategories.THREAD,
+  
+  // Lining meshes
+  'lining': ColorCategories.LINING,
+  'lining_standard': ColorCategories.LINING,
+  'lining_custom': ColorCategories.LINING,
+  'interior_lining': ColorCategories.LINING,
+  'jacket_lining': ColorCategories.LINING,
+  'inner_lining': ColorCategories.LINING,
+  'liningcurved': ColorCategories.LINING,  // Half lined curved mesh (lowercase)
+  'LiningCurved': ColorCategories.LINING,  // Half lined curved mesh (exact match from GLTF)
+  'liningcurved.001': ColorCategories.LINING,  // Full lined curved mesh (lowercase)
+  'LiningCurved.001': ColorCategories.LINING,  // Full lined curved mesh (exact match from GLTF)
+  'fully_lined': ColorCategories.LINING,
+  'fullylining': ColorCategories.LINING,
   '1_Thread003': ColorCategories.THREAD,
   'Thread': ColorCategories.THREAD,
   'buttonthread': ColorCategories.THREAD,
-  'sleevethread': ColorCategories.THREAD
+  'sleevethread': ColorCategories.THREAD,
+  'button_hole': ColorCategories.THREAD,
+  'button_stitching': ColorCategories.THREAD,
+  'buttonhole': ColorCategories.THREAD,
+  'buttonstitching': ColorCategories.THREAD,
+  'stitching': ColorCategories.THREAD,
+  'hole': ColorCategories.THREAD
 }
 
 // Helper functions that use the central categorization
 export function getMeshCategory(meshId: string): typeof ColorCategories[keyof typeof ColorCategories] | null {
   const normalizedId = meshId.toLowerCase().trim()
   
-  // PRIORITY: Check if it's a thread mesh FIRST to avoid confusion with button meshes
-  if (normalizedId.includes('thread')) {
+  // PRIORITY: Check if it's a lining mesh FIRST (LiningCurved, fully_lined, etc.)
+  if (normalizedId.includes('lining') || meshId === 'LiningCurved') {
+    console.log(`✅ Identified as LINING by pattern: ${meshId} -> ${ColorCategories.LINING}`)
+    return ColorCategories.LINING
+  }
+  
+  // PRIORITY: Check if it's a thread mesh to avoid confusion with button meshes
+  if (normalizedId.includes('thread') || normalizedId.includes('stitching') || normalizedId.includes('hole')) {
     console.log(`✅ Identified as THREAD by pattern: ${meshId} -> ${ColorCategories.THREAD}`)
     return ColorCategories.THREAD
+  }
+  
+  // Check for button patterns (S4, S14, circle) BEFORE exact match
+  if (normalizedId.startsWith('s4') || normalizedId.includes('s4.') || normalizedId.includes('s4002')) {
+    console.log(`✅ Identified as BUTTON by S4 pattern: ${meshId} -> ${ColorCategories.BUTTONS}`)
+    return ColorCategories.BUTTONS
+  }
+  if (normalizedId.startsWith('s14') || normalizedId.includes('s14_circle') || normalizedId.includes('s14circle')) {
+    console.log(`✅ Identified as BUTTON by S14 pattern: ${meshId} -> ${ColorCategories.BUTTONS}`)
+    return ColorCategories.BUTTONS
   }
   
   // First try exact match
@@ -177,6 +227,7 @@ export interface JacketConfig {
     centerVent: string; // Re-enabled vent
     frontPocket?: string; // Optional front pocket (PK-9 for flap, PK-1 for patch)
     chestPocket?: string; // Optional chest pocket
+    fullyLined: string; // Fully lined interior layer
   };
 }
 

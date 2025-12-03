@@ -8,6 +8,7 @@ export interface BasicJacketCustomization {
   threadColor?: string
   lapelColor?: string
   liningColor?: string
+  liningMeshType?: string // "unlined", "custom-coloured" (half), or "quilted" (full)
   frontPocket?: string // e.g., "flap-pocket" or "patch-pocket"
   chestPocket?: string // e.g., "piping-pocket" or "patch-pocket-chest"
   sleeveButtons?: string // e.g., "4-buttons-with-holes" or "4-buttons-no-holes"
@@ -102,5 +103,6 @@ export interface JacketConfig {
     sleeveButtonThread: string;
     sleeve4ButtonThread: string;
     centerVent: string;
+    fullyLined: string; // Fully lined interior layer
   };
 }

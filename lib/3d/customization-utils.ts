@@ -44,9 +44,11 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
     if (!category) {
       const nameLower = child.name.toLowerCase()
       
-      // Check for pocket patterns (should be fabric color)
-      if (nameLower.includes('pocket') || nameLower.includes('pk-') || nameLower.includes('pk1') || nameLower.includes('pk7')) {
-        console.log(`🎯 Identified pocket by name pattern: ${child.name}`)
+      // Check for pocket patterns (should ALWAYS match fabric color)
+      if (nameLower.includes('pocket') || nameLower.includes('pk-') || nameLower.includes('pk1') || 
+          nameLower.includes('pk7') || nameLower.includes('pk9') || nameLower.includes('chest') ||
+          nameLower.includes('patch') || nameLower.includes('cube')) {
+        console.log(`🎯 Identified POCKET by name pattern: ${child.name} -> Applying FABRIC color`)
         if (customizations.fabricColor) {
           applyMaterialColor(child, customizations.fabricColor)
           return
@@ -76,19 +78,32 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
       }
       
       // Check for THREAD patterns FIRST (before buttons) to avoid confusion
-      if (nameLower.includes('thread')) {
-        console.log(`🧵 Identified THREAD by name pattern: ${child.name} -> Applying threadColor`)
-        if (customizations.threadColor) {
-          applyMaterialColor(child, customizations.threadColor)
+      if (nameLower.includes('thread') || nameLower.includes('stitching') || nameLower.includes('hole')) {
+        console.log(`🧵 Identified THREAD by name pattern: ${child.name} -> Applying FABRIC color`)
+        if (customizations.fabricColor) {
+          applyMaterialColor(child, customizations.fabricColor)
           return
         }
       }
       
       // Check for button patterns AFTER thread check - EXCLUDE thread from button matching
-      if (!nameLower.includes('thread') && (nameLower.includes('button') || nameLower.includes('standard') || nameLower.includes('s4'))) {
-        console.log(`🔘 Identified BUTTON by name pattern: ${child.name} -> Applying buttonColor`)
-        if (customizations.buttonColor) {
-          applyMaterialColor(child, customizations.buttonColor)
+      if (!nameLower.includes('thread') && !nameLower.includes('stitching') && !nameLower.includes('hole')) {
+        if (nameLower.includes('button') || nameLower.includes('standard') || 
+            nameLower.includes('s4') || nameLower.includes('s14') || nameLower.includes('circle')) {
+          console.log(`🔘 Identified BUTTON by name pattern: ${child.name} -> Applying buttonColor`)
+          if (customizations.buttonColor) {
+            applyMaterialColor(child, customizations.buttonColor)
+            return
+          }
+        }
+      }
+      
+      // Check for LINING patterns - catch LiningCurved and other lining meshes
+      if (nameLower.includes('lining') || nameLower.includes('curved') || 
+          nameLower.includes('fully') || nameLower.includes('interior')) {
+        console.log(`🎨 Identified LINING by name pattern: ${child.name} -> Applying liningColor`)
+        if (customizations.liningColor) {
+          applyMaterialColor(child, customizations.liningColor)
           return
         }
       }
@@ -155,12 +170,106 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
 
         case ColorCategories.THREAD:
           console.log(`🧵 Applying THREAD color to: ${child.name}`)
-          // If threadColor is not set or is "standard", use fabricColor instead
-          if (customizations.threadColor && customizations.threadColor !== "standard") {
-            applyMaterialColor(child, customizations.threadColor)
-          } else if (customizations.fabricColor) {
-            // Use fabric color for standard/matching thread
+          // Thread ALWAYS matches fabric color - IGNORE customizations.threadColor
+          if (customizations.fabricColor) {
             applyMaterialColor(child, customizations.fabricColor)
+            console.log(`✅ Thread color FORCED to match fabric: ${customizations.fabricColor}`)
+          }
+          break
+
+        case ColorCategories.LINING:
+          console.log(`🎨 LINING MESH DETECTED: ${child.name}`, {
+            exactMeshName: child.name,
+            liningColor: customizations.liningColor,
+            liningMeshType: customizations.liningMeshType,
+            customType: customizations.customType,
+            isTexture: customizations.liningColor?.startsWith('/') || /\.(jpg|jpeg|png|webp)$/i.test(customizations.liningColor || ''),
+            allCustomizations: customizations
+          })
+          
+          console.log(`🔍 DEBUG - All customization keys with 'lining':`, 
+            Object.keys(customizations).filter(k => k.toLowerCase().includes('lining'))
+          )
+          console.log(`🔍 DEBUG - All customization values:`, 
+            Object.keys(customizations).filter(k => k.toLowerCase().includes('lining')).reduce((acc, k) => {
+              acc[k] = customizations[k as keyof typeof customizations]
+              return acc
+            }, {} as any)
+          )
+          
+          // Apply lining based on mesh type selection
+          const meshName = child.name.toLowerCase()
+          const isUnlined = customizations.liningMeshType === "unlined"
+          const isHalfLined = customizations.liningMeshType === "custom-coloured" // Half Lined
+          const isFullLined = customizations.liningMeshType === "quilted" // Full Lined
+          
+          console.log(`🔍 Lining type check:`, {
+            meshName: child.name,
+            liningMeshType: customizations.liningMeshType,
+            isUnlined,
+            isHalfLined,
+            isFullLined,
+            hasLiningColor: !!customizations.liningColor
+          })
+          
+          // If explicitly unlined, skip texture application
+          if (isUnlined) {
+            console.log(`⏭️ Skipping ${child.name} - unlined selected, no texture applied`)
+            break
+          }
+          
+          // If no liningMeshType set but has liningColor, treat as full lined (backward compatibility)
+          if (!customizations.liningMeshType && customizations.liningColor) {
+            console.log(`⚠️ No liningMeshType but has liningColor - applying as full lined`)
+            applyMaterialColor(child, customizations.liningColor)
+            console.log(`✅ Applied lining texture to: ${child.name} (default full)`)
+            break
+          }
+          
+          // LiningCurved (without .001) - Apply for both half and full
+          // LiningCurved.001 - Only apply for full lined
+          // LiningStraight1-4 - For 6d2 jacket, apply based on type
+          if (customizations.liningColor) {
+            if (meshName.includes("liningstraight")) {
+              // This is the straight lining mesh used in 6d2 jacket
+              console.log(`🎯 Found LiningStraight1-4 (6d2 lining mesh)`)
+              if (isHalfLined || isFullLined) {
+                console.log(`📸 Applying texture to LiningStraight1-4:`, customizations.liningColor)
+                applyMaterialColor(child, customizations.liningColor)
+                console.log(`✅ Applied lining texture to: ${child.name} (${isHalfLined ? 'half' : 'full'} lined)`)
+              } else {
+                console.log(`⏭️ Skipping ${child.name} - half or full lined required (current: ${customizations.liningMeshType})`)
+              }
+            } else if (meshName.includes("liningcurved.001") || child.name === "LiningCurved.001") {
+              // This is the full lining mesh - only apply if full lined selected
+              console.log(`🎯 Found LiningCurved.001 (full lining mesh)`)
+              if (isFullLined) {
+                console.log(`📸 Applying texture to LiningCurved.001:`, customizations.liningColor)
+                applyMaterialColor(child, customizations.liningColor)
+                console.log(`✅ Applied FULL lining texture to: ${child.name}`)
+              } else {
+                console.log(`⏭️ Skipping ${child.name} - only for full lined (current: ${customizations.liningMeshType})`)
+              }
+            } else if (meshName.includes("liningcurved") || child.name === "LiningCurved") {
+              // This is the half lining mesh - apply for both half and full
+              console.log(`🎯 Found LiningCurved (half lining mesh)`)
+              if (isHalfLined || isFullLined) {
+                console.log(`📸 Applying texture to LiningCurved:`, customizations.liningColor)
+                applyMaterialColor(child, customizations.liningColor)
+                console.log(`✅ Applied lining texture to: ${child.name} (${isHalfLined ? 'half' : 'full'} lined)`)
+              } else {
+                console.log(`⏭️ Skipping ${child.name} - half or full lined required (current: ${customizations.liningMeshType})`)
+              }
+            } else {
+              // Other lining meshes - apply normally if half or full lined
+              console.log(`🎯 Found other lining mesh: ${child.name}`)
+              if (isHalfLined || isFullLined) {
+                applyMaterialColor(child, customizations.liningColor)
+                console.log(`✅ Applied lining color/texture to: ${child.name}`)
+              }
+            }
+          } else {
+            console.log(`⚠️ No liningColor provided - keeping default material for: ${child.name}`)
           }
           break
       }
@@ -200,16 +309,16 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string) {
               // Configure texture for realistic fabric appearance
               texture.wrapS = THREE.RepeatWrapping
               texture.wrapT = THREE.RepeatWrapping
-              texture.repeat.set(2, 2) // Adjust scale for realistic fabric look
+              texture.repeat.set(8, 8) // Increased repeat for smaller, more detailed pattern
               
               material.map = texture
-              material.color.setHex(0xffffff) // Set to white to show texture properly
+              material.color.setHex(0xaaaaaa) // Darker gray to better match actual fabric colors
               
               // Apply realistic fabric properties
-              material.roughness = 0.65  // Slightly higher roughness for textured fabric
-              material.metalness = 0.02  // Very subtle metalness
+              material.roughness = 0.75  // Higher roughness for more matte fabric appearance
+              material.metalness = 0.0  // No metalness for pure fabric look
               material.flatShading = false
-              material.envMapIntensity = 0.5
+              material.envMapIntensity = 0.2  // Further reduced environment reflection
               
               material.needsUpdate = true
               console.log(`✅ Applied fabric texture to ${mesh.name}`)

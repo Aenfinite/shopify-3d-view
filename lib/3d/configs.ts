@@ -15,7 +15,8 @@ export const jacketConfigs: Record<FrontStyle, JacketConfig> = {
       sleeveLastButton: "/models/jackets/Sleeve/Working/LastButton/S4.gltf",
       sleeveButtonThread: "/models/jackets/Sleeve/Working/Thread/LastThread.gltf",
       sleeve4ButtonThread: "/models/jackets/Sleeve/Working/Thread/4Button.gltf",
-      centerVent: "/models/jackets/Vent/NoVent.gltf"
+      centerVent: "/models/jackets/Vent/NoVent.gltf",
+      fullyLined: "/models/jackets/lining/FullyLined/Curved1.gltf"
     }
   },
   '3button': {
@@ -32,7 +33,8 @@ export const jacketConfigs: Record<FrontStyle, JacketConfig> = {
       sleeveLastButton: "/models/jackets/Sleeve/Working/LastButton/S4.gltf",
       sleeveButtonThread: "/models/jackets/Sleeve/Working/Thread/LastThread.gltf",
       sleeve4ButtonThread: "/models/jackets/Sleeve/Working/Thread/4Button.gltf",
-      centerVent: "/models/jackets/Vent/NoVent.gltf"
+      centerVent: "/models/jackets/Vent/NoVent.gltf",
+      fullyLined: "/models/jackets/lining/FullyLined/Curved1.gltf"
     }
   },
   '6d2': {
@@ -48,8 +50,9 @@ export const jacketConfigs: Record<FrontStyle, JacketConfig> = {
       sleeveWorkingButtons: "/models/jackets/Sleeve/Working/4Button/S4.gltf",
       sleeveLastButton: "/models/jackets/Sleeve/Working/LastButton/S4.gltf",
       sleeveButtonThread: "/models/jackets/Sleeve/Working/Thread/LastThread.gltf",
-      sleeve4ButtonThread: "/models/jackets/Sleeve/Working/Thrad/4Button.gltf",
-      centerVent: "/models/jackets/Vent/NoVent.gltf"
+      sleeve4ButtonThread: "/models/jackets/Sleeve/Working/Thread/4Button.gltf",
+      centerVent: "/models/jackets/Vent/NoVent.gltf",
+      fullyLined: "/models/jackets/lining/FullyLined/Straight.gltf"
     }
   }
 };
@@ -58,11 +61,11 @@ export const jacketConfigs: Record<FrontStyle, JacketConfig> = {
 export const pocketConfigs: Record<string, { frontPocket: string; chestPocket?: string }> = {
   'flap-pocket': {
     frontPocket: "/models/jackets/Pocket/PK-1.gltf", // Flap pocket uses PK-9
-    chestPocket: "/models/jackets/Pocket/ChestPocket.gltf"
+    chestPocket: ""
   },
   'patch-pocket': {
-    frontPocket: "/models/jackets/Pocket/PK-9.gltf", // Patch pocket uses PK-1
-    chestPocket: "/models/jackets/Pocket/ChestPocket.gltf"
+    frontPocket: "/models/jackets/Pocket/FrontPocket.gltf", // Patch pocket uses PK-1
+    chestPocket: "/models/jackets/Pocket/ChestPocket.gltf" 
   }
 };
 

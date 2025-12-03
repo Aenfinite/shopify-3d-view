@@ -56,7 +56,8 @@ export default function FabricColorController({
 
   const handleButtonChange = (button: typeof buttonColors[0]) => {
     setSelectedButton(button)
-    updateCustomizations(selectedFabric.color, button.color, selectedThread.color)
+    // Thread always matches fabric, not button
+    updateCustomizations(selectedFabric.color, button.color, selectedFabric.color)
   }
 
   const handleThreadChange = (thread: typeof threadColors[0]) => {
@@ -69,7 +70,7 @@ export default function FabricColorController({
     const customizations: BasicJacketCustomization = {
       fabricColor,
       buttonColor,
-      threadColor,
+      threadColor: fabricColor, // Thread ALWAYS matches fabric color
       fabricType: "wool", // Default fabric type
     }
     console.log('🎨 Sending customizations:', customizations)

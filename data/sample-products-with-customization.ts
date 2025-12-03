@@ -268,14 +268,57 @@ export const SAMPLE_PRODUCTS_WITH_CUSTOMIZATION = {
         { id: "camel", name: "Camel", value: "#C19A6B", price: 5, color: "#C19A6B" },
         { id: "light-blue", name: "Light Blue", value: "#ADD8E6", price: 5, color: "#ADD8E6" },
         { id: "white", name: "White", value: "#FFFFFF", price: 0, color: "#FFFFFF" },
-        // Fabric texture options
-        { id: "texture-1", name: "Fabric Texture 1", value: "/images/fabric/IMG-20250831-WA0001.jpg", price: 15, color: "/images/fabric/IMG-20250831-WA0001.jpg", thumbnail: "/images/fabric/IMG-20250831-WA0001.jpg" },
-        { id: "texture-2", name: "Fabric Texture 2", value: "/images/fabric/IMG-20250831-WA0002.jpg", price: 15, color: "/images/fabric/IMG-20250831-WA0002.jpg", thumbnail: "/images/fabric/IMG-20250831-WA0002.jpg" },
-        { id: "texture-3", name: "Fabric Texture 3", value: "/images/fabric/IMG-20250831-WA0003.jpg", price: 15, color: "/images/fabric/IMG-20250831-WA0003.jpg", thumbnail: "/images/fabric/IMG-20250831-WA0003.jpg" },
-        { id: "texture-4", name: "Fabric Texture 4", value: "/images/fabric/IMG-20250831-WA0004.jpg", price: 15, color: "/images/fabric/IMG-20250831-WA0004.jpg", thumbnail: "/images/fabric/IMG-20250831-WA0004.jpg" },
-        { id: "texture-5", name: "Fabric Texture 5", value: "/images/fabric/IMG-20250831-WA0005.jpg", price: 15, color: "/images/fabric/IMG-20250831-WA0005.jpg", thumbnail: "/images/fabric/IMG-20250831-WA0005.jpg" },
-        { id: "texture-6", name: "Fabric Texture 6", value: "/images/fabric/IMG-20250831-WA0006.jpg", price: 15, color: "/images/fabric/IMG-20250831-WA0006.jpg", thumbnail: "/images/fabric/IMG-20250831-WA0006.jpg" },
-        { id: "texture-7", name: "Fabric Texture 7", value: "/images/fabric/IMG-20250831-WA0007.jpg", price: 15, color: "/images/fabric/IMG-20250831-WA0007.jpg", thumbnail: "/images/fabric/IMG-20250831-WA0007.jpg" },
+        // Fabric texture options from public/fabrics/FabricsJacket folder
+        { id: "texture-1", name: "Jet Black", value: "/fabrics/FabricsJacket/02.3716.01.jpg", price: 15, color: "/fabrics/FabricsJacket/02.3716.01.jpg", thumbnail: "/fabrics/FabricsJacket/02.3716.01.jpg" },
+        { id: "texture-2", name: "Midnight Plum", value: "/fabrics/FabricsJacket/02.3716.05.jpg", price: 15, color: "/fabrics/FabricsJacket/02.3716.05.jpg", thumbnail: "/fabrics/FabricsJacket/02.3716.05.jpg" },
+        { id: "texture-3", name: "Urban Grey", value: "/fabrics/FabricsJacket/02.3716.07.jpg", price: 15, color: "/fabrics/FabricsJacket/02.3716.07.jpg", thumbnail: "/fabrics/FabricsJacket/02.3716.07.jpg" },
+        { id: "texture-4", name: "Indigo Night", value: "/fabrics/FabricsJacket/02.3716.13.jpg", price: 15, color: "/fabrics/FabricsJacket/02.3716.13.jpg", thumbnail: "/fabrics/FabricsJacket/02.3716.13.jpg" },
+        { id: "texture-5", name: "Royal Navy", value: "/fabrics/FabricsJacket/02.3716.15.jpg", price: 15, color: "/fabrics/FabricsJacket/02.3716.15.jpg", thumbnail: "/fabrics/FabricsJacket/02.3716.15.jpg" },
+        { id: "texture-6", name: "Warm Almond", value: "/fabrics/FabricsJacket/02.3716.17.jpg", price: 15, color: "/fabrics/FabricsJacket/02.3716.17.jpg", thumbnail: "/fabrics/FabricsJacket/02.3716.17.jpg" },
+        { id: "texture-7", name: "Mocha Taupe", value: "/fabrics/FabricsJacket/02.3716.19.jpg", price: 15, color: "/fabrics/FabricsJacket/02.3716.19.jpg", thumbnail: "/fabrics/FabricsJacket/02.3716.19.jpg" },
+        { id: "texture-8", name: "Coffee Roast", value: "/fabrics/FabricsJacket/02.3716.20.jpg", price: 15, color: "/fabrics/FabricsJacket/02.3716.20.jpg", thumbnail: "/fabrics/FabricsJacket/02.3716.20.jpg" },
+        { id: "texture-9", name: "Blue Graphite", value: "/fabrics/FabricsJacket/02.3716.26.jpg", price: 15, color: "/fabrics/FabricsJacket/02.3716.26.jpg", thumbnail: "/fabrics/FabricsJacket/02.3716.26.jpg" },
+        { id: "texture-10", name: "Coffee Bean", value: "/fabrics/FabricsJacket/02.3716.28.jpg", price: 15, color: "/fabrics/FabricsJacket/02.3716.28.jpg", thumbnail: "/fabrics/FabricsJacket/02.3716.28.jpg" },
+        { id: "texture-11", name: "Carbon Grey", value: "/fabrics/FabricsJacket/02.3716.31.jpg", price: 15, color: "/fabrics/FabricsJacket/02.3716.31.jpg", thumbnail: "/fabrics/FabricsJacket/02.3716.31.jpg" },
+        { id: "texture-12", name: "Golden Khaki", value: "/fabrics/FabricsJacket/02.3716.32.jpg", price: 15, color: "/fabrics/FabricsJacket/02.3716.32.jpg", thumbnail: "/fabrics/FabricsJacket/02.3716.32.jpg" },
+        { id: "texture-13", name: "Cinnamon Rust", value: "/fabrics/FabricsJacket/02.3716.34.jpg", price: 15, color: "/fabrics/FabricsJacket/02.3716.34.jpg", thumbnail: "/fabrics/FabricsJacket/02.3716.34.jpg" },
+        { id: "texture-14", name: "Graphite Brown", value: "/fabrics/FabricsJacket/02.3716.39.jpg", price: 15, color: "/fabrics/FabricsJacket/02.3716.39.jpg", thumbnail: "/fabrics/FabricsJacket/02.3716.39.jpg" },
+        { id: "texture-15", name: "Dusty Olive", value: "/fabrics/FabricsJacket/02.3716.41.jpg", price: 15, color: "/fabrics/FabricsJacket/02.3716.41.jpg", thumbnail: "/fabrics/FabricsJacket/02.3716.41.jpg" },
+        { id: "texture-16", name: "Shadow Black", value: "/fabrics/FabricsJacket/image1.png", price: 15, color: "/fabrics/FabricsJacket/image1.png", thumbnail: "/fabrics/FabricsJacket/image1.png" },
+        { id: "texture-17", name: "Deep Navy", value: "/fabrics/FabricsJacket/image2.png", price: 15, color: "/fabrics/FabricsJacket/image2.png", thumbnail: "/fabrics/FabricsJacket/image2.png" },
+        { id: "texture-18", name: "Midnight Blue", value: "/fabrics/FabricsJacket/image3.png", price: 15, color: "/fabrics/FabricsJacket/image3.png", thumbnail: "/fabrics/FabricsJacket/image3.png" },
+        { id: "texture-19", name: "Slate Grey", value: "/fabrics/FabricsJacket/image4.png", price: 15, color: "/fabrics/FabricsJacket/image4.png", thumbnail: "/fabrics/FabricsJacket/image4.png" },
+        { id: "texture-20", name: "Ocean Blue", value: "/fabrics/FabricsJacket/image5.png", price: 15, color: "/fabrics/FabricsJacket/image5.png", thumbnail: "/fabrics/FabricsJacket/image5.png" },
+      ],
+    },
+    {
+      id: "jacket-lining-selection",
+      name: "Jacket Lining",
+      type: "custom" as const,
+      category: "interior",
+      customComponent: "lining-selection",
+      values: [
+        { 
+          id: "standard", 
+          name: "Standard Lining", 
+          value: "standard", 
+          price: 0,
+          thumbnail: "/placeholder.svg?height=50&width=50"
+        },
+        { 
+          id: "custom", 
+          name: "Custom Lining", 
+          value: "custom", 
+          price: 0,
+          thumbnail: "/images/lining/116_normal.jpg"
+        },
+        { 
+          id: "none", 
+          name: "No Lining", 
+          value: "none", 
+          price: -15,
+          thumbnail: "/placeholder.svg?height=50&width=50"
+        },
       ],
     },
     {
@@ -305,7 +348,7 @@ export const SAMPLE_PRODUCTS_WITH_CUSTOMIZATION = {
       type: "component" as const,
       category: "style",
       values: [
-        { id: "piping-pocket", name: "Piping Pocket", value: "piping-pocket", price: 0, thumbnail: "/images/jacket-configuration/chest-pocket/pipingpocket.png" },
+        { id: "piping-pocket", name: "Welt Chest Pocket", value: "piping-pocket", price: 0, thumbnail: "/images/jacket-configuration/chest-pocket/pipingpocket.png" },
         { id: "patch-pocket-chest", name: "Patch Pocket", value: "patch-pocket-chest", price: 8, thumbnail: "/images/jacket-configuration/chest-pocket/patchpocket.png" },
       ],
     },
@@ -336,6 +379,7 @@ export const SAMPLE_PRODUCTS_WITH_CUSTOMIZATION = {
       type: "color" as const,
       category: "details",
       values: [
+        { id: "standard", name: "Standard Matching", value: "standard", price: 0, color: "standard" },
         { id: "natural", name: "Natural", value: "#F5E6D3", price: 0, color: "#F5E6D3" },
         { id: "dark-brown", name: "Dark Brown", value: "#4A2C2A", price: 5, color: "#4A2C2A" },
         { id: "black", name: "Black", value: "#1A1A1A", price: 5, color: "#1A1A1A" },

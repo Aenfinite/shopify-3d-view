@@ -25,6 +25,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { getCustomizationOptions } from "@/lib/firebase/unified-product-service"
 import { MeasurementStep } from "./steps/measurement-step"
 import { JacketLiningStep } from "./steps/jacket-lining-step"
+import { LiningSelectionStep } from "./steps/lining-selection-step"
 import { CheckoutModal } from "./checkout-modal"
 import { MonogramConfigurator } from "./monogram-configurator-professional"
 import { EmbroideredMonogramStep } from "./steps/embroidered-monogram-step"
@@ -42,7 +43,7 @@ const THREAD_COLORS = [
   { id: "green", name: "Forest Green", color: "#166534" },
   { id: "brown", name: "Brown", color: "#92400e" },
   { id: "purple", name: "Purple", color: "#7c3aed" },
-  { id: "burgundy", name: "Burgundy", color: "#991b1b" },
+  { id: "burgundy", name: "Burgundy", color:- "#991b1b" },
   { id: "royal", name: "Royal Blue", color: "#2563eb" },
   { id: "charcoal", name: "Charcoal", color: "#374151" },
 ]
@@ -134,6 +135,13 @@ export function UniversalConfigurator({
       sleeve: 0,
     },
   })
+  const [liningSelectionData, setLiningSelectionData] = useState({
+    liningType: "standard" as "standard" | "custom" | "none",
+    customType: undefined as "custom-coloured" | "unlined" | "quilted" | undefined,
+    liningFabric: "",
+    liningColor: "",
+    liningMeshType: undefined as "custom-coloured" | "unlined" | "quilted" | undefined,
+  })
   const [jacketLiningData, setJacketLiningData] = useState({
     liningType: "standard" as "standard" | "custom" | "none",
     standardLiningColor: "",
@@ -203,6 +211,7 @@ export function UniversalConfigurator({
   const currentStepData = customizationOptions[currentStep]
   const isFitPreferenceStep = currentStep === customizationOptions.length
   const isMeasurementStep = currentStep === customizationOptions.length + 1
+  const isLiningSelectionStep = currentStepData?.type === "custom" && currentStepData?.customComponent === "lining-selection"
   const isJacketLiningStep = currentStepData?.type === "custom" && currentStepData?.customComponent === "jacket-lining"
   const isMonogramStep = currentStepData?.id === "jacket-monogram" || currentStepData?.customComponent === "monogram"
   const isEmbroideredMonogramStep = currentStepData?.id === "embroidered-monogram" || currentStepData?.customComponent === "embroidered-monogram"
@@ -218,6 +227,18 @@ export function UniversalConfigurator({
     // Add custom measurement surcharge
     if (measurementData.sizeType === "custom") {
       total += 25 // €25 surcharge for custom measurements
+    }
+    // Add lining selection costs
+    if (liningSelectionData.liningType === "custom" && liningSelectionData.customType) {
+      if (liningSelectionData.customType === "custom-coloured") {
+        total += 25 // Custom coloured lining surcharge
+      } else if (liningSelectionData.customType === "unlined") {
+        total -= 15 // Discount for unlined
+      } else if (liningSelectionData.customType === "quilted") {
+        total += 35 // Quilted lining surcharge
+      }
+    } else if (liningSelectionData.liningType === "none") {
+      total -= 15 // Discount for no lining
     }
     // Add jacket lining costs
     if (jacketLiningData.liningType === "custom") {
@@ -332,6 +353,32 @@ export function UniversalConfigurator({
     setMeasurementData((prev) => ({ ...prev, ...updates }))
   }
 
+  const updateLiningSelectionData = (updates: any) => {
+    console.log("🔧 updateLiningSelectionData called with:", updates)
+    setLiningSelectionData((prev) => {
+      const newData = { ...prev, ...updates }
+      console.log("🔧 New liningSelectionData:", newData)
+      
+      // Update configurator state for 3D model when lining selection changes
+      if (updates.liningType || updates.liningColor || updates.liningMeshType) {
+        setConfiguratorState((prevState) => ({
+          ...prevState,
+          'jacket-lining-selection': {
+            optionId: 'jacket-lining-selection',
+            valueId: newData.liningFabric || newData.liningType,
+            price: newData.liningType === 'custom' ? 25 : newData.liningType === 'none' ? -15 : 0,
+            value: newData.liningType,
+            color: newData.liningColor,
+            liningMeshType: newData.liningMeshType || newData.customType, // ADD MESH TYPE
+          },
+        }))
+        console.log("🔧 Updated configuratorState with liningMeshType:", newData.liningMeshType || newData.customType)
+      }
+      
+      return newData
+    })
+  }
+
   const updateJacketLiningData = (updates: any) => {
     setJacketLiningData((prev) => ({ ...prev, ...updates }))
   }
@@ -343,6 +390,10 @@ export function UniversalConfigurator({
   const isStepCompleted = (stepIndex: number) => {
     if (stepIndex < customizationOptions.length) {
       const option = customizationOptions[stepIndex]
+      if (option?.type === "custom" && option?.customComponent === "lining-selection") {
+        // Lining selection step is always completed (standard is default)
+        return true
+      }
       if (option?.type === "custom" && option?.customComponent === "jacket-lining") {
         // Jacket lining step is completed if a lining type is selected
         return jacketLiningData.liningType !== "none"
@@ -422,6 +473,14 @@ export function UniversalConfigurator({
             customizations.sleeveColor = colorValue
           } else if (optionNameLower.includes("lining")) {
             customizations.liningColor = colorValue
+            console.log("🔍 Lining selection object:", selection)
+            // Also get liningMeshType if available in the selection
+            if (selection.liningMeshType) {
+              customizations.liningMeshType = selection.liningMeshType
+              console.log("✅ Setting liningMeshType from configuratorState:", selection.liningMeshType)
+            } else {
+              console.log("⚠️ No liningMeshType in selection object. Keys:", Object.keys(selection))
+            }
           } else if (optionNameLower.includes("trim")) {
             customizations.trimColor = colorValue
           } else if (optionNameLower.includes("accent")) {
@@ -429,18 +488,18 @@ export function UniversalConfigurator({
           }
         }
 
-        // Handle button colors specifically (don't affect garment color)
+        // Handle button colors specifically (don't affect garment color or thread)
         if (option.name.toLowerCase().includes("button")) {
-          if (selection.color) {
+          if (selection.color && selection.color !== "standard") {
+            // Only change button color, thread stays matching fabric
             customizations.buttonColor = selection.color
-            customizations.threadColor = selection.color // Thread color matches button color
-            console.log("Setting button color and thread color:", selection.color)
-          } else if (value.value === "standard") {
-            // Set to "standard" to trigger fabric color fallback
+            console.log("Setting button color:", selection.color, "| Thread will match fabric")
+          } else {
+            // Standard matching - buttons match fabric
             customizations.buttonColor = "standard"
-            customizations.threadColor = "standard"
-            console.log("Setting button and thread to standard (will use fabric color)")
+            console.log("Setting button to standard matching (will use fabric color)")
           }
+          // NEVER set threadColor here - it should always match fabric
         }
 
         // Handle monogram thread color specifically (don't affect garment color)
@@ -659,6 +718,27 @@ export function UniversalConfigurator({
       customizations.monogramVisible = false
     }
 
+    // CRITICAL: Force thread color to ALWAYS match fabric color
+    // This ensures button thread never changes when button color changes
+    if (customizations.fabricColor) {
+      customizations.threadColor = customizations.fabricColor
+      console.log("🧵 FORCED threadColor to match fabricColor:", customizations.fabricColor)
+    }
+
+    // Add lining color and mesh type from liningSelectionData
+    console.log("🔍 liningSelectionData state:", liningSelectionData)
+    if (liningSelectionData.liningColor || liningSelectionData.liningMeshType) {
+      customizations.liningColor = liningSelectionData.liningColor
+      customizations.liningMeshType = liningSelectionData.liningMeshType || liningSelectionData.customType
+      console.log("🎨 Added lining from liningSelectionData:", {
+        liningColor: liningSelectionData.liningColor,
+        liningMeshType: customizations.liningMeshType,
+        fullLiningSelectionData: liningSelectionData
+      })
+    } else {
+      console.log("⚠️ No lining data to add - liningSelectionData:", liningSelectionData)
+    }
+
     console.log("Generated customizations for 3D model:", customizations)
     console.log("🔍 Front style in customizations:", {
       frontStyle: customizations.frontStyle,
@@ -787,8 +867,8 @@ export function UniversalConfigurator({
   }
 
   const getFabricAvailableColors = (fabricId: string): string[] => {
-    // Only one fabric texture available for testing
-    const textureOptions = ["texture-1"]
+    // All 7 fabric textures from public/fabrics folder
+    const textureOptions = ["texture-1", "texture-2", "texture-3", "texture-4", "texture-5", "texture-6", "texture-7", "texture-8", "texture-9", "texture-10", "texture-11", "texture-12", "texture-13", "texture-14", "texture-15"]
     
     const fabricColors: { [key: string]: string[] } = {
       "wool-blend": ["charcoal", "navy", "black", "brown", "gray", "forest-green", "burgundy", "midnight-blue", "olive", "slate", ...textureOptions],
@@ -924,13 +1004,15 @@ export function UniversalConfigurator({
                   ? "Measurements" 
                   : isFitPreferenceStep
                     ? "Fit Preference"
+                  : isLiningSelectionStep
+                    ? "Jacket Lining"
                   : isJacketLiningStep 
                     ? "Lining & Monogram" 
                     : isMonogramStep || isEmbroideredMonogramStep
                         ? "Embroidered Monogram"
                     : currentStepData?.name || "Customize"}
               </h2>
-              {!isMeasurementStep && !isFitPreferenceStep && !isJacketLiningStep && !isMonogramStep && !isEmbroideredMonogramStep && currentStepData && (
+              {!isMeasurementStep && !isFitPreferenceStep && !isLiningSelectionStep && !isJacketLiningStep && !isMonogramStep && !isEmbroideredMonogramStep && currentStepData && (
                 <Badge variant="secondary" className="text-xs flex-shrink-0 hidden sm:inline-flex">
                   {currentStepData.values.length} option{currentStepData.values.length !== 1 ? 's' : ''}
                 </Badge>
@@ -1165,6 +1247,13 @@ export function UniversalConfigurator({
                     }
                     garmentType={productType as "pants" | "jacket" | "shirt" | "suit" | "blazer"}
                     onUpdate={updateMeasurementData}
+                  />
+                ) : isLiningSelectionStep ? (
+                  <LiningSelectionStep
+                    selectedLiningType={liningSelectionData.liningType}
+                    selectedCustomType={liningSelectionData.customType}
+                    selectedLiningFabric={liningSelectionData.liningFabric}
+                    onUpdate={updateLiningSelectionData}
                   />
                 ) : isJacketLiningStep ? (
                   <JacketLiningStep
@@ -1542,22 +1631,19 @@ export function UniversalConfigurator({
                     }}
                   />
                   <div 
-                    className="absolute pointer-events-none whitespace-nowrap"
+                    className="absolute pointer-events-none"
                     style={{ 
                       color: THREAD_COLORS.find(c => c.id === monogramData.threadColor)?.color || "#1e3a8a",
                       fontFamily: monogramData.monogramFont === 'england' 
-                        ? "'Brush Script MT', 'Lucida Handwriting', cursive" 
+                        ? "'EdwardianScriptITC', 'Brush Script MT', 'Lucida Handwriting', cursive" 
                         : "Arial, sans-serif",
                       fontWeight: monogramData.monogramFont === 'england' ? 'bold' : '600',
                       fontStyle: monogramData.monogramFont === 'england' ? 'italic' : 'normal',
-                      fontSize: monogramData.text.length <= 2 ? '2rem' : monogramData.text.length > 10 ? '0.65rem' : '0.85rem',
-                      right: '10%',
-                      top: '42%',
-                      transform: 'translateY(-50%)',
-                      maxWidth: '150px',
-                      textAlign: 'right',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
+                      fontSize: monogramData.text.length <= 2 ? '1.5rem' : monogramData.text.length > 10 ? '0.75rem' : '1rem',
+                      left: '58%',
+                      top: '32%',
+                      transform: 'rotate(-8deg)',
+                      whiteSpace: 'nowrap'
                     }}
                   >
                     {monogramData.text}

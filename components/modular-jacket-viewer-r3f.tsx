@@ -67,7 +67,9 @@ function JacketPart({
     path,
     priority,
     stableId,
-    customizations
+    customizations,
+    hasLiningColor: !!customizations.liningColor,
+    liningMeshType: customizations.liningMeshType
   })
 
   // Use the enhanced hook with stable ID
@@ -346,7 +348,9 @@ export default function ModularJacketViewer({
     frontStyleValue: frontStyle,
     hasConfig: !!jacketConfigs[frontStyle],
     customizations,
-    customizationsFrontStyle: customizations.frontStyle
+    customizationsFrontStyle: customizations.frontStyle,
+    liningColor: customizations.liningColor,
+    liningMeshType: customizations.liningMeshType
   })
   
   const [isChangingStyle, setIsChangingStyle] = useState(false)
@@ -354,6 +358,21 @@ export default function ModularJacketViewer({
   const [activeConfig, setActiveConfig] = useState(jacketConfigs[frontStyle])
   
   const config = activeConfig // Use activeConfig instead of jacketConfigs[activeStyle]
+
+  console.log("🔍 Active Config Check:", {
+    activeStyle,
+    hasFullyLined: !!config.secondary.fullyLined,
+    fullyLinedPath: config.secondary.fullyLined,
+    allSecondaryParts: Object.keys(config.secondary),
+    secondaryPartPaths: config.secondary
+  })
+  
+  // Log specifically when rendering secondary parts
+  console.log("🎨 Secondary parts to render:", 
+    Object.entries(config.secondary)
+      .filter(([partName, path]) => path && path !== "")
+      .map(([partName, path]) => ({ partName, path }))
+  )
 
   // Monitor performance
   useJacketPerformance()
@@ -380,13 +399,23 @@ export default function ModularJacketViewer({
     if (customizations?.frontPocket) {
       const { pocketConfigs } = require('@/lib/3d/configs')
       const pocketConfig = pocketConfigs[customizations.frontPocket]
-      if (pocketConfig && pocketConfig.frontPocket) {
-        updatedConfig.secondary.frontPocket = pocketConfig.frontPocket
-        console.log("🎒 Loading front pocket:", {
-          selection: customizations.frontPocket,
-          file: pocketConfig.frontPocket,
-          availableConfigs: Object.keys(pocketConfigs)
-        })
+      if (pocketConfig) {
+        // Apply front pocket
+        if (pocketConfig.frontPocket) {
+          updatedConfig.secondary.frontPocket = pocketConfig.frontPocket
+          console.log("🎒 Loading front pocket:", {
+            selection: customizations.frontPocket,
+            file: pocketConfig.frontPocket
+          })
+        }
+        // Apply chest pocket from pocketConfig (can be empty string to hide)
+        if (pocketConfig.chestPocket !== undefined) {
+          updatedConfig.secondary.chestPocket = pocketConfig.chestPocket
+          console.log("👔 Chest pocket from front pocket config:", {
+            selection: customizations.frontPocket,
+            chestPocket: pocketConfig.chestPocket || "(none)"
+          })
+        }
       } else {
         console.warn("⚠️ No pocket config found for:", customizations.frontPocket)
       }
@@ -583,12 +612,12 @@ export default function ModularJacketViewer({
           
           {/* Professional lighting setup for high-quality suit fabric */}
           {/* Soft ambient light for base illumination */}
-          <ambientLight intensity={0.6} />
+          <ambientLight intensity={0.3} />
           
           {/* Main key light - from top-front for realistic fabric shading with shine */}
           <directionalLight
             position={[5, 8, 5]}
-            intensity={1.2}
+            intensity={0.6}
             castShadow
             shadow-mapSize-width={2048}
             shadow-mapSize-height={2048}
@@ -596,16 +625,16 @@ export default function ModularJacketViewer({
           />
           
           {/* Fill light from the side to reduce harsh shadows */}
-          <directionalLight position={[-5, 3, -3]} intensity={0.5} />
+          <directionalLight position={[-5, 3, -3]} intensity={0.25} />
           
           {/* Rim light from behind for depth and professional highlight */}
-          <directionalLight position={[0, 3, -5]} intensity={0.4} />
+          <directionalLight position={[0, 3, -5]} intensity={0.2} />
           
           {/* Bottom fill light to prevent completely dark areas */}
-          <hemisphereLight args={['#ffffff', '#444444', 0.4]} />
+          <hemisphereLight args={['#ffffff', '#444444', 0.25]} />
           
           {/* Environment for professional sheen - "studio" preset for suit-like appearance */}
-          <Environment preset="studio" environmentIntensity={0.5} />
+          <Environment preset="studio" environmentIntensity={0.2} />
           <OrbitControls
             enablePan={true}
             enableZoom={true}

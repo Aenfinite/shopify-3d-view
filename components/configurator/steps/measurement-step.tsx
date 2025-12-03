@@ -984,10 +984,6 @@ export function MeasurementStep({
                           </div>
                         )}
                       </div>
-                      <div className="bg-blue-50 p-4 rounded-lg">
-                        <h4 className="font-medium text-blue-900 mb-2">Video Instructions</h4>
-                        <p className="text-sm text-blue-800">{getCurrentField().detailedGuide}</p>
-                      </div>
                     </div>
 
                     {/* Input Section - Compact */}
@@ -1057,6 +1053,19 @@ export function MeasurementStep({
                           </div>
                         </div>
                       )}
+
+                      {/* Video Instructions Section - Below buttons */}
+                      {getCurrentField().videoGuide && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Video className="w-5 h-5 text-blue-600" />
+                            <h4 className="font-semibold text-blue-900">Video Instructions</h4>
+                          </div>
+                          <p className="text-sm text-blue-800 leading-relaxed">
+                            {getCurrentField().videoGuide}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1080,10 +1089,6 @@ export function MeasurementStep({
                             <p className="text-gray-500">Measurement Diagram</p>
                           </div>
                         )}
-                      </div>
-                      <div className="bg-green-50 p-4 rounded-lg">
-                        <h4 className="font-medium text-green-800 mb-2">Step-by-Step Guide</h4>
-                        <p className="text-sm text-green-700">{getCurrentField().detailedGuide}</p>
                       </div>
                     </div>
 
@@ -1127,12 +1132,25 @@ export function MeasurementStep({
                             </>
                           ) : (
                             <>
-                              Next
+                              Next Measurement
                               <ChevronRight className="w-4 h-4 ml-2" />
                             </>
                           )}
                         </Button>
                       </div>
+
+                      {/* Step-by-Step Guide Section - Below buttons */}
+                      {getCurrentField().detailedGuide && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Info className="w-5 h-5 text-green-600" />
+                            <h4 className="font-semibold text-green-900">Step-by-Step Guide</h4>
+                          </div>
+                          <p className="text-sm text-green-800 leading-relaxed">
+                            {getCurrentField().detailedGuide}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

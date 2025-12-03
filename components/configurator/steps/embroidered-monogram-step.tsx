@@ -21,10 +21,10 @@ interface EmbroideredMonogramStepProps {
 const FONT_OPTIONS = [
   {
     id: "england",
-    name: "England Hand DB",
-    preview: "𝒜ℬ𝒞",
+    name: "Edwardian Script ITC",
+    preview: "ABC",
     style: "font-serif italic font-bold",
-    previewStyle: "font-family: 'Brush Script MT', 'Lucida Handwriting', cursive; font-style: italic; font-weight: bold;",
+    previewStyle: "font-family: 'EdwardianScriptITC', 'Brush Script MT', 'Lucida Handwriting', cursive; font-style: italic;",
     description: "Elegant script font",
   },
   {
@@ -203,7 +203,7 @@ export function EmbroideredMonogramStep({
                 type="text"
                 value={monogramText || ""}
                 onChange={(e) => {
-                  const text = e.target.value.toUpperCase()
+                  const text = e.target.value
                   const maxLen = monogramType === "initials" ? 2 : 15
                   if (text.length <= maxLen) {
                     onUpdate({ text: text, monogramText: text })
@@ -261,7 +261,12 @@ export function EmbroideredMonogramStep({
                     `}
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`text-3xl €{font.style}`}>{font.preview}</div>
+                      <div 
+                        className="text-3xl"
+                        style={font.id === 'england' ? { fontFamily: 'EdwardianScriptITC, "Brush Script MT", "Lucida Handwriting", cursive', fontStyle: 'italic' } : { fontFamily: 'Arial, sans-serif', fontWeight: '600' }}
+                      >
+                        {font.preview}
+                      </div>
                       <div>
                         <h5 className="font-medium text-gray-900">{font.name}</h5>
                         <p className="text-sm text-gray-600">{font.description}</p>
