@@ -1,0 +1,128 @@
+{
+  "asset": {
+    "generator": "Khronos glTF Blender I/O v1.6.16",
+    "version": "2.0"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "Belt Loop  None Button Side Adjusters",
+      "scale": [
+        0.09993526339530945,
+        0.029969843104481697,
+        -0.012765077874064445
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Cube.010",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 1,
+            "NORMAL": 2,
+            "TEXCOORD_0": 3
+          },
+          "indices": 0,
+          "mode": 4,
+          "material": 0,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 0,
+              "attributes": {
+                "POSITION": 0,
+                "NORMAL": 1,
+                "TEXCOORD_0": 2
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accessors": [
+    {
+      "componentType": 5123,
+      "count": 2352,
+      "type": "SCALAR"
+    },
+    {
+      "componentType": 5126,
+      "count": 460,
+      "max": [
+        7.722520715438902,
+        47.67812267147613,
+        -4.430105712534388
+      ],
+      "min": [
+        -7.722512695668736,
+        44.98959639322897,
+        -20.241120312093297
+      ],
+      "type": "VEC3"
+    },
+    {
+      "componentType": 5126,
+      "count": 460,
+      "type": "VEC3"
+    },
+    {
+      "componentType": 5126,
+      "count": 460,
+      "type": "VEC2"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 3335
+    }
+  ],
+  "buffers": [
+    {
+      "name": "ButtonSideAdjusters",
+      "byteLength": 3336,
+      "uri": "ButtonSideAdjusters.bin"
+    }
+  ],
+  "materials": [
+    {
+      "name": "default",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "alphaMode": "OPAQUE",
+      "doubleSided": false
+    }
+  ],
+  "extensionsRequired": [
+    "KHR_draco_mesh_compression"
+  ],
+  "extensionsUsed": [
+    "KHR_draco_mesh_compression"
+  ]
+}

@@ -167,6 +167,7 @@ export function UniversalConfigurator({
   const [showCheckoutModal, setShowCheckoutModal] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [cameraRotationY, setCameraRotationY] = useState(0) // Camera Y-axis rotation for viewing different parts
+  const [cameraTargetY, setCameraTargetY] = useState(0) // Camera vertical target position
 
   // Load customization options
   useEffect(() => {
@@ -270,45 +271,57 @@ export function UniversalConfigurator({
   useEffect(() => {
     if (!currentStepData?.id) {
       setCameraRotationY(0)
+      setCameraTargetY(0)
       return
     }
 
     const optionId = currentStepData.id.toLowerCase()
     
-    // Define camera angles for different parts (in radians)
-    const cameraAngles: Record<string, number> = {
-      // Back view for vents (180°)
-      'jacket-vent-style': Math.PI,
+    // Define camera angles and target heights for different parts
+    const cameraSettings: Record<string, { angle: number; targetY: number }> = {
+      // Back view for vents and back pockets (180°, normal height)
+      'jacket-vent-style': { angle: Math.PI, targetY: 0 },
+      'back-pocket': { angle: Math.PI, targetY: 0 },
+      'back-pockets': { angle: Math.PI, targetY: 0 },
+      
+      // 45° right angle for front pockets (normal height)
+      'front-pocket': { angle: Math.PI / 4, targetY: 0 },
       
       // Slight angle for sleeve buttons (45° right side)
-      'jacket-sleeve-buttons': Math.PI / 4,
-      'sleeve-buttons': Math.PI / 4,
+      'jacket-sleeve-buttons': { angle: Math.PI / 4, targetY: 0.2 },
+      'sleeve-buttons': { angle: Math.PI / 4, targetY: 0.2 },
       
       // Front view for front elements (0°)
-      'jacket-front-style': 0,
-      'front-style': 0,
-      'front-pocket': 0,
-      'chest-pocket': 0,
+      'jacket-front-style': { angle: 0, targetY: 0 },
+      'front-style': { angle: 0, targetY: 0 },
+      'chest-pocket': { angle: 0, targetY: 0.3 },
       
-      // Slight left angle for buttons (315° = -45°)
-      'button-style': -Math.PI / 6,
-      'button-color': -Math.PI / 6,
-      'button-configuration': -Math.PI / 6,
+      // Slight left angle for buttons
+      'button-style': { angle: -Math.PI / 6, targetY: 0.2 },
+      'button-color': { angle: -Math.PI / 6, targetY: 0.2 },
+      'button-configuration': { angle: -Math.PI / 6, targetY: 0.2 },
       
-      // Three-quarter view for lapels (30°)
-      'lapel-style': Math.PI / 6,
-      'lapel': Math.PI / 6,
+      // Three-quarter view for lapels
+      'lapel-style': { angle: Math.PI / 6, targetY: 0.3 },
+      'lapel': { angle: Math.PI / 6, targetY: 0.3 },
       
-      // Front for fabric (0°)
-      'fabric-type': 0,
-      'fabric-color': 0,
+      // Front for fabric
+      'fabric-type': { angle: 0, targetY: 0 },
+      'fabric-color': { angle: 0, targetY: 0 },
+      
+      // Pants-specific angles with vertical positioning
+      'bottom-cuffs': { angle: 0, targetY: -0.8 }, // Front view, look down at bottom cuffs
+      'waist-band-extension': { angle: -Math.PI / 2, targetY: 0.2 }, // Left side view, waist height
+      'waistband-style': { angle: -Math.PI / 2, targetY: 0.2 }, // Left side view
+      'waistband-extension': { angle: -Math.PI / 2, targetY: 0.2 }, // Left side view
     }
 
-    // Find the appropriate camera angle
-    const angle = cameraAngles[optionId] ?? 0
+    // Find the appropriate camera settings
+    const settings = cameraSettings[optionId] ?? { angle: 0, targetY: 0 }
     
-    setCameraRotationY(angle)
-    console.log(`📷 Camera rotation for ${optionId}: ${(angle * 180 / Math.PI).toFixed(0)}°`)
+    setCameraRotationY(settings.angle)
+    setCameraTargetY(settings.targetY)
+    console.log(`📷 Camera for ${optionId}: ${(settings.angle * 180 / Math.PI).toFixed(0)}°, targetY: ${settings.targetY.toFixed(2)}`)
   }, [currentStep, currentStepData])
 
   const nextStep = () => {
@@ -576,6 +589,24 @@ export function UniversalConfigurator({
           customizations["jacket-vent-style"] = value.value
           // Force update timestamp to trigger re-render
           customizations.ventUpdateTime = Date.now()
+        }
+
+        // Handle pants-specific customizations
+        if (option.id === "front-style") {
+          console.log("👖 Setting pants front style:", value.value)
+          customizations.frontStyle = value.value
+          customizations.front_style = value.value
+          customizations["front-style"] = value.value
+        } else if (option.id === "front-pocket") {
+          console.log("🎒 Setting pants front pocket:", value.value)
+          customizations.frontPocket = value.value
+          customizations.front_pocket = value.value
+          customizations["front-pocket"] = value.value
+        } else if (option.id === "back-pocket") {
+          console.log("🎒 Setting pants back pocket:", value.value)
+          customizations.backPocket = value.value
+          customizations.back_pocket = value.value
+          customizations["back-pocket"] = value.value
         }
 
         // Handle ALL other style customizations by mapping option names to customization keys
@@ -867,8 +898,8 @@ export function UniversalConfigurator({
   }
 
   const getFabricAvailableColors = (fabricId: string): string[] => {
-    // All 7 fabric textures from public/fabrics folder
-    const textureOptions = ["texture-1", "texture-2", "texture-3", "texture-4", "texture-5", "texture-6", "texture-7", "texture-8", "texture-9", "texture-10", "texture-11", "texture-12", "texture-13", "texture-14", "texture-15"]
+    // All 20 fabric textures from public/fabrics folder
+    const textureOptions = ["texture-1", "texture-2", "texture-3", "texture-4", "texture-5", "texture-6", "texture-7", "texture-8", "texture-9", "texture-10", "texture-11", "texture-12", "texture-13", "texture-14", "texture-15", "texture-16", "texture-17", "texture-18", "texture-19", "texture-20"]
     
     const fabricColors: { [key: string]: string[] } = {
       "wool-blend": ["charcoal", "navy", "black", "brown", "gray", "forest-green", "burgundy", "midnight-blue", "olive", "slate", ...textureOptions],
@@ -1605,11 +1636,12 @@ export function UniversalConfigurator({
             <ModelViewer
               key={`model-${configuratorState["jacket-front-style"]?.valueId || 'default'}-${configuratorState["front-pocket"]?.valueId || 'no-pocket'}-${configuratorState["chest-pocket"]?.valueId || 'no-chest'}-${configuratorState["jacket-sleeve-buttons"]?.valueId || 'default-sleeve'}-${configuratorState["jacket-vent-style"]?.valueId || 'default-vent'}`}
               modelUrl={getModelUrl()}
-              useGLTF={productType === "jacket"}
-              gltfModelPath={productType === "jacket" ? "/models/jackets/basic-jacket.gltf" : undefined}
+              useGLTF={productType === "jacket" || productType === "pants"}
+              gltfModelPath={productType === "jacket" ? "/models/jackets/basic-jacket.gltf" : productType === "pants" ? "/models/pants/Style/Flat/Normal.gltf" : undefined}
               customizations={generateCustomizations()}
               layerControls={generateLayerControls()}
               cameraRotationY={cameraRotationY}
+              cameraTargetY={cameraTargetY}
             />
           </div>
 

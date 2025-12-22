@@ -34,7 +34,8 @@ export const jacketConfigs: Record<FrontStyle, JacketConfig> = {
       sleeveButtonThread: "/models/jackets/Sleeve/Working/Thread/LastThread.gltf",
       sleeve4ButtonThread: "/models/jackets/Sleeve/Working/Thread/4Button.gltf",
       centerVent: "/models/jackets/Vent/NoVent.gltf",
-      fullyLined: "/models/jackets/lining/FullyLined/Curved1.gltf"
+      fullyLined: "/models/jackets/lining/FullyLined/Curved1.gltf",
+      halfLining: "/models/jackets/lining/Halfed-lining.gltf"
     }
   },
   '6d2': {
@@ -52,7 +53,8 @@ export const jacketConfigs: Record<FrontStyle, JacketConfig> = {
       sleeveButtonThread: "/models/jackets/Sleeve/Working/Thread/LastThread.gltf",
       sleeve4ButtonThread: "/models/jackets/Sleeve/Working/Thread/4Button.gltf",
       centerVent: "/models/jackets/Vent/NoVent.gltf",
-      fullyLined: "/models/jackets/lining/FullyLined/Straight.gltf"
+      fullyLined: "/models/jackets/lining/FullyLined/Straight.gltf",
+      halfLining: "/models/jackets/lining/Halfed-lining.gltf"
     }
   }
 };

@@ -8,6 +8,7 @@ import { GLTFModelViewer, JacketCustomization } from "./gltf-model-viewer"
 import { StandardJacketViewer } from "./standard-jacket-viewer"
 import { ModularJacketViewer, BasicJacketCustomization } from "./modular-jacket-viewer"
 import ModularJacketViewerR3F from "./modular-jacket-viewer-r3f"
+import ModularPantsViewerR3F from "./modular-pants-viewer-r3f"
 
 interface ModelViewerProps {
   modelUrl: string
@@ -19,6 +20,7 @@ interface ModelViewerProps {
   useStandardJacket?: boolean  // Flag for standard jacket model (for testing)
   useModularJacket?: boolean  // Flag for modular jacket system (NEW)
   cameraRotationY?: number  // Camera Y-axis rotation for viewing different parts (e.g., back view for vents)
+  cameraTargetY?: number  // Camera vertical target position (Y-axis look-at height)
 }
 
 // Enhanced 3D Model Component with ALL customization support
@@ -1294,6 +1296,7 @@ export function ModelViewer({
   useStandardJacket = false,
   useModularJacket = true, // Default to modular jacket for jackets
   cameraRotationY = 0, // Camera Y-axis rotation
+  cameraTargetY = 0, // Camera vertical target position
 }: ModelViewerProps) {
   const [error, setError] = useState<string | null>(null)
 
@@ -1305,6 +1308,35 @@ export function ModelViewer({
   }
 
   const modelType = getModelType(modelUrl)
+
+  // If using modular pants system
+  if (useModularJacket && modelType === "sample-pants") {
+    const basicCustomizations = {
+      fabricColor: customizations.fabricColor || customizations.color || "#8B4513",
+      fabricType: customizations.fabricType || "cotton",
+      frontStyle: customizations.frontStyle || customizations["front-style"] || "flat-front",
+      frontPocket: customizations.frontPocket || customizations["front-pocket"],
+      backPocket: customizations.backPocket || customizations["back-pocket"],
+      bottomCuffs: customizations.bottomCuffs || customizations["bottom-cuffs"],
+      waistbandExtension: customizations.waistbandExtension || customizations["waist-band-extension"],
+      buttonColor: customizations.buttonColor || customizations["button-color"] || "#333333",
+    }
+
+    console.log("🎨 ModelViewer passing to ModularPantsViewerR3F:", {
+      basicCustomizations,
+      allCustomizationsReceived: customizations,
+    })
+
+    return (
+      <ModularPantsViewerR3F
+        customizations={basicCustomizations}
+        frontStyle={basicCustomizations.frontStyle}
+        className={className}
+        cameraRotationY={cameraRotationY}
+        cameraTargetY={cameraTargetY}
+      />
+    )
+  }
 
   // If using modular jacket system (NEW - for your component-based jackets)
   if (useModularJacket && modelType === "sample-jacket") {

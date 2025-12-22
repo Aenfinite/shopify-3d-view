@@ -98,9 +98,10 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
         }
       }
       
-      // Check for LINING patterns - catch LiningCurved and other lining meshes
+      // Check for LINING patterns - catch LiningCurved, Lining-Half, PocketLining and other lining meshes
       if (nameLower.includes('lining') || nameLower.includes('curved') || 
-          nameLower.includes('fully') || nameLower.includes('interior')) {
+          nameLower.includes('fully') || nameLower.includes('interior') ||
+          nameLower.includes('lining-half') || nameLower.includes('pocketlining')) {
         console.log(`🎨 Identified LINING by name pattern: ${child.name} -> Applying liningColor`)
         if (customizations.liningColor) {
           applyMaterialColor(child, customizations.liningColor)
@@ -229,6 +230,7 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
           // LiningCurved (without .001) - Apply for both half and full
           // LiningCurved.001 - Only apply for full lined
           // LiningStraight1-4 - For 6d2 jacket, apply based on type
+          // Lining-Half, PocketLining-* - From Halfed-lining.gltf, apply for half lined
           if (customizations.liningColor) {
             if (meshName.includes("liningstraight")) {
               // This is the straight lining mesh used in 6d2 jacket
@@ -259,6 +261,17 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
                 console.log(`✅ Applied lining texture to: ${child.name} (${isHalfLined ? 'half' : 'full'} lined)`)
               } else {
                 console.log(`⏭️ Skipping ${child.name} - half or full lined required (current: ${customizations.liningMeshType})`)
+              }
+            } else if (meshName.includes("lining-half") || meshName.includes("pocketlining") || 
+                       meshName.includes("liningtriangle") || meshName.includes("label")) {
+              // Meshes from Halfed-lining.gltf - only apply for half lined
+              console.log(`🎯 Found Halfed-lining.gltf mesh: ${child.name}`)
+              if (isHalfLined) {
+                console.log(`📸 Applying texture to half lining mesh:`, customizations.liningColor)
+                applyMaterialColor(child, customizations.liningColor)
+                console.log(`✅ Applied HALF lining texture to: ${child.name}`)
+              } else {
+                console.log(`⏭️ Skipping ${child.name} - only for half lined (current: ${customizations.liningMeshType})`)
               }
             } else {
               // Other lining meshes - apply normally if half or full lined
@@ -344,8 +357,8 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string) {
           }
           
           // Apply professional suit fabric properties with subtle shine
-          material.roughness = 0.55  // Reduced roughness for subtle shine like quality suit fabric
-          material.metalness = 0.05  // Tiny bit of metalness for professional sheen
+          material.roughness = 0.85  // Fabric roughness to match pants viewer
+          material.metalness = 0.0  // No metalness for natural fabric appearance
           
           // Enable proper lighting response
           material.flatShading = false  // Use smooth shading for realistic fabric
@@ -361,4 +374,13 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string) {
       }
     }
   })
+}
+
+/**
+ * Exported wrapper for applying fabric customization to a mesh
+ * @param mesh - The mesh to apply the material to
+ * @param color - Either a hex color string or a texture path
+ */
+export function applyFabricCustomization(mesh: THREE.Mesh, color: string) {
+  applyMaterialColor(mesh, color)
 }

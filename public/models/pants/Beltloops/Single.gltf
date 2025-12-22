@@ -1,0 +1,112 @@
+{
+  "asset": {
+    "generator": "Khronos glTF Blender I/O v1.6.16",
+    "version": "2.0"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "Belt Loop and Waistband "
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Plane.031",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 1,
+            "NORMAL": 2,
+            "TEXCOORD_0": 3
+          },
+          "indices": 0,
+          "mode": 4,
+          "material": 0,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 0,
+              "attributes": {
+                "POSITION": 0,
+                "NORMAL": 1,
+                "TEXCOORD_0": 2
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accessors": [
+    {
+      "componentType": 5123,
+      "count": 1872,
+      "type": "SCALAR"
+    },
+    {
+      "componentType": 5126,
+      "count": 324,
+      "max": [
+        0.8263115325599437,
+        1.4960027220648087,
+        0.6465040377196469
+      ],
+      "min": [
+        -0.8263115325599438,
+        1.2091886362404103,
+        -0.5017105379729992
+      ],
+      "type": "VEC3"
+    },
+    {
+      "componentType": 5126,
+      "count": 324,
+      "type": "VEC3"
+    },
+    {
+      "componentType": 5126,
+      "count": 324,
+      "type": "VEC2"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 2596
+    }
+  ],
+  "buffers": [
+    {
+      "name": "Single",
+      "byteLength": 2600,
+      "uri": "Single.bin"
+    }
+  ],
+  "materials": [
+    {
+      "name": "default",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "alphaMode": "OPAQUE",
+      "doubleSided": false
+    }
+  ],
+  "extensionsRequired": [
+    "KHR_draco_mesh_compression"
+  ],
+  "extensionsUsed": [
+    "KHR_draco_mesh_compression"
+  ]
+}

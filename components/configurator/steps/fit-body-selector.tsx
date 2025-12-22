@@ -7,13 +7,19 @@ import { Badge } from "@/components/ui/badge"
 import { Check, User, Shirt } from "lucide-react"
 import { useConfigurator } from "@/context/configurator-context"
 
-export function FitBodySelector() {
+interface FitBodySelectorProps {
+  productType?: "jacket" | "pants" | "shirt"
+}
+
+export function FitBodySelector({ productType = "jacket" }: FitBodySelectorProps) {
   const { 
     fitPreference, 
     setFitPreference, 
     bodyShape, 
     setBodyShape 
   } = useConfigurator()
+  
+  const isPants = productType === "pants"
 
   // Fit preference options
   const fitOptions = [
@@ -118,7 +124,7 @@ export function FitBodySelector() {
             >
               <Card
                 onClick={() => setFitPreference(option.id)}
-                className={`cursor-pointer transition-all border-2 €{
+                className={`cursor-pointer transition-all border-2 ${
                   fitPreference === option.id
                     ? "border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-200"
                     : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
@@ -141,145 +147,54 @@ export function FitBodySelector() {
         </div>
       </div>
 
-      {/* Body Shape Selection */}
-      <div>
-        <div className="flex items-center gap-2 mb-6">
-          <User className="w-5 h-5 text-gray-600" />
-          <h3 className="text-lg font-medium text-gray-900">Body Shape Profile</h3>
-        </div>
-
-        {/* Shoulder Types */}
-        <div className="mb-8">
-          <h4 className="font-medium text-gray-900 mb-3">Shoulder Type</h4>
-          <div className="grid grid-cols-1 gap-3">
-            {shoulderOptions.map((option) => (
-              <motion.div
-                key={option.id}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-              >
-                <Card
-                  onClick={() => handleBodyShapeChange('shoulderType', option.id)}
-                  className={`cursor-pointer transition-all border-2 €{
-                    bodyShape.shoulderType === option.id
-                      ? "border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-200"
-                      : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
-                  }`}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
-                      {/* Body shape image */}
-                      <div className="w-16 h-16 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200 flex-shrink-0 p-2">
-                        <img 
-                          src={option.image} 
-                          alt={option.name}
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <h5 className="font-medium text-gray-900">{option.name}</h5>
-                        <p className="text-sm text-gray-600">{option.description}</p>
-                      </div>
-                      {bodyShape.shoulderType === option.id && (
-                        <Check className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-
-        {/* Back Shapes */}
-        <div className="mb-8">
-          <h4 className="font-medium text-gray-900 mb-3">Back Shape</h4>
-          <div className="grid grid-cols-1 gap-3">
-            {backOptions.map((option) => (
-              <motion.div
-                key={option.id}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-              >
-                <Card
-                  onClick={() => handleBodyShapeChange('backShape', option.id)}
-                  className={`cursor-pointer transition-all border-2 €{
-                    bodyShape.backShape === option.id
-                      ? "border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-200"
-                      : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
-                  }`}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
-                      {/* Body shape image */}
-                      <div className="w-16 h-16 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200 flex-shrink-0 p-2">
-                        <img 
-                          src={option.image} 
-                          alt={option.name}
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <h5 className="font-medium text-gray-900">{option.name}</h5>
-                        <p className="text-sm text-gray-600">{option.description}</p>
-                      </div>
-                      {bodyShape.backShape === option.id && (
-                        <Check className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-
-        {/* Belly Types */}
+      {/* Body Shape Profile - Only for Jackets */}
+      {!isPants && (
         <div>
-          <h4 className="font-medium text-gray-900 mb-3">Belly Type</h4>
-          <div className="grid grid-cols-1 gap-3">
-            {bellyOptions.map((option) => (
-              <motion.div
-                key={option.id}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-              >
-                <Card
-                  onClick={() => handleBodyShapeChange('bellyType', option.id)}
-                  className={`cursor-pointer transition-all border-2 €{
-                    bodyShape.bellyType === option.id
-                      ? "border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-200"
-                      : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
-                  }`}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
-                      {/* Body shape image */}
-                      <div className="w-16 h-16 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200 flex-shrink-0 p-2">
-                        <img 
-                          src={option.image} 
-                          alt={option.name}
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <h5 className="font-medium text-gray-900">{option.name}</h5>
-                        <p className="text-sm text-gray-600">{option.description}</p>
-                      </div>
-                      {bodyShape.bellyType === option.id && (
-                        <Check className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+          <div className="flex items-center gap-2 mb-6">
+            <User className="w-5 h-5 text-gray-600" />
+            <h3 className="text-lg font-medium text-gray-900">Body Shape Profile</h3>
           </div>
-        </div>
-      </div>
 
-      {/* Selection Summary */}
-      {(fitPreference || bodyShape.shoulderType || bodyShape.backShape || bodyShape.bellyType) && (
+          {/* Shoulder Types */}
+          <div className="mb-8">
+            <h4 className="font-medium text-gray-900 mb-3">Shoulder Type</h4>
+            <div className="grid grid-cols-1 gap-3">
+              {shoulderOptions.map((option) => (
+                <motion.div
+                  key={option.id}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                >
+                  <Card
+                    onClick={() => handleBodyShapeChange('shoulderType', option.id)}
+                    className={`cursor-pointer transition-all border-2 ${
+                      bodyShape.shoulderType === option.id
+                        ? "border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-200"
+                        : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                    }`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200 flex-shrink-0 p-2">
+                          <img 
+                            src={option.image} 
+                            alt={option.name}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <h5 className="font-medium text-gray-900">{option.name}</h5>
+                          <p className="text-sm text-gray-600">{option.description}</p>
+                        </div>
+                        {bodyShape.shoulderType === option.id && (
+                          <Check className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>shoulderType || bodyShape.backShape || bodyShape.bellyType) && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h4 className="font-medium text-blue-900 mb-2">Your Selections</h4>
           <div className="space-y-1 text-sm text-blue-800">
@@ -289,16 +204,110 @@ export function FitBodySelector() {
                 <span className="font-medium">{fitOptions.find(o => o.id === fitPreference)?.name}</span>
               </div>
             )}
-            {bodyShape.shoulderType && (
+            {!isPants && bodyShape.shoulderType && (
               <div className="flex justify-between">
                 <span>Shoulder Type:</span>
                 <span className="font-medium">{shoulderOptions.find(o => o.id === bodyShape.shoulderType)?.name}</span>
               </div>
             )}
-            {bodyShape.backShape && (
+            {!isPants && bodyShape.backShape && (
               <div className="flex justify-between">
                 <span>Back Shape:</span>
-                <span className="font-medium">{backOptions.find(o => o.id === bodyShape.backShape)?.name}</span>
+                <span className="font-medium">{backOptions.find(o => o.id === bodyShape.backShap
+                <motion.div
+                  key={option.id}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                >
+                  <Card
+                    onClick={() => handleBodyShapeChange('backShape', option.id)}
+                    className={`cursor-pointer transition-all border-2 ${
+                      bodyShape.backShape === option.id
+                        ? "border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-200"
+                        : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                    }`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200 flex-shrink-0 p-2">
+                          <img 
+                            src={option.image} 
+                            alt={option.name}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <h5 className="font-medium text-gray-900">{option.name}</h5>
+                          <p className="text-sm text-gray-600">{option.description}</p>
+                        </div>
+                        {bodyShape.backShape === option.id && (
+                          <Check className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Belly Type Section */}
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <User className="w-5 h-5 text-gray-600" />
+          <h3 className="text-lg font-medium text-gray-900">Belly Type</h3>
+        </div>
+        <div className="grid grid-cols-1 gap-3">
+          {bellyOptions.map((option) => (
+            <motion.div
+              key={option.id}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+            >
+              <Card
+                onClick={() => handleBodyShapeChange('bellyType', option.id)}
+                className={`cursor-pointer transition-all border-2 ${
+                  bodyShape.bellyType === option.id
+                    ? "border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-200"
+                    : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                }`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                    {/* Body shape image */}
+                    <div className="w-16 h-16 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200 flex-shrink-0 p-2">
+                      <img 
+                        src={option.image} 
+                        alt={option.name}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <h5 className="font-medium text-gray-900">{option.name}</h5>
+                      <p className="text-sm text-gray-600">{option.description}</p>
+                    </div>
+                    {bodyShape.bellyType === option.id && (
+                      <Check className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* Selection Summary */}
+      {(fitPreference || bodyShape.bellyType) && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="font-medium text-blue-900 mb-2">Your Selections</h4>
+          <div className="space-y-1 text-sm text-blue-800">
+            {fitPreference && (
+              <div className="flex justify-between">
+                <span>Fit Preference:</span>
+                <span className="font-medium">{fitOptions.find(o => o.id === fitPreference)?.name}</span>
               </div>
             )}
             {bodyShape.bellyType && (

@@ -1,0 +1,128 @@
+{
+  "asset": {
+    "generator": "Khronos glTF Blender I/O v1.6.16",
+    "version": "2.0"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "Normal Straigh",
+      "rotation": [
+        0.7071068286895752,
+        0,
+        0,
+        0.7071067094802856
+      ],
+      "scale": [
+        0.3466881513595581,
+        0.3466881513595581,
+        0.3466881513595581
+      ],
+      "translation": [
+        0,
+        -0.22996240854263306,
+        -0.1176551878452301
+      ]
+    }
+  ],
+  "meshes": [
+    {
+      "name": "body_Circle.021",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 1,
+            "NORMAL": 2,
+            "TEXCOORD_0": 3
+          },
+          "indices": 0,
+          "mode": 4,
+          "material": 0,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 0,
+              "attributes": {
+                "POSITION": 0,
+                "NORMAL": 1,
+                "TEXCOORD_0": 2
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accessors": [
+    {
+      "componentType": 5123,
+      "count": 45432,
+      "type": "SCALAR"
+    },
+    {
+      "componentType": 5126,
+      "count": 9666,
+      "max": [
+        2.7976612815324327,
+        2.2347660773077123,
+        12.349214219184784
+      ],
+      "min": [
+        -2.7985984316786796,
+        -1.5202465287169484,
+        -4.504111432166961
+      ],
+      "type": "VEC3"
+    },
+    {
+      "componentType": 5126,
+      "count": 9666,
+      "type": "VEC3"
+    },
+    {
+      "componentType": 5126,
+      "count": 9666,
+      "type": "VEC2"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 44123
+    }
+  ],
+  "buffers": [
+    {
+      "name": "Normal",
+      "byteLength": 44128,
+      "uri": "Normal.bin"
+    }
+  ],
+  "materials": [
+    {
+      "name": "default",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "alphaMode": "OPAQUE",
+      "doubleSided": false
+    }
+  ],
+  "extensionsRequired": [
+    "KHR_draco_mesh_compression"
+  ],
+  "extensionsUsed": [
+    "KHR_draco_mesh_compression"
+  ]
+}

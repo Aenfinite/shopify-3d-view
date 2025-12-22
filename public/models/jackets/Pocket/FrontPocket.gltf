@@ -17,20 +17,15 @@
 			"mesh":0,
 			"name":"Tessuto",
 			"rotation":[
-				0.02292458713054657,
+				0.02292459085583687,
 				-0.1630253940820694,
-				-0.003789016278460622,
+				-0.003789016976952553,
 				0.9863482117652893
 			],
 			"scale":[
 				4.908240795135498,
 				4.908240795135498,
 				4.90824031829834
-			],
-			"translation":[
-				-0.04104451462626457,
-				-0.2186175435781479,
-				0
 			]
 		}
 	],
@@ -59,67 +54,67 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":5542,
+			"count":3692,
 			"max":[
-				0.22895492613315582,
-				-0.08421304821968079,
-				0.1723928600549698
+				0.22170314192771912,
+				-0.12348157167434692,
+				0.18166501820087433
 			],
 			"min":[
-				-0.19288098812103271,
-				-0.27059710025787354,
-				-0.06503451615571976
+				-0.18865656852722168,
+				-0.31438741087913513,
+				-0.057985324412584305
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":5542,
+			"count":3692,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":5542,
+			"count":3692,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5123,
-			"count":25644,
+			"count":20112,
 			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":66504,
+			"byteLength":44304,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":66504,
-			"byteOffset":66504,
+			"byteLength":44304,
+			"byteOffset":44304,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":44336,
-			"byteOffset":133008,
+			"byteLength":29536,
+			"byteOffset":88608,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":51288,
-			"byteOffset":177344,
+			"byteLength":40224,
+			"byteOffset":118144,
 			"target":34963
 		}
 	],
 	"buffers":[
 		{
-			"byteLength":228632,
+			"byteLength":158368,
 			"uri":"FrontPocket.bin"
 		}
 	]

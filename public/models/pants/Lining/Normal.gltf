@@ -1,0 +1,138 @@
+{
+  "asset": {
+    "generator": "Khronos glTF Blender I/O v1.6.16",
+    "version": "2.0"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "Nopleat Normal Straigh.001",
+      "rotation": [
+        0.7071068286895752,
+        0,
+        0,
+        0.7071067094802856
+      ],
+      "scale": [
+        0.34101754426956177,
+        0.3234584927558899,
+        0.3466881513595581
+      ],
+      "translation": [
+        0,
+        -0.22996240854263306,
+        -0.1176551878452301
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "doubleSided": true,
+      "name": "Material.010",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.800000011920929,
+          0.800000011920929,
+          0.800000011920929,
+          1
+        ],
+        "metallicFactor": 0.059025004506111145,
+        "roughnessFactor": 0.36231881380081177
+      },
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "alphaMode": "OPAQUE"
+    }
+  ],
+  "meshes": [
+    {
+      "name": "body_Circle.037",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 1,
+            "NORMAL": 2,
+            "TEXCOORD_0": 3
+          },
+          "indices": 0,
+          "material": 0,
+          "mode": 4,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 0,
+              "attributes": {
+                "POSITION": 0,
+                "NORMAL": 1,
+                "TEXCOORD_0": 2
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accessors": [
+    {
+      "componentType": 5123,
+      "count": 36600,
+      "type": "SCALAR"
+    },
+    {
+      "componentType": 5126,
+      "count": 8016,
+      "max": [
+        2.7905676027470996,
+        2.2761404539997265,
+        9.244363307137961
+      ],
+      "min": [
+        -2.791444777627463,
+        -1.520490407128806,
+        -4.474542616982932
+      ],
+      "type": "VEC3"
+    },
+    {
+      "componentType": 5126,
+      "count": 8016,
+      "type": "VEC3"
+    },
+    {
+      "componentType": 5126,
+      "count": 8016,
+      "type": "VEC2"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 36764
+    }
+  ],
+  "buffers": [
+    {
+      "name": "Normal",
+      "byteLength": 36768,
+      "uri": "Normal.bin"
+    }
+  ],
+  "extensionsRequired": [
+    "KHR_draco_mesh_compression"
+  ],
+  "extensionsUsed": [
+    "KHR_draco_mesh_compression"
+  ]
+}

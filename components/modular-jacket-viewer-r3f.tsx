@@ -379,11 +379,12 @@ export default function ModularJacketViewer({
 
   // Handle pocket customizations - UPDATE CONFIG WHEN POCKETS CHANGE
   useEffect(() => {
-    console.log("🔄 Pocket, Sleeve & Vent configuration change detected:", {
+    console.log("🔄 Pocket, Sleeve, Vent & Lining configuration change detected:", {
       frontPocket: customizations?.frontPocket,
       chestPocket: customizations?.chestPocket,
       sleeveButtons: customizations?.sleeveButtons,
       ventStyle: customizations?.ventStyle,
+      liningMeshType: customizations?.liningMeshType,
       activeStyle: activeStyle
     })
 
@@ -392,6 +393,26 @@ export default function ModularJacketViewer({
       ...baseConfig,
       secondary: {
         ...baseConfig.secondary
+      }
+    }
+
+    // Handle lining selection based on liningMeshType
+    if (customizations?.liningMeshType) {
+      if (customizations.liningMeshType === "custom-coloured") {
+        // Half Lined - load Halfed-lining.gltf, remove fullyLined
+        updatedConfig.secondary.fullyLined = ""
+        updatedConfig.secondary.halfLining = baseConfig.secondary.halfLining || "/models/jackets/lining/Halfed-lining.gltf"
+        console.log("🎨 Loading Half Lining model:", updatedConfig.secondary.halfLining)
+      } else if (customizations.liningMeshType === "quilted") {
+        // Full Lined - load FullyLined model, remove halfLining
+        updatedConfig.secondary.halfLining = ""
+        updatedConfig.secondary.fullyLined = baseConfig.secondary.fullyLined
+        console.log("🎨 Loading Full Lining model:", updatedConfig.secondary.fullyLined)
+      } else if (customizations.liningMeshType === "unlined") {
+        // Unlined - remove both lining models
+        updatedConfig.secondary.fullyLined = ""
+        updatedConfig.secondary.halfLining = ""
+        console.log("🎨 No lining models loaded (unlined)")
       }
     }
 
@@ -497,7 +518,7 @@ export default function ModularJacketViewer({
     }
 
     setActiveConfig(updatedConfig)
-  }, [activeStyle, customizations?.frontPocket, customizations?.chestPocket, customizations?.sleeveButtons, customizations?.ventStyle])
+  }, [activeStyle, customizations?.frontPocket, customizations?.chestPocket, customizations?.sleeveButtons, customizations?.ventStyle, customizations?.liningMeshType])
 
   // Initialize with 2-button style and preload parts
   useEffect(() => {
@@ -611,13 +632,13 @@ export default function ModularJacketViewer({
           )}
           
           {/* Professional lighting setup for high-quality suit fabric */}
-          {/* Soft ambient light for base illumination */}
-          <ambientLight intensity={0.3} />
+          {/* Soft ambient light for base illumination - matched to pants viewer */}
+          <ambientLight intensity={0.6} />
           
-          {/* Main key light - from top-front for realistic fabric shading with shine */}
+          {/* Main key light - from top-front for realistic fabric shading */}
           <directionalLight
             position={[5, 8, 5]}
-            intensity={0.6}
+            intensity={1.0}
             castShadow
             shadow-mapSize-width={2048}
             shadow-mapSize-height={2048}
@@ -625,7 +646,7 @@ export default function ModularJacketViewer({
           />
           
           {/* Fill light from the side to reduce harsh shadows */}
-          <directionalLight position={[-5, 3, -3]} intensity={0.25} />
+          <directionalLight position={[-5, 3, -3]} intensity={0.4} />
           
           {/* Rim light from behind for depth and professional highlight */}
           <directionalLight position={[0, 3, -5]} intensity={0.2} />

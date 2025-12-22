@@ -342,127 +342,82 @@ const GARMENT_MEASUREMENTS = {
         key: "waist", 
         label: "Waist Circumference", 
         description: "Measure around your natural waistline.", 
-        detailedGuide: "Find your natural waist (usually the narrowest part) and measure around it, keeping the tape snug but not tight.",
+        detailedGuide: "1. Lay the trousers flat on a table and make sure the waistband is fully straightened and stretched evenly from end to end.\n2. Measure at the top edge across the waistband, from the outermost point on one side to the outermost point on the other side.\n3. Since this measurement is taken on a flat garment, multiply the measured width by two to obtain the full waistband circumference.\n4. Add 1 cm to the total (to allow minimal ease and ensure comfortable fit). Example: 38 cm × 2 = 76 cm + 1 cm = 77 cm final result.\n5. Enter this final result into the system.",
         unit: "cm",
-        videoUrl: "https://youtu.be/3xVdy8Azqhs",
-        sketchImage: "/measurement-guides/pants/waist-sketch.svg"
+        videoUrl: "https://www.youtube.com/watch?v=gnxiBmx5puI",
+        sketchImage: "/images/sketch/pants/waistband circumference.png"
       },
       { 
         key: "hip", 
         label: "Hip Circumference", 
         description: "Measure around the fullest part of your hips.", 
-        detailedGuide: "Stand with feet together and measure around the fullest part of your hips and buttocks.",
+        detailedGuide: "1. Lay the trousers flat on a table, ensuring the fabric is smooth and the legs and waistband are fully straightened.\n2. Locate the widest part of the trousers, usually around the hip area, slightly below the waistband.\n3. Measure straight across the garment at this widest point, from one side seam to the other, keeping the fabric flat and free of hidden folds.\n4. Since this measurement is taken on a flat-lay garment, double the measured width to calculate the full hip circumference.",
         unit: "cm",
         videoUrl: "https://youtu.be/DVy9E71T3cI",
-        sketchImage: "/measurement-guides/pants/hip-sketch.svg"
+        sketchImage: "/images/sketch/pants/hip circumference.png"
       },
       { 
         key: "inseam", 
         label: "Inseam Length", 
         description: "Measure from crotch to ankle.", 
-        detailedGuide: "Measure from your crotch down the inside of your leg to your ankle bone.",
+        detailedGuide: "1. Lay the trousers flat on a table, ensuring both legs are straightened and the fabric has no folds or creases.\n2. Locate the crotch point, where the inseams of both legs meet.\n3. Measure from the crotch point down along the inner seam of the trouser leg.\n4. Continue measuring all the way to the bottom of the hem. This total length is the inseam measurement.",
         unit: "cm",
         videoUrl: "https://youtu.be/qJ8-OeFpGUg",
-        sketchImage: "/measurement-guides/pants/inseam-sketch.svg"
+        sketchImage: "/images/sketch/pants/inseam length.png"
       },
       { 
         key: "thigh", 
         label: "Thigh Circumference", 
         description: "Measure around the fullest part of your thigh.", 
-        detailedGuide: "Measure around the fullest part of your upper thigh, usually about 5 cm below the crotch.",
+        detailedGuide: "1. Lay one trouser leg flat on a smooth table, ensuring the fabric is straightened with no folds or creases.\n2. Locate the crotch point, where the inseams meet.\n3. Measure approximately 3 cm downward from the crotch point along the inside of the trouser leg. This marks the level at which the thigh is measured.\n4. Measure straight across the leg at this point, from one side to the other, keeping the fabric flat.\n5. Since this measurement is taken on a flat-lay garment, double the result to calculate the full thigh circumference.",
         unit: "cm",
-        videoUrl: "https://youtu.be/yHkL-9z_6Lg",
-        sketchImage: "/measurement-guides/pants/thigh-sketch.svg"
+        videoUrl: "https://www.youtube.com/watch?v=UUTeKB8HGCA",
+        sketchImage: "/images/sketch/pants/tigh circumference.png"
       },
       { 
         key: "knee", 
         label: "Knee Circumference", 
         description: "Measure around your knee.", 
-        detailedGuide: "Measure around your knee at the kneecap level.",
+        detailedGuide: "1. Lay the trousers flat on an even surface, making sure the legs are fully straightened.\n2. Locate the knee position, which is approximately at the halfway point of the inseam length.\n3. Measure straight across the leg at this level, from one side to the other, keeping the fabric smooth and flat.\n4. Double this measurement to determine the total knee circumference, using the same method as measuring the hem.",
         unit: "cm",
-        videoUrl: "https://youtu.be/tN8v4L2QP_I",
-        sketchImage: "/measurement-guides/pants/knee-sketch.svg"
+        videoUrl: "https://www.youtube.com/watch?v=Mae5OCHglDo",
+        sketchImage: "/images/sketch/pants/kee circumference.png"
       },
       { 
         key: "outseam", 
         label: "Outseam Length", 
         description: "Measure from waist to ankle on the outside.", 
-        detailedGuide: "Measure from your waist down the outside of your leg to your ankle.",
+        detailedGuide: "1. Lay the trousers flat on a table, ensuring both legs are straight and the fabric is smooth with no creases.\n2. Locate the top edge of the waistband on the side of the trousers.\n3. Measure down along the outer seam, starting from the very top of the waistband.\n4. Continue measuring all the way down the outer side seam until you reach the bottom of the hem.\n5. The number you obtain is the total length of the trousers, also known as the outseam measurement.",
         unit: "cm",
         videoUrl: "https://youtu.be/x4E7fG3-PvY",
-        sketchImage: "/measurement-guides/pants/outseam-sketch.svg"
-      },
-      {
-        key: "calf",
-        label: "Calf Circumference",
-        description: "Measure around the fullest part of your calf.",
-        detailedGuide: "Measure around the widest part of your calf muscle.",
-        unit: "cm",
-        videoUrl: "https://youtu.be/tN8v4L2QP_I",
-        sketchImage: "/measurement-guides/pants/calf-sketch.svg"
-      },
-      {
-        key: "ankle",
-        label: "Ankle Circumference",
-        description: "Measure around your ankle.",
-        detailedGuide: "Measure around your ankle at the narrowest point, just above the ankle bone.",
-        unit: "cm",
-        videoUrl: "https://youtu.be/x4E7fG3-PvY",
-        sketchImage: "/measurement-guides/pants/ankle-sketch.svg"
+        sketchImage: "/images/sketch/pants/trouser length.png"
       },
       {
         key: "rise",
         label: "Front Rise",
         description: "Measure from the crotch to the waistband in front.",
-        detailedGuide: "Measure from the crotch seam straight up to the top of the waistband at the front.",
+        detailedGuide: "1. Lay the trousers flat on a smooth, even surface, ensuring the waistband and legs are fully straightened with no folds.\n2. Locate the top edge of the front waistband.\n3. Find the front crotch point: this is where the front fly seam meets the crotch seam between the legs.\n4. Measure straight down from the top of the front waistband to this crotch intersection point, keeping the measuring tape vertical and taut.\n5. The number you obtain is the Front Rise, which indicates how the trousers will sit and fit at the front when worn.",
         unit: "cm",
-        videoUrl: "https://youtu.be/qJ8-OeFpGUg",
-        sketchImage: "/measurement-guides/pants/front-rise-sketch.svg"
+        videoUrl: "https://www.youtube.com/watch?v=0mQw-GJ5Q9o",
+        sketchImage: "/images/sketch/pants/front fly.png"
       },
       {
         key: "back_rise",
         label: "Back Rise",
         description: "Measure from the crotch to the waistband in back.",
-        detailedGuide: "Measure from the crotch seam straight up to the top of the waistband at the back.",
+        detailedGuide: "1. Lay the trousers flat on a smooth surface, making sure the waistband and legs are fully straightened with no wrinkles.\n2. Locate the top edge of the waistband at the back of the trousers.\n3. Identify the crotch point: This is where the two inseams meet and where the side seam intersects the crotch seam between the legs.\n4. Measure straight down from the top of the back waistband to this crotch intersection point. Keep the measuring tape vertical and taut for the most accurate rise measurement.\n5. The number you obtain is the Back Rise, which indicates how the trousers will sit and fit at the back when worn.",
         unit: "cm",
-        videoUrl: "https://youtu.be/qJ8-OeFpGUg",
+        videoUrl: "https://www.youtube.com/watch?v=Ju7i6PNOADo",
         sketchImage: "/measurement-guides/pants/back-rise-sketch.svg"
       },
       {
         key: "hem_width",
         label: "Hem Width",
         description: "Measure the width of the pant leg opening.",
-        detailedGuide: "Measure straight across the bottom opening of the pant leg from one side to the other.",
+        detailedGuide: "1. Lay the trousers flat on a smooth surface, ensuring the bottom of each leg is fully straightened.\n2. Locate the hem at the very bottom edge of the trouser leg.\n3. Measure straight across the hem from one side to the other, keeping the fabric flat and edges aligned.\n4. Double this measurement to determine the total hem circumference, since the trousers are measured flat.",
         unit: "cm",
         videoUrl: "https://youtu.be/x4E7fG3-PvY",
-        sketchImage: "/measurement-guides/pants/hem-width-sketch.svg"
-      },
-      {
-        key: "seat",
-        label: "Seat Width",
-        description: "Measure across the seat at the fullest part.",
-        detailedGuide: "Lay the pants flat and measure across the seat area at the fullest part of the buttocks.",
-        unit: "cm",
-        videoUrl: "https://youtu.be/DVy9E71T3cI",
-        sketchImage: "/measurement-guides/pants/seat-sketch.svg"
-      },
-      {
-        key: "crotch_depth",
-        label: "Crotch Depth",
-        description: "Measure from the waistband to the crotch seam.",
-        detailedGuide: "Measure from the top of the waistband straight down to where the crotch seam begins.",
-        unit: "cm",
-        videoUrl: "https://youtu.be/qJ8-OeFpGUg",
-        sketchImage: "/measurement-guides/pants/crotch-depth-sketch.svg"
-      },
-      {
-        key: "pocket_depth",
-        label: "Pocket Depth",
-        description: "Measure the depth of the side pockets.",
-        detailedGuide: "Measure from the pocket opening straight down to the bottom of the pocket.",
-        unit: "inches",
-        videoUrl: "https://youtu.be/3xVdy8Azqhs",
-        sketchImage: "/measurement-guides/pants/pocket-sketch.svg"
+        sketchImage: "/images/sketch/pants/hem circumference.png"
       }
     ]
   },

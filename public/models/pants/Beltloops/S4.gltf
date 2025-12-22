@@ -1,0 +1,163 @@
+{
+  "asset": {
+    "generator": "Khronos glTF Blender I/O v1.6.16",
+    "version": "2.0"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "S14.001",
+      "rotation": [
+        0.7071068286895752,
+        0,
+        0,
+        0.7071067094802856
+      ],
+      "scale": [
+        0.0762486457824707,
+        0.0762486457824707,
+        0.0762486457824707
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "doubleSided": true,
+      "name": "Material.070",
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0,
+          "texCoord": 0
+        },
+        "metallicFactor": 0.2116161584854126,
+        "roughnessFactor": 0.3400673270225525,
+        "baseColorFactor": [
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "alphaMode": "OPAQUE"
+    }
+  ],
+  "meshes": [
+    {
+      "name": "S14_Circle.003",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 1,
+            "NORMAL": 2,
+            "TEXCOORD_0": 3
+          },
+          "indices": 0,
+          "material": 0,
+          "mode": 4,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 0,
+              "attributes": {
+                "POSITION": 0,
+                "NORMAL": 1,
+                "TEXCOORD_0": 2
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    }
+  ],
+  "images": [
+    {
+      "mimeType": "image/png",
+      "name": "S14",
+      "uri": "S14.png"
+    }
+  ],
+  "accessors": [
+    {
+      "componentType": 5123,
+      "count": 12384,
+      "type": "SCALAR"
+    },
+    {
+      "componentType": 5126,
+      "count": 4548,
+      "max": [
+        9.91794430673136,
+        3.3810787479892204,
+        -17.705116664880364
+      ],
+      "min": [
+        -9.91794430673136,
+        2.3196255022286003,
+        -18.77686058938517
+      ],
+      "type": "VEC3"
+    },
+    {
+      "componentType": 5126,
+      "count": 4548,
+      "type": "VEC3"
+    },
+    {
+      "componentType": 5126,
+      "count": 4548,
+      "type": "VEC2"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 13816
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "buffers": [
+    {
+      "name": "S4",
+      "byteLength": 13816,
+      "uri": "S4.bin"
+    }
+  ],
+  "extensionsRequired": [
+    "KHR_draco_mesh_compression"
+  ],
+  "extensionsUsed": [
+    "KHR_draco_mesh_compression"
+  ]
+}

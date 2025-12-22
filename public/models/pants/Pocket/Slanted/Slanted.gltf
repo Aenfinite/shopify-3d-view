@@ -1,0 +1,112 @@
+{
+  "asset": {
+    "generator": "Khronos glTF Blender I/O v1.6.16",
+    "version": "2.0"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "Slanted"
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Plane.024",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 1,
+            "NORMAL": 2,
+            "TEXCOORD_0": 3
+          },
+          "indices": 0,
+          "mode": 4,
+          "material": 0,
+          "extensions": {
+            "KHR_draco_mesh_compression": {
+              "bufferView": 0,
+              "attributes": {
+                "POSITION": 0,
+                "NORMAL": 1,
+                "TEXCOORD_0": 2
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accessors": [
+    {
+      "componentType": 5123,
+      "count": 2496,
+      "type": "SCALAR"
+    },
+    {
+      "componentType": 5126,
+      "count": 504,
+      "max": [
+        0.9630092414145595,
+        1.2882818456603613,
+        0.37529311515342556
+      ],
+      "min": [
+        -0.9630092414145595,
+        0.2861715225453252,
+        0.037533827679860035
+      ],
+      "type": "VEC3"
+    },
+    {
+      "componentType": 5126,
+      "count": 504,
+      "type": "VEC3"
+    },
+    {
+      "componentType": 5126,
+      "count": 504,
+      "type": "VEC2"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 3549
+    }
+  ],
+  "buffers": [
+    {
+      "name": "Slanted",
+      "byteLength": 3552,
+      "uri": "Slanted.bin"
+    }
+  ],
+  "materials": [
+    {
+      "name": "default",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "alphaMode": "OPAQUE",
+      "doubleSided": false
+    }
+  ],
+  "extensionsRequired": [
+    "KHR_draco_mesh_compression"
+  ],
+  "extensionsUsed": [
+    "KHR_draco_mesh_compression"
+  ]
+}
