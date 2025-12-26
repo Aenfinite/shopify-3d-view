@@ -9,6 +9,11 @@ import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js"
 import { applyFabricCustomization } from "@/lib/3d/customization-utils"
 import { pantsConfigs, pantsFrontPocketConfigs, pantsBackPocketConfigs, pantsCuffConfigs, pantsWaistbandConfigs } from "@/lib/3d/pants-configs"
 
+// ⚙️ PANTS BASE COLOR CONTROL
+// Change this hex value to adjust the darkness/grayness of pants fabric
+// Examples: 0x4a4a4a (lighter), 0x3a3a3a (medium), 0x2a2a2a (darker), 0x1a1a1a (very dark)
+const PANTS_BASE_COLOR = 0x6a6a6a
+
 export interface BasicPantsCustomization {
   fabricColor?: string
   fabricType?: string
@@ -89,7 +94,7 @@ function PantsModel({
               const material = child.material as THREE.MeshStandardMaterial
               if (material.isMeshStandardMaterial) {
                 // Set base color to darker gray like jackets
-                material.color.setHex(0x4a4a4a)
+                material.color.setHex(PANTS_BASE_COLOR)
                 material.roughness = 0.85
                 material.metalness = 0.0
                 material.envMapIntensity = 0.2
@@ -98,7 +103,7 @@ function PantsModel({
               
               // Then apply custom fabric color/texture
               if (customizations.fabricColor) {
-                applyFabricCustomization(child, customizations.fabricColor!)
+                applyFabricCustomization(child, customizations.fabricColor!, PANTS_BASE_COLOR)
               }
             }
           })
@@ -115,7 +120,7 @@ function PantsModel({
               const material = child.material as THREE.MeshStandardMaterial
               if (material.isMeshStandardMaterial) {
                 // Set base color to darker gray like jackets
-                material.color.setHex(0x4a4a4a)
+                material.color.setHex(PANTS_BASE_COLOR)
                 material.roughness = 0.85
                 material.metalness = 0.0
                 material.envMapIntensity = 0.2
@@ -124,7 +129,7 @@ function PantsModel({
               
               // Then apply custom fabric color/texture
               if (customizations.fabricColor) {
-                applyFabricCustomization(child, customizations.fabricColor!)
+                applyFabricCustomization(child, customizations.fabricColor!, PANTS_BASE_COLOR)
               }
             }
           })
@@ -141,7 +146,7 @@ function PantsModel({
               const material = child.material as THREE.MeshStandardMaterial
               if (material.isMeshStandardMaterial) {
                 // Set base color to darker gray like jackets
-                material.color.setHex(0x4a4a4a)
+                material.color.setHex(PANTS_BASE_COLOR)
                 material.roughness = 0.85
                 material.metalness = 0.0
                 material.envMapIntensity = 0.2
@@ -150,7 +155,7 @@ function PantsModel({
               
               // Then apply custom fabric color/texture
               if (customizations.fabricColor) {
-                applyFabricCustomization(child, customizations.fabricColor!)
+                applyFabricCustomization(child, customizations.fabricColor!, PANTS_BASE_COLOR)
               }
             }
           })
@@ -191,7 +196,7 @@ function PantsModel({
           if (child instanceof THREE.Mesh && child.material) {
             const material = child.material as THREE.MeshStandardMaterial
             if (material.isMeshStandardMaterial) {
-              material.color.setHex(0x4a4a4a)
+              material.color.setHex(PANTS_BASE_COLOR)
               material.roughness = 0.85
               material.metalness = 0.0
               material.envMapIntensity = 0.2
@@ -199,7 +204,7 @@ function PantsModel({
             }
             
             if (customizations.fabricColor) {
-              applyFabricCustomization(child, customizations.fabricColor!)
+              applyFabricCustomization(child, customizations.fabricColor!, PANTS_BASE_COLOR)
             }
           }
         })
@@ -237,7 +242,7 @@ function PantsModel({
                 if (child instanceof THREE.Mesh && child.material) {
                   const material = child.material as THREE.MeshStandardMaterial
                   if (material.isMeshStandardMaterial) {
-                    material.color.setHex(0x4a4a4a)
+                    material.color.setHex(PANTS_BASE_COLOR)
                     material.roughness = 0.85
                     material.metalness = 0.0
                     material.envMapIntensity = 0.2
@@ -245,7 +250,7 @@ function PantsModel({
                   }
                   
                   if (customizations.fabricColor) {
-                    applyFabricCustomization(child, customizations.fabricColor!)
+                    applyFabricCustomization(child, customizations.fabricColor!, PANTS_BASE_COLOR)
                   }
                 }
               })
@@ -293,7 +298,7 @@ function PantsModel({
           if (child instanceof THREE.Mesh && child.material) {
             const material = child.material as THREE.MeshStandardMaterial
             if (material.isMeshStandardMaterial) {
-              material.color.setHex(0x4a4a4a)
+              material.color.setHex(PANTS_BASE_COLOR)
               material.roughness = 0.85
               material.metalness = 0.0
               material.envMapIntensity = 0.2
@@ -301,7 +306,7 @@ function PantsModel({
             }
             
             if (customizations.fabricColor) {
-              applyFabricCustomization(child, customizations.fabricColor!)
+              applyFabricCustomization(child, customizations.fabricColor!, PANTS_BASE_COLOR)
             }
           }
         })
@@ -345,7 +350,7 @@ function PantsModel({
                 if (child instanceof THREE.Mesh && child.material) {
                   const material = child.material as THREE.MeshStandardMaterial
                   if (material.isMeshStandardMaterial) {
-                    material.color.setHex(0x4a4a4a)
+                    material.color.setHex(PANTS_BASE_COLOR)
                     material.roughness = 0.85
                     material.metalness = 0.0
                     material.envMapIntensity = 0.2
@@ -353,7 +358,7 @@ function PantsModel({
                   }
                   
                   if (customizations.fabricColor) {
-                    applyFabricCustomization(child, customizations.fabricColor!)
+                    applyFabricCustomization(child, customizations.fabricColor!, PANTS_BASE_COLOR)
                   }
                 }
               })
@@ -504,16 +509,16 @@ export default function ModularPantsViewerR3F({
         <color attach="background" args={["#f5f5f5"]} />
         <fog attach="fog" args={["#f5f5f5", 5, 20]} />
         
-        <ambientLight intensity={0.3} />
+        <ambientLight intensity={0.25} />
         <directionalLight
           position={[5, 5, 5]}
-          intensity={0.6}
+          intensity={0.5}
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
         />
-        <directionalLight position={[-5, 3, -5]} intensity={0.25} />
-        <spotLight position={[0, 10, 0]} angle={0.3} intensity={0.2} />
+        <directionalLight position={[-5, 3, -5]} intensity={0.2} />
+        <spotLight position={[0, 10, 0]} angle={0.3} intensity={0.15} />
 
         <Suspense fallback={<LoadingOverlay />}>
           <PantsModel customizations={customizations} />

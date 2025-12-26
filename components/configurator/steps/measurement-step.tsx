@@ -340,8 +340,8 @@ const GARMENT_MEASUREMENTS = {
     measurements: [
       { 
         key: "waist", 
-        label: "Waist Circumference", 
-        description: "Measure around your natural waistline.", 
+        label: "Trouser Waist", 
+        description: "Take off your belt and stand naturally without sucking in your stomach. Measure around the waistband where you would wear your dress pants. Make sure the tape is level all around and leave room for one finger.", 
         detailedGuide: "1. Lay the trousers flat on a table and make sure the waistband is fully straightened and stretched evenly from end to end.\n2. Measure at the top edge across the waistband, from the outermost point on one side to the outermost point on the other side.\n3. Since this measurement is taken on a flat garment, multiply the measured width by two to obtain the full waistband circumference.\n4. Add 1 cm to the total (to allow minimal ease and ensure comfortable fit). Example: 38 cm × 2 = 76 cm + 1 cm = 77 cm final result.\n5. Enter this final result into the system.",
         unit: "cm",
         videoUrl: "https://www.youtube.com/watch?v=gnxiBmx5puI",
@@ -349,26 +349,17 @@ const GARMENT_MEASUREMENTS = {
       },
       { 
         key: "hip", 
-        label: "Hip Circumference", 
-        description: "Measure around the fullest part of your hips.", 
+        label: "Hip Around", 
+        description: "Empty your pockets and stand with your feet together. Measure around the widest part of your hips. Make sure the tape is level all around and leave room for one finger between the tape and your hips.", 
         detailedGuide: "1. Lay the trousers flat on a table, ensuring the fabric is smooth and the legs and waistband are fully straightened.\n2. Locate the widest part of the trousers, usually around the hip area, slightly below the waistband.\n3. Measure straight across the garment at this widest point, from one side seam to the other, keeping the fabric flat and free of hidden folds.\n4. Since this measurement is taken on a flat-lay garment, double the measured width to calculate the full hip circumference.",
         unit: "cm",
         videoUrl: "https://youtu.be/DVy9E71T3cI",
         sketchImage: "/images/sketch/pants/hip circumference.png"
       },
       { 
-        key: "inseam", 
-        label: "Inseam Length", 
-        description: "Measure from crotch to ankle.", 
-        detailedGuide: "1. Lay the trousers flat on a table, ensuring both legs are straightened and the fabric has no folds or creases.\n2. Locate the crotch point, where the inseams of both legs meet.\n3. Measure from the crotch point down along the inner seam of the trouser leg.\n4. Continue measuring all the way to the bottom of the hem. This total length is the inseam measurement.",
-        unit: "cm",
-        videoUrl: "https://youtu.be/qJ8-OeFpGUg",
-        sketchImage: "/images/sketch/pants/inseam length.png"
-      },
-      { 
         key: "thigh", 
-        label: "Thigh Circumference", 
-        description: "Measure around the fullest part of your thigh.", 
+        label: "Thigh", 
+        description: "Measure the widest part of your thigh just below the crotch. Make sure the tape is level all around and leave a small amount of room between the tape and your thigh.", 
         detailedGuide: "1. Lay one trouser leg flat on a smooth table, ensuring the fabric is straightened with no folds or creases.\n2. Locate the crotch point, where the inseams meet.\n3. Measure approximately 3 cm downward from the crotch point along the inside of the trouser leg. This marks the level at which the thigh is measured.\n4. Measure straight across the leg at this point, from one side to the other, keeping the fabric flat.\n5. Since this measurement is taken on a flat-lay garment, double the result to calculate the full thigh circumference.",
         unit: "cm",
         videoUrl: "https://www.youtube.com/watch?v=UUTeKB8HGCA",
@@ -376,8 +367,8 @@ const GARMENT_MEASUREMENTS = {
       },
       { 
         key: "knee", 
-        label: "Knee Circumference", 
-        description: "Measure around your knee.", 
+        label: "Knee", 
+        description: "Measure around the widest point of your kneecap. Leave room for one finger between the measuring tape and your knee.", 
         detailedGuide: "1. Lay the trousers flat on an even surface, making sure the legs are fully straightened.\n2. Locate the knee position, which is approximately at the halfway point of the inseam length.\n3. Measure straight across the leg at this level, from one side to the other, keeping the fabric smooth and flat.\n4. Double this measurement to determine the total knee circumference, using the same method as measuring the hem.",
         unit: "cm",
         videoUrl: "https://www.youtube.com/watch?v=Mae5OCHglDo",
@@ -385,8 +376,8 @@ const GARMENT_MEASUREMENTS = {
       },
       { 
         key: "outseam", 
-        label: "Outseam Length", 
-        description: "Measure from waist to ankle on the outside.", 
+        label: "Leg Side Length / Trouser Length", 
+        description: "Stand straight. Start measuring at the top of the waistband where you would wear your dress pants. Keep the tape straight along the outside of the leg, passing the knee, and measure down to the desired length at the ankle or foot.", 
         detailedGuide: "1. Lay the trousers flat on a table, ensuring both legs are straight and the fabric is smooth with no creases.\n2. Locate the top edge of the waistband on the side of the trousers.\n3. Measure down along the outer seam, starting from the very top of the waistband.\n4. Continue measuring all the way down the outer side seam until you reach the bottom of the hem.\n5. The number you obtain is the total length of the trousers, also known as the outseam measurement.",
         unit: "cm",
         videoUrl: "https://youtu.be/x4E7fG3-PvY",
@@ -395,29 +386,20 @@ const GARMENT_MEASUREMENTS = {
       {
         key: "rise",
         label: "Front Rise",
-        description: "Measure from the crotch to the waistband in front.",
+        description: "Place the tape at your side, at the same height where the trouser side length was measured. Measure straight down to the lowest point of your hip or your crotch level.",
         detailedGuide: "1. Lay the trousers flat on a smooth, even surface, ensuring the waistband and legs are fully straightened with no folds.\n2. Locate the top edge of the front waistband.\n3. Find the front crotch point: this is where the front fly seam meets the crotch seam between the legs.\n4. Measure straight down from the top of the front waistband to this crotch intersection point, keeping the measuring tape vertical and taut.\n5. The number you obtain is the Front Rise, which indicates how the trousers will sit and fit at the front when worn.",
         unit: "cm",
         videoUrl: "https://www.youtube.com/watch?v=0mQw-GJ5Q9o",
         sketchImage: "/images/sketch/pants/front fly.png"
       },
       {
-        key: "back_rise",
-        label: "Back Rise",
-        description: "Measure from the crotch to the waistband in back.",
+        key: "crotch_total",
+        label: "Crotch Total",
+        description: "Place the tape at the front, at the top of the waistband where you would wear your dress pants, vertically aligned with your belly button. Measure from the front waistband down through the crotch between your legs and up to the corresponding point on the back waistband. Hold the metal end of the tape at the front, keep the tape centered and snug, but do not pull tight.",
         detailedGuide: "1. Lay the trousers flat on a smooth surface, making sure the waistband and legs are fully straightened with no wrinkles.\n2. Locate the top edge of the waistband at the back of the trousers.\n3. Identify the crotch point: This is where the two inseams meet and where the side seam intersects the crotch seam between the legs.\n4. Measure straight down from the top of the back waistband to this crotch intersection point. Keep the measuring tape vertical and taut for the most accurate rise measurement.\n5. The number you obtain is the Back Rise, which indicates how the trousers will sit and fit at the back when worn.",
         unit: "cm",
         videoUrl: "https://www.youtube.com/watch?v=Ju7i6PNOADo",
-        sketchImage: "/measurement-guides/pants/back-rise-sketch.svg"
-      },
-      {
-        key: "hem_width",
-        label: "Hem Width",
-        description: "Measure the width of the pant leg opening.",
-        detailedGuide: "1. Lay the trousers flat on a smooth surface, ensuring the bottom of each leg is fully straightened.\n2. Locate the hem at the very bottom edge of the trouser leg.\n3. Measure straight across the hem from one side to the other, keeping the fabric flat and edges aligned.\n4. Double this measurement to determine the total hem circumference, since the trousers are measured flat.",
-        unit: "cm",
-        videoUrl: "https://youtu.be/x4E7fG3-PvY",
-        sketchImage: "/images/sketch/pants/hem circumference.png"
+        sketchImage: "/measurement-guides/pants/crotch-total-sketch.svg"
       }
     ]
   },
@@ -1010,14 +992,14 @@ export function MeasurementStep({
                       )}
 
                       {/* Video Instructions Section - Below buttons */}
-                      {getCurrentField().videoGuide && (
+                      {getCurrentField().description && (
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
                           <div className="flex items-center gap-2">
                             <Video className="w-5 h-5 text-blue-600" />
-                            <h4 className="font-semibold text-blue-900">Video Instructions</h4>
+                            <h4 className="font-semibold text-blue-900">Measurement Instructions</h4>
                           </div>
-                          <p className="text-sm text-blue-800 leading-relaxed">
-                            {getCurrentField().videoGuide}
+                          <p className="text-sm text-blue-800 leading-relaxed whitespace-pre-line">
+                            {getCurrentField().description}
                           </p>
                         </div>
                       )}

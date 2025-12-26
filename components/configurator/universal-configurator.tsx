@@ -1043,7 +1043,7 @@ export function UniversalConfigurator({
                         ? "Embroidered Monogram"
                     : currentStepData?.name || "Customize"}
               </h2>
-              {!isMeasurementStep && !isFitPreferenceStep && !isLiningSelectionStep && !isJacketLiningStep && !isMonogramStep && !isEmbroideredMonogramStep && currentStepData && (
+              {!isMeasurementStep && !isFitPreferenceStep && !isLiningSelectionStep && !isJacketLiningStep && !isMonogramStep && !isEmbroideredMonogramStep && currentStepData && currentStepData.values && (
                 <Badge variant="secondary" className="text-xs flex-shrink-0 hidden sm:inline-flex">
                   {currentStepData.values.length} option{currentStepData.values.length !== 1 ? 's' : ''}
                 </Badge>

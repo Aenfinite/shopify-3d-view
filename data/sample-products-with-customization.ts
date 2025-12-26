@@ -484,22 +484,5 @@ export const SAMPLE_PRODUCTS_WITH_CUSTOMIZATION = {
         { id: "with-extension", name: "With Extension", value: "with-extension", price: 20, thumbnail: "/images/Pants/WaistBandExtension/WaistBandExtension.jpg" },
       ],
     },
-    {
-      id: "button-color",
-      name: "Button Color",
-      type: "color" as const,
-      category: "details",
-      values: [
-        { id: "standard", name: "Standard Matching", value: "standard", price: 0, color: "standard" },
-        { id: "natural", name: "Natural", value: "#F5E6D3", price: 0, color: "#F5E6D3" },
-        { id: "dark-brown", name: "Dark Brown", value: "#4A2C2A", price: 5, color: "#4A2C2A" },
-        { id: "black", name: "Black", value: "#1A1A1A", price: 5, color: "#1A1A1A" },
-        { id: "navy", name: "Navy", value: "#1565C0", price: 5, color: "#1565C0" },
-        { id: "gold", name: "Gold", value: "#FFD700", price: 15, color: "#FFD700" },
-        { id: "silver", name: "Silver", value: "#C0C0C0", price: 12, color: "#C0C0C0" },
-        { id: "bronze", name: "Bronze", value: "#CD7F32", price: 12, color: "#CD7F32" },
-        { id: "pearl-white", name: "Pearl White", value: "#F8F8FF", price: 10, color: "#F8F8FF" },
-      ],
-    },
   ],
 }

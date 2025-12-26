@@ -296,8 +296,9 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
  * Applies a color or texture to a mesh's material with realistic fabric properties
  * @param mesh - The mesh to apply the material to
  * @param color - Either a hex color string (e.g., "#ff0000") or a texture path (e.g., "/images/fabric/IMG-20250831-WA0001.jpg")
+ * @param baseColor - Optional base color multiplier for textures (e.g., 0xaaaaaa for jackets, 0x1a1a1a for darker pants)
  */
-function applyMaterialColor(mesh: THREE.Mesh, color: string) {
+function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number = 0xaaaaaa) {
   if (!mesh.material) {
     console.warn(`⚠️ No material found on mesh: ${mesh.name}`)
     return
@@ -325,7 +326,7 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string) {
               texture.repeat.set(8, 8) // Increased repeat for smaller, more detailed pattern
               
               material.map = texture
-              material.color.setHex(0xaaaaaa) // Darker gray to better match actual fabric colors
+              material.color.setHex(baseColor) // Use custom base color for fabric appearance
               
               // Apply realistic fabric properties
               material.roughness = 0.75  // Higher roughness for more matte fabric appearance
@@ -380,7 +381,8 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string) {
  * Exported wrapper for applying fabric customization to a mesh
  * @param mesh - The mesh to apply the material to
  * @param color - Either a hex color string or a texture path
+ * @param baseColor - Optional base color multiplier for textures (default: 0xaaaaaa for jackets)
  */
-export function applyFabricCustomization(mesh: THREE.Mesh, color: string) {
-  applyMaterialColor(mesh, color)
+export function applyFabricCustomization(mesh: THREE.Mesh, color: string, baseColor?: number) {
+  applyMaterialColor(mesh, color, baseColor)
 }
