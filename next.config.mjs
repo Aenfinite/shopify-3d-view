@@ -1,16 +1,22 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
   images: {
     unoptimized: true,
   },
+  turbopack: {
+    rules: {
+      // Handle .bin files for GLTF models
+      '*.bin': {
+        loaders: ['file-loader'],
+        as: '*.bin',
+      },
+    },
+  },
   webpack: (config) => {
-    // Handle .bin files for GLTF models
+    // Handle .bin files for GLTF models (fallback for webpack mode)
     config.module.rules.push({
       test: /\.bin$/,
       type: 'asset/resource',

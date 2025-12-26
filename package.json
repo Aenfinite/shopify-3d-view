@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "next build",
+    "build": "next build --webpack",
     "dev": "next dev",
     "lint": "next lint",
     "start": "next start"
@@ -57,11 +57,11 @@
     "jspdf": "latest",
     "jspdf-autotable": "latest",
     "lucide-react": "^0.454.0",
-    "next": "15.2.4",
+    "next": "16.1.1",
     "next-themes": "^0.4.4",
-    "react": "^19",
+    "react": "^19.2.3",
     "react-day-picker": "9.8.0",
-    "react-dom": "^19",
+    "react-dom": "^19.2.3",
     "react-hook-form": "latest",
     "react-native": "latest",
     "react-resizable-panels": "^2.1.7",
