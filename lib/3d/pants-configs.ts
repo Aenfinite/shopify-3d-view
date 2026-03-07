@@ -32,7 +32,7 @@ export const pantsConfigs: Record<string, PantsConfig> = {
   },
   'two-pleats': {
     priority: {
-      style: "/models/pants/FrontStyle/25020.gltf",
+      style: "/models/pants/FrontStyle/2Pleats.gltf",
       beltLoops: "/models/pants/BeltLoops/01.gltf",
       waistband: "/models/pants/Backandbasebeltarea/Basemodel.gltf"
     },
@@ -44,7 +44,7 @@ export const pantsConfigs: Record<string, PantsConfig> = {
 export const pantsFrontPocketConfigs: Record<string, string> = {
   'slanted-pockets': "/models/pants/Pockets/Slanted.gltf",
   'seam-pockets': "/models/pants/Pockets/StraightWelt.gltf",
-  'jeans-pockets': "/models/pants/Pockets/Jeans.gltf"
+  'jeans-pockets': "/models/pants/Pockets/Jeanss.gltf"
 }
 
 // Back pocket configurations

@@ -9,10 +9,9 @@ import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js"
 import { applyFabricCustomization } from "@/lib/3d/customization-utils"
 import { pantsConfigs, pantsFrontPocketConfigs, pantsBackPocketConfigs, pantsCuffConfigs, pantsWaistbandConfigs } from "@/lib/3d/pants-configs"
 
-// ⚙️ PANTS BASE COLOR CONTROL
-// Change this hex value to adjust the darkness/grayness of pants fabric
-// Examples: 0x4a4a4a (lighter), 0x3a3a3a (medium), 0x2a2a2a (darker), 0x1a1a1a (very dark)
-const PANTS_BASE_COLOR = 0x6a6a6a
+// Neutral fallback base color when no fabric is selected.
+// Keep this aligned with jacket defaults to avoid cross-garment color mismatch.
+const PANTS_BASE_COLOR = 0xaaaaaa
 
 // Material names that are NOT fabric — skip fabric color/texture on these
 const NON_FABRIC_MATERIALS = ['filobottoni', 'bottone', 'filobottone']
@@ -30,31 +29,32 @@ function isFabricMesh(child: THREE.Mesh): boolean {
 function applyPantsFabric(scene: THREE.Group, fabricColor?: string) {
   scene.traverse((child) => {
     if (child instanceof THREE.Mesh && child.material) {
-      const material = child.material as THREE.MeshStandardMaterial
-      if (!material.isMeshStandardMaterial) return
+      const materials = Array.isArray(child.material) ? child.material : [child.material]
 
       if (isFabricMesh(child)) {
-        // Fabric mesh — fully matte fabric, zero shine
-        material.color.setHex(PANTS_BASE_COLOR)
-        material.roughness = 1.0          // 100% roughness — completely matte
-        material.metalness = 0.0          // Zero metalness — fabric is not metallic
-        material.envMapIntensity = 0.0    // No environment reflection at all
-        material.flatShading = false      // Smooth shading for realistic cloth
-        material.needsUpdate = true
-
         if (fabricColor) {
-          applyFabricCustomization(child, fabricColor, PANTS_BASE_COLOR)
-          // Override AFTER applyFabricCustomization (it can set higher values)
-          material.envMapIntensity = 0.0
-          material.roughness = 1.0
-          material.metalness = 0.0
-          material.needsUpdate = true
+          // Use the same fabric pipeline as jacket to preserve swatch fidelity.
+          applyFabricCustomization(child, fabricColor)
+        } else {
+          // Fallback neutral cloth look before a fabric is selected.
+          materials.forEach((material) => {
+            if (!(material instanceof THREE.MeshStandardMaterial)) return
+            material.color.setHex(PANTS_BASE_COLOR)
+            material.roughness = 0.92
+            material.metalness = 0.0
+            material.envMapIntensity = 0.15
+            material.flatShading = false
+            material.needsUpdate = true
+          })
         }
       } else {
         // Button / thread — keep original material, just ensure quality
-        material.roughness = Math.max(material.roughness, 0.5)
-        material.envMapIntensity = 0.1
-        material.needsUpdate = true
+        materials.forEach((material) => {
+          if (!(material instanceof THREE.MeshStandardMaterial)) return
+          material.roughness = Math.max(material.roughness, 0.5)
+          material.envMapIntensity = 0.1
+          material.needsUpdate = true
+        })
       }
     }
   })
