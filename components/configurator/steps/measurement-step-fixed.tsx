@@ -39,13 +39,13 @@ interface MeasurementData {
 }
 
 const MEASUREMENT_FIELDS = [
-  { key: "neck", label: "Neck", description: "Measure around the neck where collar sits", unit: "inches" },
-  { key: "chest", label: "Chest", description: "Measure around fullest part of chest", unit: "inches" },
-  { key: "stomach", label: "Stomach", description: "Measure around natural waistline", unit: "inches" },
-  { key: "hip", label: "Hip", description: "Measure around fullest part of hips", unit: "inches" },
-  { key: "length", label: "Length", description: "Measure from back of neck to desired hem", unit: "inches" },
-  { key: "shoulder", label: "Shoulder", description: "Measure from shoulder point to shoulder point", unit: "inches" },
-  { key: "sleeve", label: "Sleeve", description: "Measure from shoulder to wrist", unit: "inches" },
+  { key: "neck", label: "Neck", description: "Measure around the neck where collar sits", unit: "cm" },
+  { key: "chest", label: "Chest", description: "Measure around fullest part of chest", unit: "cm" },
+  { key: "stomach", label: "Stomach", description: "Measure around natural waistline", unit: "cm" },
+  { key: "hip", label: "Hip", description: "Measure around fullest part of hips", unit: "cm" },
+  { key: "length", label: "Length", description: "Measure from back of neck to desired hem", unit: "cm" },
+  { key: "shoulder", label: "Shoulder", description: "Measure from shoulder point to shoulder point", unit: "cm" },
+  { key: "sleeve", label: "Sleeve", description: "Measure from shoulder to wrist", unit: "cm" },
 ]
 
 const MEASUREMENT_SKETCHES = {

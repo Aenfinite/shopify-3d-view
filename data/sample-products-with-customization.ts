@@ -1,4 +1,4 @@
-export interface CustomizationOption {
+﻿export interface CustomizationOption {
   id: string
   name: string
   type: "color" | "texture" | "component"
@@ -88,12 +88,12 @@ export const SAMPLE_PRODUCTS_WITH_CUSTOMIZATION = {
       type: "color" as const,
       category: "details",
       values: [
-        { id: "standard", name: "Standard Matching", value: "standard", price: 0 },
-        { id: "gold", name: "Gold", value: "#FFD700", price: 8, color: "#FFD700" },
-        { id: "silver", name: "Silver", value: "#C0C0C0", price: 8, color: "#C0C0C0" },
-        { id: "copper", name: "Copper", value: "#B87333", price: 8, color: "#B87333" },
-        { id: "bronze", name: "Bronze", value: "#CD7F32", price: 8, color: "#CD7F32" },
-        { id: "pewter", name: "Pewter", value: "#96A8A1", price: 8, color: "#96A8A1" },
+        { id: "standard", name: "Standard", value: "standard", price: 0 },
+        { id: "gold", name: "Gold", value: "#FFD700", price: 0, color: "#FFD700" },
+        { id: "silver", name: "Silver", value: "#C0C0C0", price: 0, color: "#C0C0C0" },
+        { id: "copper", name: "Copper", value: "#B87333", price: 0, color: "#B87333" },
+        { id: "bronze", name: "Bronze", value: "#CD7F32", price: 0, color: "#CD7F32" },
+        { id: "pewter", name: "Pewter", value: "#96A8A1", price: 0, color: "#96A8A1" },
       ],
     },
   ],
@@ -104,47 +104,26 @@ export const SAMPLE_PRODUCTS_WITH_CUSTOMIZATION = {
       type: "texture" as const,
       category: "fabric",
       values: [
-        { 
-          id: "wool-blend", 
-          name: "Wool Blend", 
-          value: "wool-blend", 
+        {
+          id: "wool-blend",
+          name: "Poly Visc Performance",
+          value: "wool-blend",
           price: 0,
-          thumbnail: "/placeholder.svg?height=60&width=60&text=Wool"
+          thumbnail: "/fabrics/FabricsJacket/02.3716.01.jpg"
         },
-        { 
-          id: "premium-wool", 
-          name: "Premium Wool", 
-          value: "premium-wool", 
+        {
+          id: "premium-wool",
+          name: "Merino Wool / Lycra",
+          value: "premium-wool",
           price: 50,
-          thumbnail: "/placeholder.svg?height=60&width=60&text=Premium"
+          thumbnail: "/fabrics/FabricsJacket/XHS23L6001-7-reduced.jpg"
         },
-        { 
-          id: "cashmere-blend", 
-          name: "Cashmere Blend", 
-          value: "cashmere-blend", 
-          price: 120,
-          thumbnail: "/placeholder.svg?height=60&width=60&text=Cashmere"
-        },
-        { 
-          id: "summer-wool", 
-          name: "Summer Wool", 
-          value: "summer-wool", 
-          price: 30,
-          thumbnail: "/placeholder.svg?height=60&width=60&text=Summer"
-        },
-        { 
-          id: "tweed", 
-          name: "Tweed", 
-          value: "tweed", 
-          price: 80,
-          thumbnail: "/placeholder.svg?height=60&width=60&text=Tweed"
-        },
-        { 
-          id: "linen-blend", 
-          name: "Linen Blend", 
-          value: "linen-blend", 
-          price: 40,
-          thumbnail: "/placeholder.svg?height=60&width=60&text=Linen"
+        {
+          id: "washable-wool",
+          name: "Premium Wool/Poly",
+          value: "washable-wool",
+          price: 50,
+          thumbnail: "/fabrics/FabricsJacket/XHS23T9001-5-reduced.jpg"
         },
       ],
     },
@@ -184,25 +163,25 @@ export const SAMPLE_PRODUCTS_WITH_CUSTOMIZATION = {
       category: "interior",
       customComponent: "lining-selection",
       values: [
-        { 
-          id: "standard", 
-          name: "Standard Lining", 
-          value: "standard", 
+        {
+          id: "standard",
+          name: "Standard Lining",
+          value: "standard",
           price: 0,
           thumbnail: "/placeholder.svg?height=50&width=50"
         },
-        { 
-          id: "custom", 
-          name: "Custom Lining", 
-          value: "custom", 
+        {
+          id: "custom",
+          name: "Custom Lining",
+          value: "custom",
           price: 0,
           thumbnail: "/images/lining/116_normal.jpg"
         },
-        { 
-          id: "none", 
-          name: "No Lining", 
-          value: "none", 
-          price: -15,
+        {
+          id: "unlined",
+          name: "Unlined",
+          value: "unlined",
+          price: 0,
           thumbnail: "/placeholder.svg?height=50&width=50"
         },
       ],
@@ -215,20 +194,20 @@ export const SAMPLE_PRODUCTS_WITH_CUSTOMIZATION = {
       values: [
         { id: "two-buttons", name: "Two Buttons", value: "two-buttons", price: 0, thumbnail: "/images/jacket-configuration/front-style/2buttons.png" },
         { id: "three-buttons", name: "Three Buttons", value: "three-buttons", price: 10, thumbnail: "/images/jacket-configuration/front-style/3buttons.png" },
-        { id: "2x3-buttons", name: "2x3 Buttons", value: "2x3-buttons", price: 25, thumbnail: "/images/jacket-configuration/front-style/2x3buttons.png" },
+        { id: "2x3-buttons", name: "Double-breasted", value: "2x3-buttons", price: 25, thumbnail: "/images/jacket-configuration/front-style/2x3buttons.png" },
       ],
     },
-     {
+    {
       id: "front-pocket",
       name: "Front Pocket",
       type: "component" as const,
       category: "style",
       values: [
-        { id: "flap-pocket", name: "Flap Pocket", value: "flap-pocket", price: 0, thumbnail: "/images/jacket-configuration/front-pocket/flappocket.png" },
-        { id: "patch-pocket", name: "Patch Pocket", value: "patch-pocket", price: 10, thumbnail: "/images/jacket-configuration/front-pocket/patchpocket.png" },
+        { id: "flap-pocket", name: "Flap Pocket", value: "flap-pocket", price: 0, thumbnail: "/images/jacket-configuration/front-pocket/flap-pocket.png" },
+        { id: "patch-pocket", name: "Patch Pocket", value: "patch-pocket", price: 10, thumbnail: "/images/jacket-configuration/front-pocket/patch-pocket.png" },
       ],
     },
-     {
+    {
       id: "chest-pocket",
       name: "Chest Pocket",
       type: "component" as const,
@@ -254,26 +233,27 @@ export const SAMPLE_PRODUCTS_WITH_CUSTOMIZATION = {
       type: "component" as const,
       category: "style",
       values: [
+        { id: "no-vent", name: "No Vent", value: "no-vent", price: 0, thumbnail: "/images/jacket-configuration/back-vent/onebackvent.png" },
         { id: "one-back-vent", name: "One Back Vent", value: "one-back-vent", price: 0, thumbnail: "/images/jacket-configuration/back-vent/onebackvent.png" },
         { id: "two-back-vent", name: "Two Back Vent", value: "two-back-vent", price: 15, thumbnail: "/images/jacket-configuration/back-vent/2sidevent.png" },
       ],
     },
-   
-      {
+
+    {
       id: "button-color",
       name: "Button Color",
       type: "color" as const,
       category: "details",
       values: [
-        { id: "standard", name: "Standard Matching", value: "standard", price: 0, color: "standard" },
+        { id: "standard", name: "Standard", value: "standard", price: 0, color: "standard" },
         { id: "natural", name: "Natural", value: "#F5E6D3", price: 0, color: "#F5E6D3" },
-        { id: "dark-brown", name: "Dark Brown", value: "#4A2C2A", price: 5, color: "#4A2C2A" },
-        { id: "black", name: "Black", value: "#1A1A1A", price: 5, color: "#1A1A1A" },
-        { id: "navy", name: "Navy", value: "#1565C0", price: 5, color: "#1565C0" },
-        { id: "gold", name: "Gold", value: "#FFD700", price: 15, color: "#FFD700" },
-        { id: "silver", name: "Silver", value: "#C0C0C0", price: 12, color: "#C0C0C0" },
-        { id: "bronze", name: "Bronze", value: "#CD7F32", price: 12, color: "#CD7F32" },
-        { id: "pearl-white", name: "Pearl White", value: "#F8F8FF", price: 10, color: "#F8F8FF" },
+        { id: "dark-brown", name: "Dark Brown", value: "#4A2C2A", price: 0, color: "#4A2C2A" },
+        { id: "black", name: "Black", value: "#1A1A1A", price: 0, color: "#1A1A1A" },
+        { id: "navy", name: "Navy", value: "#1a3055", price: 0, color: "#1a3055" },
+        { id: "gold", name: "Gold", value: "#FFD700", price: 0, color: "#FFD700" },
+        { id: "silver", name: "Silver", value: "#C0C0C0", price: 0, color: "#C0C0C0" },
+        { id: "bronze", name: "Bronze", value: "#CD7F32", price: 0, color: "#CD7F32" },
+        { id: "pearl-white", name: "Pearl White", value: "#F8F8FF", price: 0, color: "#F8F8FF" },
       ],
     },
     {
@@ -309,7 +289,6 @@ export const SAMPLE_PRODUCTS_WITH_CUSTOMIZATION = {
       values: [
         { id: "super-120s", name: "Super 120s Wool", value: "super-120s", price: 0 },
         { id: "super-150s", name: "Super 150s Wool", value: "super-150s", price: 200 },
-        { id: "cashmere-blend", name: "Cashmere Blend", value: "cashmere-blend", price: 400 },
         { id: "mohair-blend", name: "Mohair Blend", value: "mohair-blend", price: 150 },
       ],
     },
@@ -357,47 +336,26 @@ export const SAMPLE_PRODUCTS_WITH_CUSTOMIZATION = {
       type: "texture" as const,
       category: "fabric",
       values: [
-        { 
-          id: "wool-blend", 
-          name: "Wool Blend", 
-          value: "wool-blend", 
+        {
+          id: "wool-blend",
+          name: "Poly Visc Performance",
+          value: "wool-blend",
           price: 0,
-          thumbnail: "/placeholder.svg?height=60&width=60&text=Wool"
+          thumbnail: "/fabrics/FabricsJacket/02.3716.01.jpg"
         },
-        { 
-          id: "premium-wool", 
-          name: "Premium Wool", 
-          value: "premium-wool", 
+        {
+          id: "premium-wool",
+          name: "Merino Wool / Lycra",
+          value: "premium-wool",
           price: 50,
-          thumbnail: "/placeholder.svg?height=60&width=60&text=Premium"
+          thumbnail: "/fabrics/FabricsJacket/XHS23L6001-7-reduced.jpg"
         },
-        { 
-          id: "cashmere-blend", 
-          name: "Cashmere Blend", 
-          value: "cashmere-blend", 
-          price: 120,
-          thumbnail: "/placeholder.svg?height=60&width=60&text=Cashmere"
-        },
-        { 
-          id: "summer-wool", 
-          name: "Summer Wool", 
-          value: "summer-wool", 
-          price: 30,
-          thumbnail: "/placeholder.svg?height=60&width=60&text=Summer"
-        },
-        { 
-          id: "tweed", 
-          name: "Tweed", 
-          value: "tweed", 
-          price: 80,
-          thumbnail: "/placeholder.svg?height=60&width=60&text=Tweed"
-        },
-        { 
-          id: "linen-blend", 
-          name: "Linen Blend", 
-          value: "linen-blend", 
-          price: 40,
-          thumbnail: "/placeholder.svg?height=60&width=60&text=Linen"
+        {
+          id: "washable-wool",
+          name: "Premium Wool/Poly",
+          value: "washable-wool",
+          price: 50,
+          thumbnail: "/fabrics/FabricsJacket/XHS23T9001-5-reduced.jpg"
         },
       ],
     },
@@ -486,3 +444,5 @@ export const SAMPLE_PRODUCTS_WITH_CUSTOMIZATION = {
     },
   ],
 }
+
+

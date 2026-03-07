@@ -76,7 +76,7 @@ const GARMENT_MEASUREMENTS = {
       { 
         key: "front_length", 
         label: "Front Length", 
-        description: "Measure from shoulder to desired front length.", 
+        description: "Measure from your shoulder to the base of your thumb.", 
         detailedGuide: "Measure from the high point of your shoulder down the front to where you want the jacket to end.",
         unit: "cm",
         videoUrl: "https://youtu.be/Yi1Zd1MigyM",

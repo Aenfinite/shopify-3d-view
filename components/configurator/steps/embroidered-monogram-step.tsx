@@ -96,25 +96,6 @@ export function EmbroideredMonogramStep({
           className="space-y-3"
         >
           <div>
-            <RadioGroupItem value="no" id="no-monogram" className="sr-only" />
-            <Label
-              htmlFor="no-monogram"
-              className={`
-                block cursor-pointer rounded-lg border-2 p-4 transition-all hover:bg-gray-50
-                €{!monogramEnabled ? "border-blue-500 bg-blue-50" : "border-gray-200"}
-              `}
-            >
-              <div className="flex justify-between items-center">
-                <div>
-                  <h5 className="font-medium text-gray-900">No Monogram</h5>
-                  <p className="text-sm text-gray-600">Keep the jacket clean without personalization</p>
-                </div>
-                <Badge variant="outline">Included</Badge>
-              </div>
-            </Label>
-          </div>
-
-          <div>
             <RadioGroupItem value="yes" id="yes-monogram" className="sr-only" />
             <Label
               htmlFor="yes-monogram"
@@ -129,7 +110,7 @@ export function EmbroideredMonogramStep({
                   <p className="text-sm text-gray-600">Personal embroidery inside the jacket</p>
                 </div>
                 <Badge variant="outline" className="text-green-600 border-green-600">
-                  with a surcharge
+                  surcharge
                 </Badge>
               </div>
             </Label>

@@ -1,0 +1,139 @@
+{% comment %}
+  ──────────────────────────────────────────────────────────────────────────────
+  Anna & Morgan Tailoring — 3D Configurator Snippet
+  File: snippets/am-configurator.liquid
+
+  INSTALLATION:
+  1. Add this file to your Shopify theme under: snippets/am-configurator.liquid
+  2. In your product template (templates/product.json or sections/main-product.liquid),
+     add:  {% render 'am-configurator' %}
+  3. OR paste directly into any page/section where you want the configurator to appear.
+
+  The snippet automatically passes the logged-in customer's access token to the
+  configurator app so measurements are pre-filled securely.
+  ──────────────────────────────────────────────────────────────────────────────
+{% endcomment %}
+
+{%- comment -%} ── Configuration — update these values ── {%- endcomment -%}
+{%- assign configurator_base_url = 'https://shopfy3dviewer.vercel.app' -%}
+
+{%- comment -%}
+  Build the configurator URL.
+  The product ID comes from the current product page (or you can hardcode it).
+  Liquid customer.access_token only works if the customer is logged in AND
+  the storefront has "Customer accounts" enabled in Shopify settings.
+{%- endcomment -%}
+
+{%- if product -%}
+  {%- assign product_param = product.id -%}
+{%- else -%}
+  {%- assign product_param = '' -%}
+{%- endif -%}
+
+{%- if customer -%}
+  {%- assign customer_token = customer.access_token -%}
+  {%- assign customer_id    = customer.id -%}
+  {%- assign customer_email = customer.email -%}
+{%- endif -%}
+
+<div id="am-configurator-container" style="width:100%; min-height:700px; border-radius:12px; overflow:hidden;">
+  <iframe
+    id="am-configurator-frame"
+    src="about:blank"
+    style="width:100%; height:700px; border:none; border-radius:12px;"
+    allow="camera; accelerometer; gyroscope"
+    loading="lazy"
+    title="3D Garment Configurator">
+  </iframe>
+</div>
+
+<script>
+(function () {
+  var BASE_URL   = {{ configurator_base_url | json }};
+  var productId  = {{ product_param | json }};
+
+  // ── Build URL params ──────────────────────────────────────────────────────
+
+  var params = new URLSearchParams();
+
+  if (productId) {
+    params.set('product', String(productId));
+  }
+
+  // Pass Shopify customer data for auto-detection:
+  // shopify_customer_token  → verified server-side via Storefront API (secure)
+  // shopify_customer_id/email/name → fallback URL params (less secure, nice-to-have)
+
+  {% if customer %}
+    {% if customer.access_token %}
+      // Secure token for server-side verification
+      params.set('shopify_customer_token', {{ customer.access_token | json }});
+    {% endif %}
+
+    // Fallback fields (used if token verification is unavailable)
+    params.set('shopify_customer_id',    {{ customer.id    | json }});
+    params.set('shopify_customer_email', {{ customer.email | json }});
+    params.set('shopify_customer_name',  {{ customer.name  | json }});
+  {% endif %}
+
+  // ── Load the iframe ───────────────────────────────────────────────────────
+
+  var path = productId ? ('/product/' + productId) : '/';
+  var qs   = params.toString();
+  var url  = BASE_URL + path + (qs ? '?' + qs : '');
+
+  var iframe = document.getElementById('am-configurator-frame');
+  if (iframe) {
+    iframe.src = url;
+  }
+
+  // ── Resize iframe to content height (optional) ────────────────────────────
+  // Uncomment if you want the iframe to auto-resize instead of being fixed 700px.
+
+  // window.addEventListener('message', function (e) {
+  //   if (!BASE_URL.startsWith(e.origin)) return;
+  //   if (e.data && e.data.type === 'am-resize' && e.data.height) {
+  //     iframe.style.height = e.data.height + 'px';
+  //   }
+  // });
+
+})();
+</script>
+
+{% comment %}
+  ──────────────────────────────────────────────────────────────────────────────
+  NOTES FOR THE SHOPIFY DEVELOPER
+  ──────────────────────────────────────────────────────────────────────────────
+
+  1. CUSTOMER ACCESS TOKEN
+     `customer.access_token` is only available in Liquid when the store has
+     "Classic customer accounts" enabled (not the new Shopify accounts).
+     Check: Shopify Admin → Settings → Customer accounts → Classic accounts.
+
+  2. STOREFRONT API SETUP (done on the app side, not here)
+     On the Vercel app, set these environment variables:
+       SHOPIFY_STORE_DOMAIN=annamorgantailoring.myshopify.com
+       SHOPIFY_STOREFRONT_TOKEN=<public storefront API token>
+
+     To get the Storefront token:
+       Shopify Admin → Settings → Apps and sales channels
+       → Develop apps → Your app → API credentials
+       → Storefront API access token
+       Required scope: unauthenticated_read_customers
+
+  3. EMBEDDING ON A PAGE (not a product)
+     Create a Shopify page, add a Custom HTML section, paste the snippet.
+     Remove the `{%- if product -%}` block — product_param will be empty
+     and the configurator will load on its default product.
+
+  4. CROSS-ORIGIN (CORS)
+     The Vercel app has next.config.mjs headers that allow framing.
+     If you see a "Refused to display in iframe" error, check those headers.
+
+  5. HEIGHT
+     Adjust `min-height` and `height: 700px` to match your page layout.
+     The iframe can auto-resize if you uncomment the postMessage listener above
+     (requires corresponding postMessage from the app).
+
+  ──────────────────────────────────────────────────────────────────────────────
+{% endcomment %}

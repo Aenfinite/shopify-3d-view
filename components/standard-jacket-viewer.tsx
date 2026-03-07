@@ -142,11 +142,12 @@ export function StandardJacketViewer({
   return (
     <div className={`w-full h-full ${className}`}>
       <Canvas
-        camera={{ position: [0, 0, 5], fov: 50 }}
+        camera={{ position: [0, 0.8, 7.0], fov: 45 }}
         shadows
         gl={{ antialias: true, alpha: true }}
-        onCreated={({ gl }) => {
+        onCreated={({ gl, camera }) => {
           gl.setClearColor(0x000000, 0)
+          camera.lookAt(0, 0.5, 0)
         }}
       >
         <Suspense fallback={
@@ -178,7 +179,7 @@ export function StandardJacketViewer({
             enableRotate={true}
             minDistance={2}
             maxDistance={10}
-            target={[0, 0, 0]}
+            target={[0, 0.5, 0]}
           />
         </Suspense>
       </Canvas>

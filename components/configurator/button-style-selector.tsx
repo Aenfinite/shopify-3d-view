@@ -71,7 +71,7 @@ export function ButtonStyleSelector({
     { id: "natural", name: "Natural", color: "#F5E6D3", price: 0 },
     { id: "dark-brown", name: "Dark Brown", color: "#4A2C2A", price: 5 },
     { id: "black", name: "Black", color: "#1A1A1A", price: 5 },
-    { id: "navy", name: "Navy", color: "#1565C0", price: 5 },
+    { id: "navy", name: "Navy", color: "#1a3055", price: 5 },
     { id: "gold", name: "Gold", color: "#FFD700", price: 15 },
     { id: "silver", name: "Silver", color: "#C0C0C0", price: 12 },
     { id: "bronze", name: "Bronze", color: "#CD7F32", price: 12 },

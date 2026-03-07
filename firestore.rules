@@ -26,6 +26,16 @@ service cloud.firestore {
       allow read: if true;
     }
     
+    // Measurement profile system – customers are looked up by email
+    // (auth is not used for this feature), so we allow public read/write.
+    match /customers/{customerId} {
+      allow read, write: if true;
+      
+      match /measurement_profiles/{profileId} {
+        allow read, write: if true;
+      }
+    }
+    
     // Admin access - require authentication and admin claim
     match /{document=**} {
       allow write: if request.auth != null && request.auth.token.admin == true;

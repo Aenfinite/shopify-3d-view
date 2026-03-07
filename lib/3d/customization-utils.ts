@@ -102,9 +102,38 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
       if (nameLower.includes('lining') || nameLower.includes('curved') || 
           nameLower.includes('fully') || nameLower.includes('interior') ||
           nameLower.includes('lining-half') || nameLower.includes('pocketlining')) {
-        console.log(`🎨 Identified LINING by name pattern: ${child.name} -> Applying liningColor`)
+        console.log(`🎨 Identified LINING by name pattern: ${child.name}`)
+        
+        // Save original material for restoration
+        if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
+          if (!child.userData._originalLiningMaterial) {
+            child.userData._originalLiningMaterial = {
+              color: child.material.color.clone(),
+              map: child.material.map,
+              roughness: child.material.roughness,
+              metalness: child.material.metalness,
+              envMapIntensity: child.material.envMapIntensity,
+              flatShading: child.material.flatShading,
+            }
+          }
+        }
+        
         if (customizations.liningColor) {
           applyMaterialColor(child, customizations.liningColor)
+          return
+        } else if (customizations.liningMeshType === 'standard' || !customizations.liningMeshType) {
+          // Standard lining - restore original GLTF texture
+          if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial && child.userData._originalLiningMaterial) {
+            const orig = child.userData._originalLiningMaterial
+            child.material.color.copy(orig.color)
+            child.material.map = orig.map
+            child.material.roughness = orig.roughness
+            child.material.metalness = orig.metalness
+            child.material.envMapIntensity = orig.envMapIntensity
+            child.material.flatShading = orig.flatShading
+            child.material.needsUpdate = true
+            console.log(`🔄 Restored original GLTF material for: ${child.name}`)
+          }
           return
         }
       }
@@ -183,106 +212,126 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
             exactMeshName: child.name,
             liningColor: customizations.liningColor,
             liningMeshType: customizations.liningMeshType,
-            customType: customizations.customType,
-            isTexture: customizations.liningColor?.startsWith('/') || /\.(jpg|jpeg|png|webp)$/i.test(customizations.liningColor || ''),
-            allCustomizations: customizations
           })
-          
-          console.log(`🔍 DEBUG - All customization keys with 'lining':`, 
-            Object.keys(customizations).filter(k => k.toLowerCase().includes('lining'))
-          )
-          console.log(`🔍 DEBUG - All customization values:`, 
-            Object.keys(customizations).filter(k => k.toLowerCase().includes('lining')).reduce((acc, k) => {
-              acc[k] = customizations[k as keyof typeof customizations]
-              return acc
-            }, {} as any)
-          )
           
           // Apply lining based on mesh type selection
           const meshName = child.name.toLowerCase()
           const isUnlined = customizations.liningMeshType === "unlined"
+          const isStandardLining = customizations.liningMeshType === "standard" || !customizations.liningMeshType
           const isHalfLined = customizations.liningMeshType === "custom-coloured" // Half Lined
           const isFullLined = customizations.liningMeshType === "quilted" // Full Lined
           
-          console.log(`🔍 Lining type check:`, {
+          // If explicitly unlined, hide the lining mesh
+          if (isUnlined) {
+            console.log(`⏭️ Hiding ${child.name} - unlined selected`)
+            child.visible = false
+            break
+          }
+          
+          // Save original material state for restoration when switching back to standard
+          if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
+            if (!child.userData._originalLiningMaterial) {
+              child.userData._originalLiningMaterial = {
+                color: child.material.color.clone(),
+                map: child.material.map,
+                roughness: child.material.roughness,
+                metalness: child.material.metalness,
+                envMapIntensity: child.material.envMapIntensity,
+                flatShading: child.material.flatShading,
+              }
+              console.log(`💾 Saved original lining material for ${child.name}`)
+            }
+          }
+          
+          // Standard lining - restore original GLTF texture
+          if (isStandardLining && !customizations.liningColor) {
+            if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial && child.userData._originalLiningMaterial) {
+              const orig = child.userData._originalLiningMaterial
+              child.material.color.copy(orig.color)
+              child.material.map = orig.map
+              child.material.roughness = orig.roughness
+              child.material.metalness = orig.metalness
+              child.material.envMapIntensity = orig.envMapIntensity
+              child.material.flatShading = orig.flatShading
+              child.material.needsUpdate = true
+              console.log(`🔄 Restored original GLTF material for standard lining: ${child.name}`)
+            }
+            child.visible = true
+            break
+          }
+          
+          // If no liningMeshType set, treat as full lined (standard lining = full lined)
+          // This ensures proper visibility control for default/standard lining
+          const treatAsFullLined = isStandardLining || isFullLined
+          const treatAsHalfLined = isHalfLined
+          
+          console.log(`🎯 Lining visibility logic:`, {
             meshName: child.name,
-            liningMeshType: customizations.liningMeshType,
-            isUnlined,
-            isHalfLined,
-            isFullLined,
+            treatAsFullLined,
+            treatAsHalfLined,
             hasLiningColor: !!customizations.liningColor
           })
           
-          // If explicitly unlined, skip texture application
-          if (isUnlined) {
-            console.log(`⏭️ Skipping ${child.name} - unlined selected, no texture applied`)
-            break
-          }
+          // FULL LINING: All meshes from Curved1.gltf (LiningCurved, LiningCurved001, etc.)
+          // HALF LINING: All meshes from Halfed-lining.gltf (Lining-Half, PocketLining-*, LiningTriangle*, etc.)
           
-          // If no liningMeshType set but has liningColor, treat as full lined (backward compatibility)
-          if (!customizations.liningMeshType && customizations.liningColor) {
-            console.log(`⚠️ No liningMeshType but has liningColor - applying as full lined`)
-            applyMaterialColor(child, customizations.liningColor)
-            console.log(`✅ Applied lining texture to: ${child.name} (default full)`)
-            break
+          // Handle LiningCurved and LiningCurved001 - BOTH are part of FULL lining from Curved1.gltf
+          if (meshName.includes("liningcurved") || child.name === "LiningCurved" || child.name === "LiningCurved001" || child.name === "LiningCurved.001") {
+            console.log(`🎯 Found LiningCurved mesh (FULL lining from Curved1.gltf): ${child.name}`)
+            if (treatAsFullLined) {
+              if (customizations.liningColor) {
+                console.log(`📸 Applying texture to FULL lining mesh:`, customizations.liningColor)
+                applyMaterialColor(child, customizations.liningColor)
+              }
+              child.visible = true
+              console.log(`✅ Showing FULL lining mesh: ${child.name}`)
+            } else {
+              console.log(`⏭️ Hiding FULL lining mesh ${child.name} - in half lined mode`)
+              child.visible = false
+            }
           }
-          
-          // LiningCurved (without .001) - Apply for both half and full
-          // LiningCurved.001 - Only apply for full lined
-          // LiningStraight1-4 - For 6d2 jacket, apply based on type
-          // Lining-Half, PocketLining-* - From Halfed-lining.gltf, apply for half lined
-          if (customizations.liningColor) {
-            if (meshName.includes("liningstraight")) {
-              // This is the straight lining mesh used in 6d2 jacket
-              console.log(`🎯 Found LiningStraight1-4 (6d2 lining mesh)`)
-              if (isHalfLined || isFullLined) {
-                console.log(`📸 Applying texture to LiningStraight1-4:`, customizations.liningColor)
-                applyMaterialColor(child, customizations.liningColor)
-                console.log(`✅ Applied lining texture to: ${child.name} (${isHalfLined ? 'half' : 'full'} lined)`)
-              } else {
-                console.log(`⏭️ Skipping ${child.name} - half or full lined required (current: ${customizations.liningMeshType})`)
-              }
-            } else if (meshName.includes("liningcurved.001") || child.name === "LiningCurved.001") {
-              // This is the full lining mesh - only apply if full lined selected
-              console.log(`🎯 Found LiningCurved.001 (full lining mesh)`)
-              if (isFullLined) {
-                console.log(`📸 Applying texture to LiningCurved.001:`, customizations.liningColor)
-                applyMaterialColor(child, customizations.liningColor)
-                console.log(`✅ Applied FULL lining texture to: ${child.name}`)
-              } else {
-                console.log(`⏭️ Skipping ${child.name} - only for full lined (current: ${customizations.liningMeshType})`)
-              }
-            } else if (meshName.includes("liningcurved") || child.name === "LiningCurved") {
-              // This is the half lining mesh - apply for both half and full
-              console.log(`🎯 Found LiningCurved (half lining mesh)`)
-              if (isHalfLined || isFullLined) {
-                console.log(`📸 Applying texture to LiningCurved:`, customizations.liningColor)
-                applyMaterialColor(child, customizations.liningColor)
-                console.log(`✅ Applied lining texture to: ${child.name} (${isHalfLined ? 'half' : 'full'} lined)`)
-              } else {
-                console.log(`⏭️ Skipping ${child.name} - half or full lined required (current: ${customizations.liningMeshType})`)
-              }
-            } else if (meshName.includes("lining-half") || meshName.includes("pocketlining") || 
-                       meshName.includes("liningtriangle") || meshName.includes("label")) {
-              // Meshes from Halfed-lining.gltf - only apply for half lined
-              console.log(`🎯 Found Halfed-lining.gltf mesh: ${child.name}`)
-              if (isHalfLined) {
+          // Handle meshes from Halfed-lining.gltf - only show for half lined mode
+          else if (meshName.includes("lining-half") || meshName.includes("pocketlining") || 
+                   meshName.includes("liningtriangle") || meshName.includes("label-ojbrown")) {
+            console.log(`🎯 Found Halfed-lining.gltf mesh: ${child.name}`)
+            if (treatAsHalfLined) {
+              if (customizations.liningColor) {
                 console.log(`📸 Applying texture to half lining mesh:`, customizations.liningColor)
                 applyMaterialColor(child, customizations.liningColor)
-                console.log(`✅ Applied HALF lining texture to: ${child.name}`)
-              } else {
-                console.log(`⏭️ Skipping ${child.name} - only for half lined (current: ${customizations.liningMeshType})`)
               }
+              child.visible = true
+              console.log(`✅ Showing HALF lining mesh: ${child.name}`)
             } else {
-              // Other lining meshes - apply normally if half or full lined
-              console.log(`🎯 Found other lining mesh: ${child.name}`)
-              if (isHalfLined || isFullLined) {
-                applyMaterialColor(child, customizations.liningColor)
-                console.log(`✅ Applied lining color/texture to: ${child.name}`)
-              }
+              console.log(`⏭️ Hiding ${child.name} - only for half lined mode`)
+              child.visible = false
             }
-          } else {
-            console.log(`⚠️ No liningColor provided - keeping default material for: ${child.name}`)
+          }
+          // Handle LiningStraight1-4 (6d2 jacket lining)
+          else if (meshName.includes("liningstraight")) {
+            console.log(`🎯 Found LiningStraight1-4 (6d2 lining mesh)`)
+            if (treatAsHalfLined || treatAsFullLined) {
+              if (customizations.liningColor) {
+                console.log(`📸 Applying texture to LiningStraight1-4:`, customizations.liningColor)
+                applyMaterialColor(child, customizations.liningColor)
+              }
+              child.visible = true
+              console.log(`✅ Applied lining texture to: ${child.name} (${treatAsHalfLined ? 'half' : 'full'} lined)`)
+            } else {
+              console.log(`⏭️ Hiding ${child.name} - half or full lined required`)
+              child.visible = false
+            }
+          }
+          // Handle other lining meshes
+          else if (customizations.liningColor) {
+            // Other lining meshes - apply normally if half or full lined
+            console.log(`🎯 Found other lining mesh: ${child.name}`)
+            if (treatAsHalfLined || treatAsFullLined) {
+              applyMaterialColor(child, customizations.liningColor)
+              child.visible = true
+              console.log(`✅ Applied lining color/texture to: ${child.name}`)
+            } else {
+              child.visible = false
+            }
           }
           break
       }
@@ -357,15 +406,15 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number =
             material.map = null
           }
           
-          // Apply professional suit fabric properties with subtle shine
-          material.roughness = 0.85  // Fabric roughness to match pants viewer
-          material.metalness = 0.0  // No metalness for natural fabric appearance
+          // Apply professional suit fabric properties — matte, non-shiny
+          material.roughness = 0.92  // High roughness for realistic fabric without shine
+          material.metalness = 0.0   // No metalness for natural fabric appearance
           
           // Enable proper lighting response
           material.flatShading = false  // Use smooth shading for realistic fabric
           
-          // Increase environment map for subtle reflections and depth
-          material.envMapIntensity = 0.6  // More environment reflection for professional look
+          // Low environment map to prevent shiny/glossy look on fabric
+          material.envMapIntensity = 0.15  // Subtle reflection only — avoids plastic look
           
           material.needsUpdate = true
           console.log(`✅ Applied realistic fabric color ${color} to ${mesh.name}`)

@@ -134,11 +134,12 @@ export function ModularJacketViewer({
   return (
     <div className={`w-full h-full ${className}`}>
       <Canvas
-        camera={{ position: [0, 0, 5], fov: 50 }}
+        camera={{ position: [0, 0.8, 7.0], fov: 45 }}
         shadows
         gl={{ antialias: true, alpha: true }}
         onCreated={({ gl, camera, scene }) => {
           gl.setClearColor(0x000000, 0)
+          camera.lookAt(0, 0.5, 0)
           console.log("📷 Camera positioned at:", camera.position)
           console.log("🎬 Scene children count:", scene.children.length)
         }}
@@ -170,7 +171,7 @@ export function ModularJacketViewer({
             enableRotate={true}
             minDistance={0.5}
             maxDistance={50}
-            target={[0, 0, 0]}
+            target={[0, 0.5, 0]}
             autoRotate={false}
             onEnd={() => {
               console.log("🎮 Camera controls updated")

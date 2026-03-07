@@ -82,6 +82,7 @@ export const sleeveButtonConfigs: Record<string, {
   showThreads: boolean;  // Whether to show thread models
   sleeveWorkingButtons?: string;
   sleeveLastButton?: string;
+  noThreadModel?: string; // NoThread model for buttons without holes
 }> = {
   '4-buttons-with-holes': {
     showThreads: true,  // Show threads for buttons with holes
@@ -91,12 +92,14 @@ export const sleeveButtonConfigs: Record<string, {
   '4-buttons-no-holes': {
     showThreads: false,  // No threads for buttons without holes
     sleeveWorkingButtons: "/models/jackets/Sleeve/Working/4Button/S4.gltf",
-    sleeveLastButton: "/models/jackets/Sleeve/Working/LastButton/S4.gltf"
+    sleeveLastButton: "/models/jackets/Sleeve/Working/LastButton/S4.gltf",
+    noThreadModel: "/models/jackets/Sleeve/Working/NoThread/Nothread.gltf"
   }
 };
 
 // Vent style configurations
 export const ventStyleConfigs: Record<string, string> = {
+  'no-vent': "/models/jackets/Vent/NoVent.gltf",            // No vent
   'one-back-vent': "/models/jackets/Vent/CenterVent.gltf",  // One back vent = center vent
   'two-back-vent': "/models/jackets/Vent/SideVent.gltf"     // Two back vent = side vents
 };

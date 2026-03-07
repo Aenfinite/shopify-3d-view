@@ -431,31 +431,32 @@ export function MonogramConfigurator({
               <div className="space-y-3">
                 <Label className="text-base font-medium">Monogram Preview on Jacket</Label>
                 <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden shadow-sm">
-                  <div className="relative h-80 overflow-hidden">
-                    {/* Background jacket image */}
+                  <div className="relative h-96 overflow-hidden bg-gray-100">
+                    {/* Background jacket image - zoomed out to fit fully */}
                     <img 
                       src="/images/threadmonogram.png" 
                       alt="Jacket with Monogram" 
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                     />
                     
-                    {/* Monogram text overlay - positioned on the chest pocket area */}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div 
-                        className={`${getStyleFont(selectedStyle)}`}
-                        style={{ 
-                          color: getSelectedColor(),
-                          fontSize: 'clamp(2rem, 8vw, 4rem)', // Responsive font size
-                          textShadow: getSelectedColorImage() 
-                            ? "2px 2px 4px rgba(0,0,0,0.5)" 
-                            : "1px 1px 3px rgba(0,0,0,0.3)",
-                          fontWeight: selectedStyle === 'block-bold' ? 'bold' : 'normal',
-                          letterSpacing: '0.05em',
-                          transform: 'translateX(10%) translateY(-5%)', // Adjust position to align with chest pocket
-                        }}
-                      >
-                        {localText}
-                      </div>
+                    {/* Monogram text overlay - positioned on top of the pocket line */}
+                    <div 
+                      className={`absolute pointer-events-none ${getStyleFont(selectedStyle)}`}
+                      style={{ 
+                        color: getSelectedColor(),
+                        fontSize: 'clamp(1.4rem, 5vw, 2.5rem)',
+                        textShadow: getSelectedColorImage() 
+                          ? "2px 2px 4px rgba(0,0,0,0.5)" 
+                          : "1px 1px 3px rgba(0,0,0,0.3)",
+                        fontWeight: selectedStyle === 'block-bold' ? 'bold' : 'normal',
+                        letterSpacing: '0.08em',
+                        left: '50%',
+                        top: '52%',
+                        transform: 'translate(-50%, -100%)',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {localText}
                     </div>
                   </div>
                   <div className="bg-gray-50 px-4 py-3 border-t border-gray-200">

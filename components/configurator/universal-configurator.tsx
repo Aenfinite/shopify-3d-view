@@ -10,6 +10,7 @@ import {
   Maximize2,
   RotateCcw,
   Check,
+  CheckCircle,
   Palette,
   Shirt,
   Scissors,
@@ -29,8 +30,21 @@ import { LiningSelectionStep } from "./steps/lining-selection-step"
 import { CheckoutModal } from "./checkout-modal"
 import { MonogramConfigurator } from "./monogram-configurator-professional"
 import { EmbroideredMonogramStep } from "./steps/embroidered-monogram-step"
+import { MeasurementConfirmStep } from "./steps/measurement-confirm-step"
 import { FabricTypeSelector } from "./fabric-type-selector"
 import { FabricColorSelector } from "./fabric-color-selector"
+import {
+  getProfileByGarmentType,
+  saveMeasurementProfile,
+  upsertCustomer,
+  type MeasurementProfile,
+} from "@/lib/firebase/measurement-profile-service"
+import {
+  detectShopifyCustomer,
+  verifyShopifyCustomerToken,
+  getCustomerTokenFromUrl,
+  type ShopifyCustomer,
+} from "@/lib/shopify/shopify-customer-detection"
 
 // Thread colors for monogram preview
 const THREAD_COLORS = [
@@ -43,7 +57,7 @@ const THREAD_COLORS = [
   { id: "green", name: "Forest Green", color: "#166534" },
   { id: "brown", name: "Brown", color: "#92400e" },
   { id: "purple", name: "Purple", color: "#7c3aed" },
-  { id: "burgundy", name: "Burgundy", color:- "#991b1b" },
+  { id: "burgundy", name: "Burgundy", color: - "#991b1b" },
   { id: "royal", name: "Royal Blue", color: "#2563eb" },
   { id: "charcoal", name: "Charcoal", color: "#374151" },
 ]
@@ -136,14 +150,14 @@ export function UniversalConfigurator({
     },
   })
   const [liningSelectionData, setLiningSelectionData] = useState({
-    liningType: "standard" as "standard" | "custom" | "none",
-    customType: undefined as "custom-coloured" | "unlined" | "quilted" | undefined,
+    liningType: "standard" as "standard" | "custom" | "unlined",
+    customType: undefined as "custom-coloured" | "quilted" | undefined,
     liningFabric: "",
     liningColor: "",
-    liningMeshType: undefined as "custom-coloured" | "unlined" | "quilted" | undefined,
+    liningMeshType: "standard" as "standard" | "custom-coloured" | "unlined" | "quilted" | undefined,
   })
   const [jacketLiningData, setJacketLiningData] = useState({
-    liningType: "standard" as "standard" | "custom" | "none",
+    liningType: "standard" as "standard" | "custom" | "unlined",
     standardLiningColor: "",
     customLiningColor: "",
     monogramEnabled: false,
@@ -162,12 +176,72 @@ export function UniversalConfigurator({
     monogramFont: "england" as "england" | "arial",
     threadColor: "navy",
   })
+  const [customerEmail, setCustomerEmail] = useState("")
+  const [shopifyCustomer, setShopifyCustomer] = useState<ShopifyCustomer | null>(null)
+  const [savedMeasurementProfile, setSavedMeasurementProfile] = useState<MeasurementProfile | null>(null)
+  const [isProfileLoading, setIsProfileLoading] = useState(false)
+  const [measurementsConfirmed, setMeasurementsConfirmed] = useState(false)
+  const [customerAutoDetected, setCustomerAutoDetected] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showCheckoutModal, setShowCheckoutModal] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [cameraRotationY, setCameraRotationY] = useState(0) // Camera Y-axis rotation for viewing different parts
   const [cameraTargetY, setCameraTargetY] = useState(0) // Camera vertical target position
+
+  // ─── Auto-detect Shopify customer on mount ──────────────────────────────
+  useEffect(() => {
+    ; (async () => {
+      setIsProfileLoading(true)
+      try {
+        let customer: ShopifyCustomer | null = null
+
+        // ─ LAYER 1: Secure token verification ────────────────────────
+        // If the Shopify theme passed a customerAccessToken in the URL,
+        // verify it against the Storefront API to confirm it's genuine.
+        const token = getCustomerTokenFromUrl()
+        if (token) {
+          console.log("🔒 Verifying Shopify customer token...")
+          const verified = await verifyShopifyCustomerToken(token)
+          if (verified) {
+            console.log("✅ Shopify token verified for:", verified.email)
+            customer = verified
+          } else {
+            console.warn("⚠️ Token verification failed — falling back to URL params")
+          }
+        }
+
+        // ─ LAYER 2: URL params fallback ───────────────────────────
+        // No token or verification failed — read from Liquid-injected URL params.
+        if (!customer) {
+          customer = detectShopifyCustomer()
+        }
+
+        if (customer && customer.email) {
+          setShopifyCustomer(customer)
+          setCustomerEmail(customer.email)
+          setCustomerAutoDetected(true)
+
+          // Ensure customer record exists in Firebase (links Shopify ID to email)
+          await upsertCustomer({
+            email: customer.email,
+            name: customer.name,
+            phone: customer.phone,
+            shopifyCustomerId: customer.id,
+          })
+
+          // Look up their existing measurement profile
+          const profile = await getProfileByGarmentType(customer.email, productType)
+          setSavedMeasurementProfile(profile)
+          console.log("📋 Profile lookup for", customer.email, "→", profile ? "👍 Found" : "❓ Not found")
+        }
+      } catch (err) {
+        console.error("Error during Shopify customer detection:", err)
+      } finally {
+        setIsProfileLoading(false)
+      }
+    })()
+  }, [productType])
 
   // Load customization options
   useEffect(() => {
@@ -180,7 +254,7 @@ export function UniversalConfigurator({
         const options = await getCustomizationOptions(productId)
 
         console.log(`Loaded ${options.length} customization options:`, options)
-        
+
         // Log specifically if front-pocket option exists
         const frontPocketOption = options.find(opt => opt.id === "front-pocket")
         if (frontPocketOption) {
@@ -188,7 +262,7 @@ export function UniversalConfigurator({
         } else {
           console.warn("⚠️ front-pocket option NOT FOUND in loaded options")
         }
-        
+
         setCustomizationOptions(options)
 
         if (options.length === 0) {
@@ -207,11 +281,12 @@ export function UniversalConfigurator({
     }
   }, [productId])
 
-  // Total steps = customization options + fit preference step + measurement step
-  const totalSteps = customizationOptions.length + 2
+  // Total steps = customization options + fit preference step + measurement step + review/confirm step
+  const totalSteps = customizationOptions.length + 3
   const currentStepData = customizationOptions[currentStep]
   const isFitPreferenceStep = currentStep === customizationOptions.length
   const isMeasurementStep = currentStep === customizationOptions.length + 1
+  const isMeasurementConfirmStep = currentStep === customizationOptions.length + 2
   const isLiningSelectionStep = currentStepData?.type === "custom" && currentStepData?.customComponent === "lining-selection"
   const isJacketLiningStep = currentStepData?.type === "custom" && currentStepData?.customComponent === "jacket-lining"
   const isMonogramStep = currentStepData?.id === "jacket-monogram" || currentStepData?.customComponent === "monogram"
@@ -233,20 +308,17 @@ export function UniversalConfigurator({
     if (liningSelectionData.liningType === "custom" && liningSelectionData.customType) {
       if (liningSelectionData.customType === "custom-coloured") {
         total += 25 // Custom coloured lining surcharge
-      } else if (liningSelectionData.customType === "unlined") {
-        total -= 15 // Discount for unlined
       } else if (liningSelectionData.customType === "quilted") {
         total += 35 // Quilted lining surcharge
       }
-    } else if (liningSelectionData.liningType === "none") {
-      total -= 15 // Discount for no lining
+      // Note: unlined has no price adjustment - same as standard
     }
+    // Note: "none" lining type has no price adjustment - same as standard
     // Add jacket lining costs
     if (jacketLiningData.liningType === "custom") {
       total += 25 // Custom lining surcharge
-    } else if (jacketLiningData.liningType === "none") {
-      total -= 15 // Discount for no lining
     }
+    // Note: no lining has no price adjustment - same as standard
     // Add monogram costs
     if (jacketLiningData.monogramEnabled) {
       total += jacketLiningData.monogramType === "initials" ? 8.5 : 15.0
@@ -276,39 +348,39 @@ export function UniversalConfigurator({
     }
 
     const optionId = currentStepData.id.toLowerCase()
-    
+
     // Define camera angles and target heights for different parts
     const cameraSettings: Record<string, { angle: number; targetY: number }> = {
       // Back view for vents and back pockets (180°, normal height)
       'jacket-vent-style': { angle: Math.PI, targetY: 0 },
       'back-pocket': { angle: Math.PI, targetY: 0 },
       'back-pockets': { angle: Math.PI, targetY: 0 },
-      
+
       // 45° right angle for front pockets (normal height)
       'front-pocket': { angle: Math.PI / 4, targetY: 0 },
-      
+
       // Slight angle for sleeve buttons (45° right side)
       'jacket-sleeve-buttons': { angle: Math.PI / 4, targetY: 0.2 },
       'sleeve-buttons': { angle: Math.PI / 4, targetY: 0.2 },
-      
+
       // Front view for front elements (0°)
       'jacket-front-style': { angle: 0, targetY: 0 },
       'front-style': { angle: 0, targetY: 0 },
       'chest-pocket': { angle: 0, targetY: 0.3 },
-      
+
       // Slight left angle for buttons
       'button-style': { angle: -Math.PI / 6, targetY: 0.2 },
       'button-color': { angle: -Math.PI / 6, targetY: 0.2 },
       'button-configuration': { angle: -Math.PI / 6, targetY: 0.2 },
-      
+
       // Three-quarter view for lapels
       'lapel-style': { angle: Math.PI / 6, targetY: 0.3 },
       'lapel': { angle: Math.PI / 6, targetY: 0.3 },
-      
+
       // Front for fabric
       'fabric-type': { angle: 0, targetY: 0 },
       'fabric-color': { angle: 0, targetY: 0 },
-      
+
       // Pants-specific angles with vertical positioning
       'bottom-cuffs': { angle: 0, targetY: -0.8 }, // Front view, look down at bottom cuffs
       'waist-band-extension': { angle: -Math.PI / 2, targetY: 0.2 }, // Left side view, waist height
@@ -318,7 +390,7 @@ export function UniversalConfigurator({
 
     // Find the appropriate camera settings
     const settings = cameraSettings[optionId] ?? { angle: 0, targetY: 0 }
-    
+
     setCameraRotationY(settings.angle)
     setCameraTargetY(settings.targetY)
     console.log(`📷 Camera for ${optionId}: ${(settings.angle * 180 / Math.PI).toFixed(0)}°, targetY: ${settings.targetY.toFixed(2)}`)
@@ -371,23 +443,31 @@ export function UniversalConfigurator({
     setLiningSelectionData((prev) => {
       const newData = { ...prev, ...updates }
       console.log("🔧 New liningSelectionData:", newData)
-      
+
       // Update configurator state for 3D model when lining selection changes
       if (updates.liningType || updates.liningColor || updates.liningMeshType) {
+        let meshType: string | undefined
+        if (newData.liningType === 'unlined') {
+          meshType = 'unlined'
+        } else if (newData.liningType === 'standard') {
+          meshType = 'standard'
+        } else {
+          meshType = newData.liningMeshType || newData.customType
+        }
         setConfiguratorState((prevState) => ({
           ...prevState,
           'jacket-lining-selection': {
             optionId: 'jacket-lining-selection',
             valueId: newData.liningFabric || newData.liningType,
-            price: newData.liningType === 'custom' ? 25 : newData.liningType === 'none' ? -15 : 0,
+            price: newData.liningType === 'custom' ? 25 : 0,
             value: newData.liningType,
             color: newData.liningColor,
-            liningMeshType: newData.liningMeshType || newData.customType, // ADD MESH TYPE
+            liningMeshType: meshType,
           },
         }))
-        console.log("🔧 Updated configuratorState with liningMeshType:", newData.liningMeshType || newData.customType)
+        console.log("🔧 Updated configuratorState with liningMeshType:", meshType)
       }
-      
+
       return newData
     })
   }
@@ -400,6 +480,88 @@ export function UniversalConfigurator({
     setMonogramData((prev) => ({ ...prev, ...updates }))
   }
 
+  // ─── Measurement Profile Handlers ──────────────────────────────────────────
+
+  /** Collect all current measurements into a Record<string, number> */
+  const getCurrentMeasurementsRecord = (): Record<string, number> => {
+    const allMeasurements: Record<string, number> = {}
+
+    // Pull from the extended measurementData.measurementData (set by measurement-step onUpdate)
+    if ((measurementData as any).measurementData) {
+      Object.entries((measurementData as any).measurementData).forEach(([key, value]) => {
+        const numVal = parseFloat(value as string) || 0
+        if (numVal > 0) allMeasurements[key] = numVal
+      })
+    }
+
+    // Fallback to legacy customMeasurements fields
+    if (Object.keys(allMeasurements).length === 0 && measurementData.customMeasurements) {
+      Object.entries(measurementData.customMeasurements).forEach(([key, value]) => {
+        if (value > 0) allMeasurements[key] = value
+      })
+    }
+
+    return allMeasurements
+  }
+
+  /** Look up a measurement profile by email for the current garment type */
+  const handleEmailLookup = async (email: string) => {
+    setIsProfileLoading(true)
+    try {
+      const profile = await getProfileByGarmentType(email, productType)
+      setSavedMeasurementProfile(profile)
+      console.log("📋 Profile lookup for", email, "→", profile ? "Found" : "Not found")
+    } catch (error) {
+      console.error("Error looking up measurement profile:", error)
+      setSavedMeasurementProfile(null)
+    } finally {
+      setIsProfileLoading(false)
+    }
+  }
+
+  /** Called when user confirms measurements on the review step */
+  const handleMeasurementsConfirmed = async (measurements: Record<string, number>, email: string) => {
+    setMeasurementsConfirmed(true)
+
+    // Save / update profile in Firebase if an email was provided
+    if (email) {
+      try {
+        await saveMeasurementProfile({
+          email,
+          garmentType: productType as "jacket" | "pants" | "shirt" | "suit" | "blazer",
+          measurements,
+          measurementMethod: measurementData.customMeasurementMethod || "sketches",
+          fitPreference: measurementData.fitPreference,
+          shoulderType: measurementData.shoulderType,
+          backShape: measurementData.backShape,
+          bellyType: measurementData.bellyType,
+        })
+        console.log("✅ Measurement profile saved for", email)
+      } catch (error) {
+        console.error("Error saving measurement profile:", error)
+      }
+    }
+
+    // Open checkout modal
+    setShowCheckoutModal(true)
+  }
+
+  /** Navigate back to the measurement-taking step */
+  const handleGoToMeasurementStep = () => {
+    setCurrentStep(customizationOptions.length + 1)
+  }
+
+  /** Called from MeasurementStep when saved measurements are found and accepted —
+   *  jumps straight to the Review & Confirm step, skipping measurement entry */
+  const handleUseSavedFromMeasurementStep = () => {
+    setCurrentStep(customizationOptions.length + 2)
+  }
+
+  /** Edit Configuration – go back to step 0 */
+  const handleEditConfiguration = () => {
+    setCurrentStep(0)
+  }
+
   const isStepCompleted = (stepIndex: number) => {
     if (stepIndex < customizationOptions.length) {
       const option = customizationOptions[stepIndex]
@@ -409,7 +571,7 @@ export function UniversalConfigurator({
       }
       if (option?.type === "custom" && option?.customComponent === "jacket-lining") {
         // Jacket lining step is completed if a lining type is selected
-        return jacketLiningData.liningType !== "none"
+        return jacketLiningData.liningType === "standard" || jacketLiningData.liningType === "custom" || jacketLiningData.liningType === "unlined"
       }
       if (option?.id === "jacket-monogram") {
         return !monogramData.monogramEnabled || (monogramData.text !== "" && monogramData.monogramType && monogramData.threadColor)
@@ -427,11 +589,14 @@ export function UniversalConfigurator({
         return monogramData.position === "no-monogram" || monogramData.color !== ""
       }
       return option && configuratorState[option.id]
-    } else {
+    } else if (stepIndex === customizationOptions.length + 1) {
       // Measurement step
       return measurementData.sizeType === "standard"
         ? measurementData.standardSize && measurementData.fitType
         : Object.values(measurementData.customMeasurements || {}).some((val) => val > 0)
+    } else {
+      // Measurement confirm step
+      return measurementsConfirmed
     }
   }
 
@@ -468,7 +633,7 @@ export function UniversalConfigurator({
         else if (selection.color && !option.name.toLowerCase().includes("button") && !option.name.toLowerCase().includes("monogram")) {
           const colorValue = selection.color || value.color
           const optionNameLower = option.name.toLowerCase().replace(/\s+/g, "")
-          
+
           customizations.color = colorValue
           customizations.fabricColor = colorValue
 
@@ -532,7 +697,7 @@ export function UniversalConfigurator({
           // Normalize front style value to match expected values
           let normalizedValue = value.value
           const valueLower = value.value.toLowerCase()
-          
+
           // Check for double-breasted FIRST (2×3 buttons contains "2" and "3")
           if (valueLower.includes("×") || valueLower.includes("x") || valueLower.includes("double") || valueLower.includes("6d2") || valueLower === "2×3 buttons") {
             normalizedValue = "6d2"
@@ -541,12 +706,12 @@ export function UniversalConfigurator({
           } else if (valueLower.includes("two") || valueLower.includes("2 button")) {
             normalizedValue = "2button"
           }
-          
+
           console.log("🎯 Front style selected:", {
             original: value.value,
             normalized: normalizedValue
           })
-          
+
           customizations.frontStyle = normalizedValue
           customizations.front_style = normalizedValue
           customizations["jacket-front-style"] = normalizedValue
@@ -607,12 +772,22 @@ export function UniversalConfigurator({
           customizations.backPocket = value.value
           customizations.back_pocket = value.value
           customizations["back-pocket"] = value.value
+        } else if (option.id === "bottom-cuffs") {
+          console.log("👖 Setting pants bottom cuffs:", value.value)
+          customizations.bottomCuffs = value.value
+          customizations.bottom_cuffs = value.value
+          customizations["bottom-cuffs"] = value.value
+        } else if (option.id === "waist-band-extension") {
+          console.log("👖 Setting pants waistband extension:", value.value)
+          customizations.waistbandExtension = value.value
+          customizations.waistband_extension = value.value
+          customizations["waist-band-extension"] = value.value
         }
 
         // Handle ALL other style customizations by mapping option names to customization keys
         const optionNameLower = option.name.toLowerCase().replace(/\s+/g, "")
         const optionId = option.id.toLowerCase()
-        
+
         if (optionNameLower.includes("collar") && !optionNameLower.includes("color")) {
           customizations.collarstyle = value.value
           customizations.collar = value.value
@@ -687,7 +862,7 @@ export function UniversalConfigurator({
             customizations.buttonConfiguration = value.value // Default to configuration
             console.log(`Setting generic button customization: €{value.value}`)
           }
-          
+
           // Ensure button customizations are always applied to the 3D model
           customizations.updateButtons = true
           customizations.buttonConfigUpdate = Date.now() // Force update
@@ -721,10 +896,10 @@ export function UniversalConfigurator({
     if (monogramData.text && monogramData.position !== "no-monogram") {
       customizations.monogramText = monogramData.text
       customizations.monogramPosition = monogramData.position
-      
+
       // Use monogram thread color from monogramData (selected in MonogramConfigurator)
       const threadColor = monogramData.color || getMonogramColorValue(monogramData.color) || "#1565C0"
-      
+
       customizations.monogramColor = threadColor
       customizations.monogramThreadColor = threadColor
       customizations.monogramStyle = monogramData.style || "classic-serif"
@@ -732,11 +907,11 @@ export function UniversalConfigurator({
         ...monogramData,
         threadColor: threadColor
       })
-      
+
       // Ensure monogram is visible
       customizations.showMonogram = true
       customizations.monogramVisible = true
-      
+
       console.log("Setting monogram:", {
         text: monogramData.text,
         position: monogramData.position,
@@ -758,17 +933,25 @@ export function UniversalConfigurator({
 
     // Add lining color and mesh type from liningSelectionData
     console.log("🔍 liningSelectionData state:", liningSelectionData)
-    if (liningSelectionData.liningColor || liningSelectionData.liningMeshType) {
+    // Always pass lining data so the 3D model knows the lining state
+    if (liningSelectionData.liningType === 'unlined') {
+      customizations.liningColor = ""
+      customizations.liningMeshType = 'unlined'
+    } else if (liningSelectionData.liningType === 'standard') {
+      customizations.liningColor = ""
+      customizations.liningMeshType = 'standard'
+    } else if (liningSelectionData.liningColor || liningSelectionData.liningMeshType) {
       customizations.liningColor = liningSelectionData.liningColor
       customizations.liningMeshType = liningSelectionData.liningMeshType || liningSelectionData.customType
-      console.log("🎨 Added lining from liningSelectionData:", {
-        liningColor: liningSelectionData.liningColor,
-        liningMeshType: customizations.liningMeshType,
-        fullLiningSelectionData: liningSelectionData
-      })
     } else {
-      console.log("⚠️ No lining data to add - liningSelectionData:", liningSelectionData)
+      // Default to standard if nothing is set
+      customizations.liningMeshType = 'standard'
     }
+    console.log("🎨 Lining customization:", {
+      liningColor: customizations.liningColor,
+      liningMeshType: customizations.liningMeshType,
+      liningType: liningSelectionData.liningType
+    })
 
     console.log("Generated customizations for 3D model:", customizations)
     console.log("🔍 Front style in customizations:", {
@@ -837,15 +1020,33 @@ export function UniversalConfigurator({
   }
 
   // Generate order summary for checkout
+  // Clean raw image paths into readable names
+  // e.g. "/fabrics/FabricsJacket/XHS23L6001-7-reduced.jpg" → "XHS23L6001 7"
+  const cleanCustomizationValue = (value: string): string => {
+    if (!value) return value
+    if (value.startsWith("/") || /\.(jpg|jpeg|png|webp|gif)$/i.test(value)) {
+      const filename = value.split("/").pop() || value
+      return filename
+        .replace(/\.(jpg|jpeg|png|webp|gif)$/i, "")
+        .replace(/-reduced$/i, "")
+        .replace(/[-_]/g, " ")
+        .trim()
+    }
+    return value
+  }
+
   const generateOrderSummary = () => {
     const customizations = Object.values(configuratorState).map((selection) => {
       const option = customizationOptions.find((opt) => opt.id === selection.optionId)
       return {
         category: option?.name || "Unknown",
-        value: selection.value,
+        value: cleanCustomizationValue(selection.value),
         price: selection.price || 0,
       }
     })
+
+    // Collect confirmed measurement details for the order
+    const confirmedMeasurements = savedMeasurementProfile?.measurements || getCurrentMeasurementsRecord()
 
     return {
       productName,
@@ -853,46 +1054,47 @@ export function UniversalConfigurator({
       customizations,
       measurementData,
       totalPrice: calculatePrice(),
+      customerEmail: customerEmail || undefined,
+      shopifyCustomerId: shopifyCustomer?.id || undefined,
+      customerName: shopifyCustomer?.name || undefined,
+      confirmedMeasurements: Object.keys(confirmedMeasurements).length > 0 ? confirmedMeasurements : undefined,
     }
   }
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
+    // If on the confirm step and email is set, save the measurement profile first
+    if (isMeasurementConfirmStep && customerEmail) {
+      const measurements = savedMeasurementProfile?.measurements || getCurrentMeasurementsRecord()
+      await handleMeasurementsConfirmed(measurements, customerEmail)
+      return // handleMeasurementsConfirmed already opens checkout
+    }
     setShowCheckoutModal(true)
   }
 
   // Fabric helper functions
   const getFabricDescription = (fabricId: string): string => {
     const descriptions: { [key: string]: string } = {
-      "wool-blend": "Classic business fabric - Perfect for year-round wear",
-      "premium-wool": "Luxury Italian wool - Superior drape and comfort",
-      "cashmere-blend": "Ultra-soft cashmere blend - Ultimate luxury",
-      "summer-wool": "Lightweight tropical wool - Breathable and cool",
-      "tweed": "Traditional textured wool - Heritage style",
-      "linen-blend": "Light summer fabric - Natural breathability"
+      "wool-blend": "Refined for business, Comfortable for everyday wear",
+      "premium-wool": "Refined for business, Comfortable for everyday wear",
+      "washable-wool": "Refined for business or when thoughtfully matched with jeans or chinos for a smarter look"
     }
     return descriptions[fabricId] || "Premium fabric option"
   }
 
   const getFabricWeight = (fabricId: string): string => {
     const weights: { [key: string]: string } = {
-      "wool-blend": "Medium weight",
-      "premium-wool": "Medium-heavy weight",
-      "cashmere-blend": "Light-medium weight", 
-      "summer-wool": "Lightweight",
-      "tweed": "Heavy weight",
-      "linen-blend": "Very lightweight"
+      "wool-blend": "Medium",
+      "premium-wool": "Medium to light",
+      "washable-wool": "Light"
     }
     return weights[fabricId] || "Medium weight"
   }
 
   const getFabricSeason = (fabricId: string): string => {
     const seasons: { [key: string]: string } = {
-      "wool-blend": "All seasons",
-      "premium-wool": "Fall/Winter",
-      "cashmere-blend": "Fall/Winter/Spring",
-      "summer-wool": "Spring/Summer",
-      "tweed": "Fall/Winter",
-      "linen-blend": "Spring/Summer"
+      "wool-blend": "Year round",
+      "premium-wool": "Year round",
+      "washable-wool": "Year round"
     }
     return seasons[fabricId] || "All seasons"
   }
@@ -900,23 +1102,107 @@ export function UniversalConfigurator({
   const getFabricAvailableColors = (fabricId: string): string[] => {
     // All 20 fabric textures from public/fabrics folder
     const textureOptions = ["texture-1", "texture-2", "texture-3", "texture-4", "texture-5", "texture-6", "texture-7", "texture-8", "texture-9", "texture-10", "texture-11", "texture-12", "texture-13", "texture-14", "texture-15", "texture-16", "texture-17", "texture-18", "texture-19", "texture-20"]
-    
+
     const fabricColors: { [key: string]: string[] } = {
-      "wool-blend": ["charcoal", "navy", "black", "brown", "gray", "forest-green", "burgundy", "midnight-blue", "olive", "slate", ...textureOptions],
-      "premium-wool": ["charcoal", "navy", "black", "brown", "camel", "midnight-blue", "chocolate-brown", ...textureOptions],
-      "cashmere-blend": ["charcoal", "navy", "brown", "camel", "burgundy", "tan", ...textureOptions],
-      "summer-wool": ["light-gray", "navy", "charcoal", "beige", "tan", "slate", ...textureOptions],
-      "tweed": ["brown", "gray", "forest-green", "olive", "chocolate-brown", ...textureOptions],
-      "linen-blend": ["beige", "light-blue", "white", "light-gray", "cream", "mint-green", "peach", ...textureOptions],
-      "cotton": ["white", "sky-blue", "pink", "lavender", "mint-green", "peach", ...textureOptions],
-      "blend": ["charcoal", "burgundy", "heather-gray", "maroon", "cream", "beige", ...textureOptions]
+      // 78% Terylene, 18% Rayon, 4% Spandex - Performance Fabric (15 colors)
+      "wool-blend": ["texture-1", "texture-2", "texture-3", "texture-4", "texture-5", "texture-6", "texture-7", "texture-8", "texture-9", "texture-10", "texture-11", "texture-12", "texture-13", "texture-14", "texture-15"],
+      // 97% Merino Wool, 3% Lycra - Superfine Merino with Lycra (2 colors)
+      "premium-wool": ["texture-16", "texture-17"],
+      // 70% Merino Wool, 30% Polyester - Superfine Merino Washable (3 colors)
+      "washable-wool": ["texture-18", "texture-19", "texture-20"]
     }
     return fabricColors[fabricId] || textureOptions
   }
 
+  const getFabricPerformanceFeatures = (fabricId: string): string[] => {
+    const features: { [key: string]: string[] } = {
+      "wool-blend": ["Breathable", "Wrinkle Resistant", "Fast Drying", "Moisture Wicking", "4-Way Stretch", "Mechanical Stretch", "Machine washable"],
+      "premium-wool": ["Breathable", "Wrinkle Resistant", "Fast Drying", "Moisture Wicking", "4-Way Stretch"],
+      "washable-wool": ["Breathable", "Wrinkle Resistant", "Fast Drying", "Moisture Wicking", "Mechanical Stretch", "Machine washable"]
+    }
+    return features[fabricId] || []
+  }
+
+  const getFabricTechnicalSpecs = (fabricId: string) => {
+    const specs: { [key: string]: any } = {
+      "wool-blend": {
+        tone: "15 colors available",
+        pattern: "Solid",
+        weave: "Twill",
+        category: "Performance",
+        seasonality: "Year round",
+        weight: "350 Gram",
+        composition: "65% Polyester, 35% Viscose",
+        shine: "Matte",
+        opacity: "Very Opaque",
+        stretch: "Mechanical Stretch",
+        careInstructions: "Machine washable, Hang dry",
+        suggestedOccasion: "Business, Smart casual, Travel, Active",
+        breathable: true,
+        wrinkleResistant: true,
+        moistureWicking: true,
+        fastDrying: true,
+        fourWayStretch: true,
+        mechanicalStretch: true,
+        machineWashable: true,
+        waterRepellent: false,
+        odorResistant: false,
+        uvProtection: false
+      },
+      "premium-wool": {
+        tone: "2 colors available",
+        pattern: "Solid",
+        weave: "Twill",
+        category: "Natural with Lycra",
+        seasonality: "Year round",
+        weight: "Light to medium",
+        composition: "97% Merino Wool, 3% Lycra",
+        shine: "Matte",
+        opacity: "High opacity",
+        stretch: "4-way stretch",
+        careInstructions: "Machine wash cold, hang dry",
+        suggestedOccasion: "A blend of business and smart casual with a refined touch",
+        breathable: true,
+        wrinkleResistant: true,
+        fastDrying: true,
+        moistureWicking: true,
+        fourWayStretch: true,
+        mechanicalStretch: false,
+        waterRepellent: false,
+        odorResistant: false,
+        uvProtection: false
+      },
+      "washable-wool": {
+        tone: "3 colors available",
+        pattern: "Solid",
+        weave: "Twill",
+        category: "Natural with performance features",
+        seasonality: "Year round",
+        weight: "Light",
+        composition: "70% Merino Wool, 30% Polyester",
+        shine: "Matte",
+        opacity: "High opacity",
+        stretch: "Mechanical Stretch",
+        careInstructions: "Machine wash cold, hang dry",
+        suggestedOccasion: "A blend of business and smart casual with a refined touch. Designed for everyday wear, thanks to its washable fabric",
+        breathable: true,
+        wrinkleResistant: true,
+        fastDrying: true,
+        moistureWicking: true,
+        fourWayStretch: false,
+        mechanicalStretch: true,
+        machineWashable: true,
+        waterRepellent: false,
+        odorResistant: false,
+        uvProtection: false
+      }
+    }
+    return specs[fabricId] || {}
+  }
+
   const getFilteredColors = () => {
     const selectedFabricType = configuratorState["fabric-type"]?.valueId
-    
+
     // If no fabric type selected, show all colors
     if (!selectedFabricType) {
       return currentStepData?.values.map(v => ({
@@ -972,7 +1258,7 @@ export function UniversalConfigurator({
       <div className="w-full h-screen bg-gray-50 flex relative">
         {/* Mobile Sidebar Overlay */}
         {isSidebarOpen && (
-          <div 
+          <div
             className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
             onClick={() => setIsSidebarOpen(false)}
           />
@@ -1023,7 +1309,9 @@ export function UniversalConfigurator({
           {/* Current Step Header - Fully Responsive */}
           <div className="px-4 sm:px-5 lg:px-6 py-3 sm:py-4 bg-gray-50 border-b">
             <div className="flex items-center gap-2 sm:gap-3">
-              {isMeasurementStep ? (
+              {isMeasurementConfirmStep ? (
+                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 text-green-600" />
+              ) : isMeasurementStep ? (
                 <Ruler className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 text-blue-600" />
               ) : isFitPreferenceStep ? (
                 <Shirt className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 text-green-600" />
@@ -1031,21 +1319,25 @@ export function UniversalConfigurator({
                 getCategoryIcon(currentStepData?.category || "")
               )}
               <h2 className="font-semibold text-gray-900 text-sm sm:text-base lg:text-lg truncate flex-1">
-                {isMeasurementStep 
-                  ? "Measurements" 
-                  : isFitPreferenceStep
-                    ? "Fit Preference"
-                  : isLiningSelectionStep
-                    ? "Jacket Lining"
-                  : isJacketLiningStep 
-                    ? "Lining & Monogram" 
-                    : isMonogramStep || isEmbroideredMonogramStep
-                        ? "Embroidered Monogram"
-                    : currentStepData?.name || "Customize"}
+                {isMeasurementConfirmStep
+                  ? "Review & Confirm"
+                  : isMeasurementStep
+                    ? "Measurements"
+                    : isFitPreferenceStep
+                      ? "Fit Preference"
+                      : isLiningSelectionStep
+                        ? "Jacket Lining"
+                        : isJacketLiningStep
+                          ? "Lining & Monogram"
+                          : isMonogramStep || isEmbroideredMonogramStep
+                            ? "Embroidered Monogram"
+                            : isFabricTypeStep
+                              ? <>{currentStepData?.name} <span className="font-normal text-gray-400">&#8212; Fabric - next colors</span></>
+                              : currentStepData?.name || "Customize"}
               </h2>
-              {!isMeasurementStep && !isFitPreferenceStep && !isLiningSelectionStep && !isJacketLiningStep && !isMonogramStep && !isEmbroideredMonogramStep && currentStepData && currentStepData.values && (
+              {!isMeasurementConfirmStep && !isMeasurementStep && !isFitPreferenceStep && !isLiningSelectionStep && !isJacketLiningStep && !isMonogramStep && !isEmbroideredMonogramStep && currentStepData && currentStepData.values && (
                 <Badge variant="secondary" className="text-xs flex-shrink-0 hidden sm:inline-flex">
-                  {currentStepData.values.length} option{currentStepData.values.length !== 1 ? 's' : ''}
+                  {(() => { const count = isFabricColorStep ? getFilteredColors().length : currentStepData.values.length; return `${count} option${count !== 1 ? 's' : ''}`; })()}
                 </Badge>
               )}
             </div>
@@ -1066,10 +1358,10 @@ export function UniversalConfigurator({
                     <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-2">
                         <Shirt className="w-4 h-4 text-green-600" />
-                        <h3 className="font-medium text-green-800">Choose Your Fit Preference</h3>
+                        <h3 className="font-medium text-black">Choose Your Fit Preference</h3>
                       </div>
-                      <p className="text-sm text-green-700">
-                        Select your preferred fit style. This helps us apply the right overmeasurements during production for optimal comfort.
+                      <p className="text-sm text-black">
+                        Choose your preferred fit to ensure optimal comfort. Please answer all 4 questions to continue.
                       </p>
                     </div>
 
@@ -1081,13 +1373,13 @@ export function UniversalConfigurator({
                           description: "Closer to body, tailored fit with minimal ease"
                         },
                         {
-                          id: "regular", 
+                          id: "regular",
                           name: "Regular",
                           description: "Classic comfortable fit with standard ease"
                         },
                         {
                           id: "comfort",
-                          name: "Comfort", 
+                          name: "Comfort",
                           description: "Relaxed fit with extra room for movement"
                         }
                       ].map((fit) => (
@@ -1096,20 +1388,18 @@ export function UniversalConfigurator({
                           onClick={() => setMeasurementData(prev => ({ ...prev, fitPreference: fit.id as "slim" | "regular" | "comfort" }))}
                           className={`
                             group relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 transform hover:scale-[1.02]
-                            ${
-                              measurementData.fitPreference === fit.id
-                                ? "border-green-500 bg-gradient-to-br from-green-50 via-emerald-50 to-green-50 shadow-lg ring-2 ring-green-200/50 scale-[1.02]"
-                                : "border-gray-200 hover:border-green-300 hover:shadow-lg bg-white hover:bg-gradient-to-br hover:from-gray-50 hover:to-white"
+                            ${measurementData.fitPreference === fit.id
+                              ? "border-green-500 bg-gradient-to-br from-green-50 via-emerald-50 to-green-50 shadow-lg ring-2 ring-green-200/50 scale-[1.02]"
+                              : "border-gray-200 hover:border-green-300 hover:shadow-lg bg-white hover:bg-gradient-to-br hover:from-gray-50 hover:to-white"
                             }
                           `}
                         >
                           <div className="flex flex-col items-center gap-3 text-center">
                             <div className="flex items-center gap-3 w-full">
-                              <div className={`w-4 h-4 rounded-full border-2 ${
-                                measurementData.fitPreference === fit.id 
-                                  ? 'border-green-500 bg-green-500' 
-                                  : 'border-gray-300'
-                              }`}>
+                              <div className={`w-4 h-4 rounded-full border-2 ${measurementData.fitPreference === fit.id
+                                ? 'border-green-500 bg-green-500'
+                                : 'border-gray-300'
+                                }`}>
                                 {measurementData.fitPreference === fit.id && (
                                   <div className="w-full h-full rounded-full bg-white scale-50"></div>
                                 )}
@@ -1278,6 +1568,27 @@ export function UniversalConfigurator({
                     }
                     garmentType={productType as "pants" | "jacket" | "shirt" | "suit" | "blazer"}
                     onUpdate={updateMeasurementData}
+                    customerEmail={customerEmail}
+                    onEmailChange={setCustomerEmail}
+                    onEmailLookup={handleEmailLookup}
+                    isLookingUp={isProfileLoading}
+                    savedProfile={savedMeasurementProfile}
+                    onUseSavedMeasurements={handleUseSavedFromMeasurementStep}
+                  />
+                ) : isMeasurementConfirmStep ? (
+                  <MeasurementConfirmStep
+                    garmentType={productType as "pants" | "jacket" | "shirt" | "suit" | "blazer"}
+                    savedProfile={savedMeasurementProfile}
+                    currentMeasurements={getCurrentMeasurementsRecord()}
+                    customerEmail={customerEmail}
+                    onCustomerEmailChange={setCustomerEmail}
+                    onConfirm={handleMeasurementsConfirmed}
+                    onEditMeasurements={handleGoToMeasurementStep}
+                    onNewMeasurements={handleGoToMeasurementStep}
+                    isLoading={isProfileLoading}
+                    onLookup={handleEmailLookup}
+                    shopifyCustomer={shopifyCustomer}
+                    autoDetected={customerAutoDetected}
                   />
                 ) : isLiningSelectionStep ? (
                   <LiningSelectionStep
@@ -1328,7 +1639,9 @@ export function UniversalConfigurator({
                       description: getFabricDescription(value.id),
                       weight: getFabricWeight(value.id),
                       season: getFabricSeason(value.id),
-                      availableColors: getFabricAvailableColors(value.id)
+                      availableColors: getFabricAvailableColors(value.id),
+                      performanceFeatures: getFabricPerformanceFeatures(value.id),
+                      technicalSpecs: getFabricTechnicalSpecs(value.id)
                     }))}
                   />
                 ) : isFabricColorStep ? (
@@ -1351,7 +1664,7 @@ export function UniversalConfigurator({
                       {getFilteredColors().map((color) => {
                         // Check if this is a texture (starts with / or contains image extension)
                         const isTexture = color.hex.startsWith('/') || /\.(jpg|jpeg|png|webp)$/i.test(color.hex)
-                        
+
                         return (
                           <div
                             key={color.id}
@@ -1366,22 +1679,21 @@ export function UniversalConfigurator({
                             }}
                             className={`
                               relative p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all hover:scale-105 hover:shadow-md
-                              ${
-                                configuratorState["fabric-color"]?.valueId === color.id
-                                  ? "border-blue-500 ring-2 ring-blue-200 bg-blue-50"
-                                  : "border-gray-200 hover:border-gray-300"
+                              ${configuratorState["fabric-color"]?.valueId === color.id
+                                ? "border-blue-500 ring-2 ring-blue-200 bg-blue-50"
+                                : "border-gray-200 hover:border-gray-300"
                               }
                             `}
                           >
                             <div className="text-center">
                               <div
                                 className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-lg mx-auto mb-2 border border-gray-300 shadow-sm overflow-hidden"
-                                style={isTexture 
-                                  ? { 
-                                      backgroundImage: `url(${color.hex})`,
-                                      backgroundSize: 'cover',
-                                      backgroundPosition: 'center'
-                                    }
+                                style={isTexture
+                                  ? {
+                                    backgroundImage: `url(${color.hex})`,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center'
+                                  }
                                   : { backgroundColor: color.hex }
                                 }
                               />
@@ -1443,7 +1755,7 @@ export function UniversalConfigurator({
                                     className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-lg mx-auto mb-2 border border-gray-300 shadow-sm"
                                     style={{ backgroundColor: value.color || value.value }}
                                   />
-                                  <div className="text-xs sm:text-sm font-medium text-gray-900 truncate leading-tight">
+                                  <div className="text-xs sm:text-sm font-medium text-gray-900 leading-tight break-words">
                                     {value.name}
                                   </div>
                                   {value.price > 0 && (
@@ -1490,10 +1802,9 @@ export function UniversalConfigurator({
                                 style={{ cursor: 'pointer', userSelect: 'none' }}
                                 className={`
                                   group relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 transform hover:scale-[1.02] 
-                                  ${
-                                    configuratorState[currentStepData.id]?.valueId === value.id
-                                      ? "border-blue-500 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 shadow-lg ring-2 ring-blue-200/50 scale-[1.02]"
-                                      : "border-gray-200 hover:border-blue-300 hover:shadow-lg bg-white hover:bg-gradient-to-br hover:from-gray-50 hover:to-white"
+                                  ${configuratorState[currentStepData.id]?.valueId === value.id
+                                    ? "border-blue-500 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 shadow-lg ring-2 ring-blue-200/50 scale-[1.02]"
+                                    : "border-gray-200 hover:border-blue-300 hover:shadow-lg bg-white hover:bg-gradient-to-br hover:from-gray-50 hover:to-white"
                                   }
                                 `}
                               >
@@ -1554,10 +1865,10 @@ export function UniversalConfigurator({
           {/* Sidebar Footer - Fully Responsive */}
           <div className="p-4 sm:p-5 lg:p-6 border-t border-gray-200 bg-white">
             <div className="flex items-center gap-3 sm:gap-4">
-              <Button 
-                variant="outline" 
-                onClick={prevStep} 
-                disabled={currentStep === 0} 
+              <Button
+                variant="outline"
+                onClick={prevStep}
+                disabled={currentStep === 0}
                 size="sm"
                 className="flex-1 h-10 sm:h-11 text-sm font-medium"
               >
@@ -1567,9 +1878,9 @@ export function UniversalConfigurator({
 
               {currentStep < totalSteps - 1 ? (
                 <>
-                  <Button 
-                    onClick={nextStep} 
-                    size="sm" 
+                  <Button
+                    onClick={nextStep}
+                    size="sm"
                     disabled={isFitPreferenceStep && (!measurementData.fitPreference || !measurementData.shoulderType || !measurementData.backShape || !measurementData.bellyType)}
                     className="bg-blue-600 hover:bg-blue-700 flex-1 h-10 sm:h-11 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -1580,9 +1891,9 @@ export function UniversalConfigurator({
               ) : (
                 <>
                   {/* Only show Add to Cart on the final step */}
-                  <Button 
-                    className="bg-green-600 hover:bg-green-700 flex-1 h-10 sm:h-11 text-sm font-medium" 
-                    size="sm" 
+                  <Button
+                    className="bg-green-600 hover:bg-green-700 flex-1 h-10 sm:h-11 text-sm font-medium"
+                    size="sm"
                     onClick={handleAddToCart}
                   >
                     <ShoppingCart className="w-4 h-4 mr-2" />
@@ -1613,22 +1924,12 @@ export function UniversalConfigurator({
           flex-1 relative h-screen bg-gradient-to-br from-gray-100 to-gray-200 transition-all duration-300
           €{isSidebarOpen ? 'lg:ml-0' : ''}
         `}>
-          {/* Top Controls - Responsive with better positioning */}
-          <div className="absolute top-3 sm:top-4 lg:top-6 right-3 sm:right-4 lg:right-6 z-10 flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="bg-white/95 backdrop-blur-sm h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 p-0 shadow-lg hover:shadow-xl transition-all border-gray-300"
-            >
-              <Maximize2 className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="bg-white/95 backdrop-blur-sm h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 p-0 shadow-lg hover:shadow-xl transition-all border-gray-300"
-            >
-              <RotateCcw className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
-            </Button>
+          {/* Top Controls - hint text moved here and buttons removed */}
+          <div className="absolute top-3 sm:top-4 lg:top-6 left-1/2 transform -translate-x-1/2 z-10 px-2 sm:px-4">
+            <div className="bg-white/95 backdrop-blur-sm px-3 sm:px-4 lg:px-6 py-2 sm:py-3 rounded-full text-xs sm:text-sm text-gray-600 shadow-lg border border-gray-300 text-center max-w-sm sm:max-w-md">
+              <span className="hidden sm:inline">Drag to rotate • Scroll to zoom • Double-click to reset view</span>
+              <span className="sm:hidden">Tap &amp; drag • Pinch to zoom</span>
+            </div>
           </div>
 
           {/* 3D Model Viewer - FULL HEIGHT with better styling */}
@@ -1652,29 +1953,25 @@ export function UniversalConfigurator({
                 <div className="text-center mb-2">
                   <h4 className="text-sm font-semibold text-gray-900">Monogram Preview</h4>
                 </div>
-                <div className="relative w-full aspect-square bg-gray-50 rounded-lg overflow-hidden">
+                <div className="relative w-full aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden">
                   <img
                     src="/images/threadmonogram.png"
                     alt="Jacket with monogram position"
-                    className="w-full h-full object-cover"
-                    style={{ 
-                      transform: 'scale(1.8)',
-                      transformOrigin: 'center'
-                    }}
+                    className="w-full h-full object-contain"
                   />
-                  <div 
+                  <div
                     className="absolute pointer-events-none"
-                    style={{ 
+                    style={{
                       color: THREAD_COLORS.find(c => c.id === monogramData.threadColor)?.color || "#1e3a8a",
-                      fontFamily: monogramData.monogramFont === 'england' 
-                        ? "'EdwardianScriptITC', 'Brush Script MT', 'Lucida Handwriting', cursive" 
+                      fontFamily: monogramData.monogramFont === 'england'
+                        ? "'EdwardianScriptITC', 'Brush Script MT', 'Lucida Handwriting', cursive"
                         : "Arial, sans-serif",
                       fontWeight: monogramData.monogramFont === 'england' ? 'bold' : '600',
                       fontStyle: monogramData.monogramFont === 'england' ? 'italic' : 'normal',
-                      fontSize: monogramData.text.length <= 2 ? '1.5rem' : monogramData.text.length > 10 ? '0.75rem' : '1rem',
-                      left: '58%',
-                      top: '32%',
-                      transform: 'rotate(-8deg)',
+                      fontSize: monogramData.text.length <= 2 ? '2.5rem' : monogramData.text.length > 10 ? '1.2rem' : '1.8rem',
+                      left: '50%',
+                      top: '52%',
+                      transform: 'translate(-50%, -100%)',
                       whiteSpace: 'nowrap'
                     }}
                   >
@@ -1688,13 +1985,7 @@ export function UniversalConfigurator({
             </div>
           )}
 
-          {/* Bottom Instructions - More Responsive */}
-          <div className="absolute bottom-3 sm:bottom-4 lg:bottom-6 left-1/2 transform -translate-x-1/2 z-10 px-2 sm:px-4">
-            <div className="bg-white/95 backdrop-blur-sm px-3 sm:px-4 lg:px-6 py-2 sm:py-3 rounded-full text-xs sm:text-sm text-gray-600 shadow-lg border border-gray-300 text-center max-w-sm sm:max-w-md">
-              <span className="hidden sm:inline">Drag to rotate • Scroll to zoom • Double-click to reset view</span>
-              <span className="sm:hidden">Tap & drag • Pinch to zoom</span>
-            </div>
-          </div>
+          {/* Bottom Instructions - removed (moved to top) */}
 
           {/* Mobile Price Indicator */}
           <div className="absolute top-3 left-3 lg:hidden z-10">
@@ -1722,6 +2013,7 @@ export function UniversalConfigurator({
         isOpen={showCheckoutModal}
         onClose={() => setShowCheckoutModal(false)}
         orderSummary={generateOrderSummary()}
+        onEditConfiguration={handleEditConfiguration}
       />
     </>
   )

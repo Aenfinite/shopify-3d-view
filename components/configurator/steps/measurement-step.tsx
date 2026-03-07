@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
-import { Ruler, Video, Edit3, ChevronLeft, ChevronRight, CheckCircle, Info } from "lucide-react"
+import { Ruler, Video, Edit3, ChevronLeft, ChevronRight, CheckCircle, Info, Mail, Loader2, User } from "lucide-react"
 
 interface MeasurementStepProps {
   sizeType?: "standard"
@@ -27,6 +27,13 @@ interface MeasurementStepProps {
   }
   customMeasurementMethod?: "sketches" | "videos"
   onUpdate: (updates: any) => void
+  // Email lookup props
+  customerEmail?: string
+  onEmailChange?: (email: string) => void
+  onEmailLookup?: (email: string) => void
+  isLookingUp?: boolean
+  savedProfile?: any | null
+  onUseSavedMeasurements?: () => void
 }
 
 interface MeasurementData {
@@ -64,7 +71,7 @@ const GARMENT_MEASUREMENTS = {
       { 
         key: "neck", 
         label: "Neck Circumference", 
-        description: "Measure around the neck where collar sits.", 
+        description: "Measure around the neck where the collar sits.", 
         detailedGuide: "Place the measuring tape around your neck at the base, where your collar would normally sit. Make sure the tape is snug but not tight.",
         unit: "cm",
         videoUrl: "https://youtu.be/8eTJzzDZ-Ps",
@@ -191,16 +198,16 @@ const GARMENT_MEASUREMENTS = {
   },
   jacket: {
     measurements: [
-      // 1. Neck
+      // 1. Neck (video method only)
       {
         key: "neck",
         label: "Neck",
-        description: "Measure around the neck where collar sits.",
+        description: "Measure around the neck where the collar sits.",
         detailedGuide: "Place the measuring tape around your neck at the base, where your collar would normally sit. Make sure the tape is snug but not tight.",
-        videoGuide: "Stand upright and look straight ahead. Place the tape just below the larynx and wrap it horizontally around the neck where it meets the shoulders. Leave a finger's width of space between the tape and the neck. Record the measurement.",
+        videoGuide: "Wrap the tape around the base of your neck, where the collar sits. Keep the tape snug but not tight. Record the measurement.",
         unit: "cm",
         videoUrl: "https://youtu.be/8eTJzzDZ-Ps",
-        sketchImage: "/images/jacket/neck.png"
+        videoOnly: true
       },
       // 2. Chest
       {
@@ -235,29 +242,18 @@ const GARMENT_MEASUREMENTS = {
         videoUrl: "https://youtu.be/DVy9E71T3cI",
         sketchImage: "/images/jacket/hem.png"
       },
-      // 5. Front Width
-      {
-        key: "front_width",
-        label: "Front Width",
-        description: "Measure across the chest from armpit to armpit.",
-        detailedGuide: "Measure straight across the front from one armpit to the other, keeping the tape parallel to the ground at chest height.",
-        videoGuide: "At chest height, place the tape between the midpoints of each armpit where the arm meets the chest. Keep horizontal. Record the measurement.",
-        unit: "cm",
-        videoUrl: "https://youtu.be/fN7ChyTlAS8",
-        sketchImage: "/images/jacket/chest.png"
-      },
-      // 6. Front Length
+      // 5. Front Length
       {
         key: "front_length",
         label: "Front Length",
-        description: "Measure from shoulder to desired front length.",
+        description: "Measure from your shoulder to the base of your thumb (or desired front length).",
         detailedGuide: "Front Length: With the jacket laid flat, buttoned, and smoothed out, measure from the highest point of the shoulder seam at the collar straight down the front over the buttons to the bottom edge of the hem.",
         videoGuide: "Measure from the shoulder seam at the base of the neck straight down the front to the base of the thumb. Maintain an upright posture. Record the measurement.",
         unit: "cm",
         videoUrl: "https://youtu.be/Yi1Zd1MigyM",
         sketchImage: "/images/jacket/front-length.png"
       },
-      // 7. Back Width
+      // 6. Back Width
       {
         key: "back_width",
         label: "Back Width",
@@ -268,7 +264,7 @@ const GARMENT_MEASUREMENTS = {
         videoUrl: "https://youtu.be/ZeOSNRw9NRM",
         sketchImage: "/images/jacket/backmass.png"
       },
-      // 8. Back Length
+      // 7. Back Length
       {
         key: "back_length",
         label: "Back Length",
@@ -279,7 +275,7 @@ const GARMENT_MEASUREMENTS = {
         videoUrl: "https://youtu.be/qJn27RFvNsk",
         sketchImage: "/images/jacket/back-length.png"
       },
-      // 9. Shoulder
+      // 8. Shoulder
       {
         key: "shoulder",
         label: "Shoulder",
@@ -288,9 +284,9 @@ const GARMENT_MEASUREMENTS = {
         videoGuide: "Have someone assist. Measure from the outer edge of one shoulder bone to the other, slightly curved over the shoulders. Ensure start and end points are level. Record the measurement.",
         unit: "cm",
         videoUrl: "https://youtu.be/8bT5sg4-Q0o",
-        sketchImage: "/images/jacket/shoulder.png"
+        sketchImage: "/images/jacket/shoulder-measurement.png"
       },
-      // 10. Sleeve Length
+      // 9. Sleeve Length
       {
         key: "sleeve_length",
         label: "Sleeve Length",
@@ -301,7 +297,7 @@ const GARMENT_MEASUREMENTS = {
         videoUrl: "https://youtu.be/D9StvHaSgM8",
         sketchImage: "/images/jacket/sleeve-length.png"
       },
-      // 11. Armhole
+      // 10. Armhole
       {
         key: "armhole",
         label: "Armhole",
@@ -312,23 +308,23 @@ const GARMENT_MEASUREMENTS = {
         videoUrl: "https://youtu.be/p3SCb2WsP2M",
         sketchImage: "/images/jacket/armhole.png"
       },
-      // 12. Biceps
+      // 11. Biceps
       {
         key: "biceps",
         label: "Biceps",
         description: "Measure around the largest part of your upper arm.",
-        detailedGuide: "Sleeve Bicep Width: Measure about 1 inch below the underarm, straight across the sleeve.",
+        detailedGuide: "Sleeve Bicep Width: Measure about 1 inch below the underarm, straight across the sleeve, then double the result to get the full bicep circumference.",
         videoGuide: "With arms relaxed, wrap the tape around the fullest part of your upper arm without tensing the muscles. Record the measurement.",
         unit: "cm",
         videoUrl: "https://youtu.be/h5GvZbTVSH8",
-        sketchImage: "/images/jacket/biceps.png"
+        sketchImage: "/images/jacket/bicep-measurement.png"
       },
-      // 13. Wrist
+      // 12. Wrist
       {
         key: "wrist",
         label: "Wrist",
         description: "Measure around your wrist bone.",
-        detailedGuide: "Sleeve Opening / Cuff Width: Measure across the fully buttoned cuff.",
+        detailedGuide: "Sleeve Opening / Cuff Width: Measure across the fully buttoned cuff, then double the result to get the full cuff circumference.",
         videoGuide: "Wrap the tape around the widest point of your wrist, over the carpal bone. Record the measurement.",
         unit: "cm",
         videoUrl: "https://youtu.be/9fgnZ0YQ2Mk",
@@ -342,7 +338,7 @@ const GARMENT_MEASUREMENTS = {
         key: "waist", 
         label: "Trouser Waist", 
         description: "Take off your belt and stand naturally without sucking in your stomach. Measure around the waistband where you would wear your dress pants. Make sure the tape is level all around and leave room for one finger.", 
-        detailedGuide: "1. Lay the trousers flat on a table and make sure the waistband is fully straightened and stretched evenly from end to end.\n2. Measure at the top edge across the waistband, from the outermost point on one side to the outermost point on the other side.\n3. Since this measurement is taken on a flat garment, multiply the measured width by two to obtain the full waistband circumference.\n4. Add 1 cm to the total (to allow minimal ease and ensure comfortable fit). Example: 38 cm × 2 = 76 cm + 1 cm = 77 cm final result.\n5. Enter this final result into the system.",
+        detailedGuide: "1. Lay the trousers flat on a table and make sure the waistband is fully straightened and stretched evenly from end to end.\n2. Measure at the top edge across the waistband, from the outermost point on one side to the outermost point on the other side.\n3. Since this measurement is taken on a flat garment, multiply the measured width by two to obtain the full waistband circumference.\n4. Add 1 cm to the total (to allow minimal ease and ensure comfortable fit). Example: 38 cm Ã— 2 = 76 cm + 1 cm = 77 cm final result.\n5. Enter this final result into the system.",
         unit: "cm",
         videoUrl: "https://www.youtube.com/watch?v=gnxiBmx5puI",
         sketchImage: "/images/sketch/pants/waistband circumference.png"
@@ -410,7 +406,7 @@ const GARMENT_MEASUREMENTS = {
         label: "Chest Circumference", 
         description: "Measure around the fullest part of your chest.", 
         detailedGuide: "Wrap the measuring tape around your chest at nipple level, keeping the tape parallel to the floor.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/fN7ChyTlAS8",
         sketchImage: "/measurement-guides/jacket/chest-sketch.svg"
       },
@@ -419,7 +415,7 @@ const GARMENT_MEASUREMENTS = {
         label: "Waist Circumference", 
         description: "Measure around your natural waistline.", 
         detailedGuide: "Find your natural waist (usually the narrowest part) and measure around it, keeping the tape snug but not tight.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/3xVdy8Azqhs",
         sketchImage: "/measurement-guides/jacket/waist-sketch.svg"
       },
@@ -428,7 +424,7 @@ const GARMENT_MEASUREMENTS = {
         label: "Inseam Length (Pants)", 
         description: "Measure from crotch to ankle for suit pants.", 
         detailedGuide: "Measure from your crotch down the inside of your leg to your ankle bone.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/qJ8-OeFpGUg",
         sketchImage: "/measurement-guides/pants/inseam-sketch.svg"
       },
@@ -437,34 +433,33 @@ const GARMENT_MEASUREMENTS = {
         label: "Shoulder Width",
         description: "Measure from shoulder point to shoulder point.",
         detailedGuide: "Have someone help you measure across your back from the edge of one shoulder to the edge of the other.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/8bT5sg4-Q0o",
-        sketchImage: "/measurement-guides/jacket/shoulder-sketch.svg"
+        sketchImage: "/images/jacket/shoulder-measurement.png"
       },
       {
         key: "sleeve",
         label: "Sleeve Length",
         description: "Measure from shoulder point to wrist.",
         detailedGuide: "With your arm slightly bent, measure from the edge of your shoulder down to your wrist bone.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/D9StvHaSgM8",
         sketchImage: "/measurement-guides/jacket/sleeve-sketch.svg"
       },
       {
         key: "neck",
         label: "Neck Circumference",
-        description: "Measure around the neck where collar sits.",
+        description: "Measure around the neck where the collar sits.",
         detailedGuide: "Place the measuring tape around your neck at the base, where your collar would normally sit. Make sure the tape is snug but not tight.",
-        unit: "inches",
-        videoUrl: "https://youtu.be/8eTJzzDZ-Ps",
-        sketchImage: "/measurement-guides/shirt/neck-sketch.svg"
+        unit: "cm",
+        videoUrl: "https://youtu.be/8eTJzzDZ-Ps"
       },
       {
         key: "jacket_length",
         label: "Jacket Length",
         description: "Measure from neck to desired jacket length.",
         detailedGuide: "Start at the base of your neck and measure straight down your front to where you want the jacket to end.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/Yi1Zd1MigyM",
         sketchImage: "/measurement-guides/jacket/front-length-sketch.svg"
       },
@@ -473,7 +468,7 @@ const GARMENT_MEASUREMENTS = {
         label: "Hip Circumference",
         description: "Measure around the fullest part of your hips.",
         detailedGuide: "Stand with feet together and measure around the fullest part of your hips and buttocks.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/DVy9E71T3cI",
         sketchImage: "/measurement-guides/pants/hip-sketch.svg"
       },
@@ -482,7 +477,7 @@ const GARMENT_MEASUREMENTS = {
         label: "Thigh Circumference (Pants)",
         description: "Measure around the fullest part of your thigh.",
         detailedGuide: "Measure around the fullest part of your upper thigh, usually about 2 inches below the crotch.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/yHkL-9z_6Lg",
         sketchImage: "/measurement-guides/pants/thigh-sketch.svg"
       },
@@ -491,7 +486,7 @@ const GARMENT_MEASUREMENTS = {
         label: "Jacket Back Length",
         description: "Measure the back length of the jacket.",
         detailedGuide: "Turn the jacket face down. From the intersection of the collar and center back seam, measure straight down along the center back to the hem.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/dJgJkL_EXqM",
         sketchImage: "/images/jacket/back-length.png"
       },
@@ -500,16 +495,16 @@ const GARMENT_MEASUREMENTS = {
         label: "Sleeve Bicep Width",
         description: "Measure about 1 inch below the underarm, straight across the sleeve.",
         detailedGuide: "Measure about 1 inch below the underarm, straight across the sleeve.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/h5GvZbTVSH8",
-        sketchImage: "/images/jacket/biceps.png"
+        sketchImage: "/images/jacket/bicep-measurement.png"
       },
       {
         key: "outseam",
         label: "Outseam Length (Pants)",
         description: "Measure from waist to ankle on the outside.",
         detailedGuide: "Measure from your waist down the outside of your leg to your ankle.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/x4E7fG3-PvY",
         sketchImage: "/measurement-guides/pants/outseam-sketch.svg"
       },
@@ -518,7 +513,7 @@ const GARMENT_MEASUREMENTS = {
         label: "Armhole Circumference",
         description: "With the jacket laid flat and buttoned, measure from the top shoulder point along the seam where the sleeve is attached.",
         detailedGuide: "With the jacket laid flat and buttoned, measure from the top shoulder point along the seam where the sleeve is attached, following the curve all the way around back to the starting point.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/TBFxP6pX-GE",
         sketchImage: "/images/jacket/armhole.png"
       },
@@ -527,7 +522,7 @@ const GARMENT_MEASUREMENTS = {
         label: "Crotch Depth (Pants)",
         description: "Measure from the waistband to the crotch seam.",
         detailedGuide: "Measure from the top of the waistband straight down to where the crotch seam begins.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/qJ8-OeFpGUg",
         sketchImage: "/measurement-guides/pants/crotch-depth-sketch.svg"
       }
@@ -540,7 +535,7 @@ const GARMENT_MEASUREMENTS = {
         label: "Chest Circumference", 
         description: "Measure around the fullest part of your chest.", 
         detailedGuide: "Wrap the measuring tape around your chest at nipple level, keeping the tape parallel to the floor.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/fN7ChyTlAS8",
         sketchImage: "/measurement-guides/jacket/chest-sketch.svg"
       },
@@ -549,7 +544,7 @@ const GARMENT_MEASUREMENTS = {
         label: "Waist Circumference", 
         description: "Measure around your natural waistline.", 
         detailedGuide: "Find your natural waist (usually the narrowest part) and measure around it, keeping the tape snug but not tight.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/3xVdy8Azqhs",
         sketchImage: "/measurement-guides/jacket/waist-sketch.svg"
       },
@@ -558,7 +553,7 @@ const GARMENT_MEASUREMENTS = {
         label: "Blazer Length", 
         description: "Measure from neck to desired blazer length.", 
         detailedGuide: "Start at the base of your neck and measure straight down your front to where you want the blazer to end.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/Yi1Zd1MigyM",
         sketchImage: "/measurement-guides/jacket/front-length-sketch.svg"
       },
@@ -567,16 +562,16 @@ const GARMENT_MEASUREMENTS = {
         label: "Shoulder Width",
         description: "Measure from shoulder point to shoulder point.",
         detailedGuide: "Have someone help you measure across your back from the edge of one shoulder to the edge of the other.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/8bT5sg4-Q0o",
-        sketchImage: "/measurement-guides/jacket/shoulder-sketch.svg"
+        sketchImage: "/images/jacket/shoulder-measurement.png"
       },
       {
         key: "sleeve",
         label: "Sleeve Length",
         description: "Measure from shoulder point to wrist.",
         detailedGuide: "With your arm slightly bent, measure from the edge of your shoulder down to your wrist bone.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/D9StvHaSgM8",
         sketchImage: "/measurement-guides/jacket/sleeve-sketch.svg"
       },
@@ -585,16 +580,16 @@ const GARMENT_MEASUREMENTS = {
         label: "Sleeve Bicep Width",
         description: "Measure about 1 inch below the underarm, straight across the sleeve.",
         detailedGuide: "Measure about 1 inch below the underarm, straight across the sleeve.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/h5GvZbTVSH8",
-        sketchImage: "/images/jacket/biceps.png"
+        sketchImage: "/images/jacket/bicep-measurement.png"
       },
       {
         key: "back_length",
         label: "Center Back Length",
         description: "Turn the blazer face down. From the intersection of the collar and center back seam, measure straight down along the center back to the hem.",
         detailedGuide: "Turn the blazer face down. From the intersection of the collar and center back seam, measure straight down along the center back to the hem.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/dJgJkL_EXqM",
         sketchImage: "/images/jacket/back-length.png"
       },
@@ -603,25 +598,24 @@ const GARMENT_MEASUREMENTS = {
         label: "Armhole Circumference",
         description: "With the blazer laid flat and buttoned, measure from the top shoulder point along the seam where the sleeve is attached.",
         detailedGuide: "With the blazer laid flat and buttoned, measure from the top shoulder point along the seam where the sleeve is attached, following the curve all the way around back to the starting point.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/TBFxP6pX-GE",
         sketchImage: "/images/jacket/armhole.png"
       },
       {
         key: "neck",
         label: "Neck Circumference",
-        description: "Measure around the neck where collar sits.",
+        description: "Measure around the neck where the collar sits.",
         detailedGuide: "Place the measuring tape around your neck at the base, where your collar would normally sit. Make sure the tape is snug but not tight.",
-        unit: "inches",
-        videoUrl: "https://youtu.be/8eTJzzDZ-Ps",
-        sketchImage: "/measurement-guides/shirt/neck-sketch.svg"
+        unit: "cm",
+        videoUrl: "https://youtu.be/8eTJzzDZ-Ps"
       },
       {
         key: "sleeve_opening",
         label: "Sleeve Opening / Cuff Width",
         description: "Measure across the fully buttoned cuff.",
         detailedGuide: "Measure across the fully buttoned cuff.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/fmmIXzBVVVU",
         sketchImage: "/images/jacket/sleeve-opening.png"
       },
@@ -630,7 +624,7 @@ const GARMENT_MEASUREMENTS = {
         label: "Lapel Width",
         description: "Measure the width of the lapel at its widest point.",
         detailedGuide: "Measure from the outer edge of the lapel to where it meets the collar, at the widest part of the lapel.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/8bT5sg4-Q0o",
         sketchImage: "/measurement-guides/jacket/lapel-sketch.svg"
       },
@@ -639,16 +633,15 @@ const GARMENT_MEASUREMENTS = {
         label: "Button Stance",
         description: "Measure from collar to first button.",
         detailedGuide: "With the blazer laid flat and buttoned, measure from the shoulder point where the seam meets the collar straight down the front to the center of the first button.",
-        unit: "inches",
-        videoUrl: "https://youtu.be/8eTJzzDZ-Ps",
-        sketchImage: "/images/jacket/image.png"
+        unit: "cm",
+        videoUrl: "https://youtu.be/8eTJzzDZ-Ps"
       },
       {
         key: "vent_length",
         label: "Back Vent Length",
         description: "Measure the length of the back vent.",
         detailedGuide: "Measure from the bottom of the blazer up to where the back vent begins.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/Yi1Zd1MigyM",
         sketchImage: "/measurement-guides/jacket/vent-sketch.svg"
       },
@@ -657,7 +650,7 @@ const GARMENT_MEASUREMENTS = {
         label: "Hem Width",
         description: "Measure the width at the bottom hem.",
         detailedGuide: "With the blazer laid flat, measure straight across the bottom hem from one side seam to the other.",
-        unit: "inches",
+        unit: "cm",
         videoUrl: "https://youtu.be/DVy9E71T3cI",
         sketchImage: "/images/jacket/hem.png"
       }
@@ -668,7 +661,16 @@ const GARMENT_MEASUREMENTS = {
 export function MeasurementStep({
   garmentType = "jacket",
   onUpdate,
+  customerEmail = "",
+  onEmailChange,
+  onEmailLookup,
+  isLookingUp = false,
+  savedProfile = null,
+  onUseSavedMeasurements,
 }: MeasurementStepProps) {
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(true)
+  const [emailInput, setEmailInput] = useState(customerEmail || "")
+  const [hasLookedUp, setHasLookedUp] = useState(!!customerEmail)
   const [isMethodSelectionOpen, setIsMethodSelectionOpen] = useState(false)
   const [isStepByStepOpen, setIsStepByStepOpen] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
@@ -682,10 +684,15 @@ export function MeasurementStep({
     front_length: "", backmass: "", sleeve_opening: "", first_button: ""
   })
 
-  // Auto-open method selection on mount
+  // Auto-open email lookup when mounted.
+  // If customerEmail already known (Shopify login), run lookup immediately.
   useEffect(() => {
-    setIsMethodSelectionOpen(true)
-  }, [])
+    if (customerEmail && !hasLookedUp) {
+      setEmailInput(customerEmail)
+      setHasLookedUp(true)
+      onEmailLookup?.(customerEmail)
+    }
+  }, [customerEmail])
 
   // Helper functions
   const getGarmentMeasurements = () => {
@@ -698,7 +705,13 @@ export function MeasurementStep({
     return garmentConfig.measurements?.length || 0
   }
 
-  const getActiveMeasurements = () => getGarmentMeasurements()
+  const getActiveMeasurements = () => {
+    const all = getGarmentMeasurements()
+    if (currentMethod === "sketches") {
+      return all.filter((m: any) => !m.videoOnly)
+    }
+    return all
+  }
   const getCurrentField = () => getActiveMeasurements()[currentStep]
 
   const handleMeasurementChange = (field: string, value: string) => {
@@ -795,13 +808,13 @@ export function MeasurementStep({
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-3">
               <CheckCircle className="w-4 h-4 text-blue-600" />
-              <h3 className="font-medium text-blue-800">Your Measurements</h3>
+              <h3 className="font-medium text-blue-800">Your Measurements in cm</h3>
             </div>
             <div className="space-y-2">
               {Object.entries(savedMeasurements).map(([key, value]) => (
                 <div key={key} className="flex justify-between text-sm">
                   <span className="text-blue-700 capitalize">{key.replace('_', ' ')}:</span>
-                  <span className="text-blue-900 font-medium">{value}"</span>
+                  <span className="text-blue-900 font-medium">{value} cm</span>
                 </div>
               ))}
             </div>
@@ -813,6 +826,120 @@ export function MeasurementStep({
           </div>
         )}
       </div>
+
+      {/* ── Email Lookup Modal — shown first before measurement method ── */}
+      <Dialog open={isEmailModalOpen} onOpenChange={() => {}}>
+        <DialogContent className="max-w-lg" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="w-5 h-5 text-blue-600" />
+              Your Measurements
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Enter your email address. If we have your measurements on file, we'll show them to you so you can confirm or adjust. Otherwise you can take new measurements.
+            </p>
+
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="your@email.com"
+                value={emailInput}
+                onChange={(e) => {
+                  setEmailInput(e.target.value)
+                  onEmailChange?.(e.target.value)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && emailInput.trim()) {
+                    setHasLookedUp(true)
+                    onEmailLookup?.(emailInput.trim())
+                  }
+                }}
+                className="flex-1"
+                disabled={isLookingUp}
+              />
+              <Button
+                onClick={() => {
+                  if (emailInput.trim()) {
+                    setHasLookedUp(true)
+                    onEmailLookup?.(emailInput.trim())
+                  }
+                }}
+                disabled={!emailInput.trim() || isLookingUp}
+              >
+                {isLookingUp ? <Loader2 className="w-4 h-4 animate-spin" /> : "Look up"}
+              </Button>
+            </div>
+
+            {/* Result: saved measurements found */}
+            {hasLookedUp && !isLookingUp && savedProfile && (
+              <Alert className="border-green-200 bg-green-50">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">
+                  <p className="font-medium mb-1">We found your saved measurements!</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs mt-2 mb-3">
+                    {Object.entries(savedProfile.measurements || {}).slice(0, 8).map(([k, v]) => (
+                      <span key={k}><span className="font-medium capitalize">{k.replace(/_/g, " ")}:</span> {String(v)} cm</span>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 text-white flex-1"
+                      onClick={() => {
+                        setIsEmailModalOpen(false)
+                        onUseSavedMeasurements?.()
+                      }}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Use These Measurements
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        setIsEmailModalOpen(false)
+                        setIsMethodSelectionOpen(true)
+                      }}
+                    >
+                      Enter New Measurements
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Result: no measurements found */}
+            {hasLookedUp && !isLookingUp && !savedProfile && emailInput.trim() && (
+              <Alert className="border-blue-100 bg-blue-50">
+                <Info className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800">
+                  No saved measurements found for this email. Please take your measurements below.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Bottom actions */}
+            <div className="flex flex-col gap-2 pt-1">
+              {(hasLookedUp && !isLookingUp && !savedProfile) || !hasLookedUp ? (
+                <Button
+                  className="w-full"
+                  disabled={isLookingUp}
+                  onClick={() => {
+                    setIsEmailModalOpen(false)
+                    setIsMethodSelectionOpen(true)
+                  }}
+                >
+                  {hasLookedUp ? "Choose Measurement Method" : "Skip & Measure Now"}
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Method Selection Modal */}
       <Dialog open={isMethodSelectionOpen} onOpenChange={setIsMethodSelectionOpen}>
@@ -1009,25 +1136,20 @@ export function MeasurementStep({
 
                 {/* SKETCH METHOD - Different Layout */}
                 {currentMethod === "sketches" && (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Sketch Diagram Section */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-green-800">{getCurrentField().label}</h3>
-                      <div className="aspect-square bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-                        {getCurrentField().sketchImage ? (
+                  <div className={getCurrentField().sketchImage ? "grid grid-cols-1 lg:grid-cols-2 gap-6" : "max-w-2xl mx-auto"}>
+                    {/* Sketch Diagram Section - Only show if sketchImage exists */}
+                    {getCurrentField().sketchImage && (
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-green-800">{getCurrentField().label}</h3>
+                        <div className="aspect-square bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
                           <img
                             src={getCurrentField().sketchImage}
                             alt={`Measurement guide for ${getCurrentField().label}`}
                             className="max-w-full max-h-full object-contain"
                           />
-                        ) : (
-                          <div className="text-center">
-                            <Edit3 className="w-16 h-16 text-gray-400 mx-auto mb-2" />
-                            <p className="text-gray-500">Measurement Diagram</p>
-                          </div>
-                        )}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Input Section */}
                     <div className="space-y-4">

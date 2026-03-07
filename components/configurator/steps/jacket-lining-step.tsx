@@ -22,7 +22,7 @@ import {
 } from "lucide-react"
 
 interface JacketLiningStepProps {
-  liningType: "standard" | "custom" | "none"
+  liningType: "standard" | "custom" | "unlined"
   standardLiningColor?: string
   customLiningColor?: string
   monogramEnabled: boolean
@@ -122,9 +122,6 @@ export function JacketLiningStep({
       case "custom":
         total += 25 // Custom lining surcharge
         break
-      case "none":
-        total -= 15 // Discount for no lining (sleeve only)
-        break
     }
 
     // Monogram prices
@@ -173,7 +170,7 @@ export function JacketLiningStep({
           <RadioGroup
             value={selectedLiningType}
             onValueChange={(value) => {
-              setSelectedLiningType(value as "standard" | "custom" | "none")
+              setSelectedLiningType(value as "standard" | "custom" | "unlined")
               onUpdate({ liningType: value })
             }}
             className="space-y-4"
@@ -269,14 +266,14 @@ export function JacketLiningStep({
               )}
             </div>
 
-            {/* No Lining (Sleeve Only) */}
+            {/* Unlined */}
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="none" id="none" />
-                <Label htmlFor="none" className="flex items-center gap-2 cursor-pointer">
-                  <span className="font-medium">No Lining (Sleeve Lined Only)</span>
-                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                    -€15.00
+                <RadioGroupItem value="unlined" id="unlined" />
+                <Label htmlFor="unlined" className="flex items-center gap-2 cursor-pointer">
+                  <span className="font-medium">Unlined</span>
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    Included
                   </Badge>
                 </Label>
               </div>
@@ -284,16 +281,6 @@ export function JacketLiningStep({
                 Unlined jacket body with only sleeve lining for structure. 
                 Provides better breathability and a more casual drape.
               </p>
-
-              {selectedLiningType === "none" && (
-                <Alert className="ml-6 mt-4 border-amber-200 bg-amber-50">
-                  <Clock className="h-4 w-4 text-amber-600" />
-                  <AlertDescription className="text-amber-800">
-                    <strong>Note:</strong> Unlined jackets are perfect for warmer climates and casual wear. 
-                    The sleeves will still be lined for proper structure and comfort.
-                  </AlertDescription>
-                </Alert>
-              )}
             </div>
           </RadioGroup>
         </CardContent>

@@ -17,14 +17,15 @@ import {
 } from "lucide-react"
 
 interface LiningSelectionStepProps {
-  selectedLiningType: "standard" | "custom" | "none"
-  selectedCustomType?: "custom-coloured" | "unlined" | "quilted"
+  selectedLiningType: "standard" | "custom" | "unlined"
+  selectedCustomType?: "custom-coloured" | "quilted"
   selectedLiningFabric?: string
   onUpdate: (updates: { 
     liningType?: string
     customType?: string
     liningFabric?: string
-    liningColor?: string 
+    liningColor?: string
+    liningMeshType?: string
   }) => void
 }
 
@@ -73,53 +74,65 @@ export function LiningSelectionStep({
   selectedLiningFabric,
   onUpdate,
 }: LiningSelectionStepProps) {
-  const [liningType, setLiningType] = useState<"standard" | "custom" | "none">(selectedLiningType || "standard")
-  const [customType, setCustomType] = useState<"custom-coloured" | "unlined" | "quilted" | undefined>(selectedCustomType)
+  const [liningType, setLiningType] = useState<"standard" | "custom" | "unlined">(selectedLiningType || "standard")
+  const [customType, setCustomType] = useState<"custom-coloured" | "quilted" | undefined>(selectedCustomType as "custom-coloured" | "quilted" | undefined)
   const [showFabricPopup, setShowFabricPopup] = useState(false)
   const [selectedFabric, setSelectedFabric] = useState<string | undefined>(selectedLiningFabric)
 
-  const handleLiningTypeChange = (value: "standard" | "custom" | "none") => {
+  const handleLiningTypeChange = (value: "standard" | "custom" | "unlined") => {
     setLiningType(value)
-    onUpdate({ liningType: value })
     
-    // Reset custom options when changing main type
-    if (value !== "custom") {
+    if (value === "unlined") {
+      // Unlined - no fabric needed, update immediately
+      onUpdate({ 
+        liningType: value,
+        customType: "",
+        liningColor: "",
+        liningFabric: ""
+      })
       setCustomType(undefined)
       setSelectedFabric(undefined)
       setShowFabricPopup(false)
+      console.log(`🎨 Selected: Unlined - no fabric needed`)
+    } else if (value === "standard") {
+      // Standard - clear all custom lining data to restore original GLTF texture
+      onUpdate({ 
+        liningType: value,
+        customType: "",
+        liningColor: "",
+        liningFabric: "",
+        liningMeshType: "standard"
+      })
+      setCustomType(undefined)
+      setSelectedFabric(undefined)
+      setShowFabricPopup(false)
+      console.log(`🎨 Selected: Standard lining - clearing custom data, restoring original texture`)
+    } else {
+      onUpdate({ liningType: value })
+      // Reset custom options when changing main type
+      if (value !== "custom") {
+        setCustomType(undefined)
+        setSelectedFabric(undefined)
+        setShowFabricPopup(false)
+      }
     }
   }
 
-  const handleCustomTypeSelect = (type: "custom-coloured" | "unlined" | "quilted") => {
+  const handleCustomTypeSelect = (type: "custom-coloured" | "quilted") => {
     setCustomType(type)
     
-    // Set lining type based on selection
-    if (type === "unlined") {
-      // No lining at all - update immediately, no fabric selection needed
-      onUpdate({ 
-        customType: type,
-        liningColor: "",
-        liningType: "none",
-        liningMeshType: "unlined",
-        liningFabric: ""
-      })
-      setSelectedFabric(undefined)
-      setShowFabricPopup(false)
-      console.log(`🎨 Selected: Unlined - no fabric needed`)
-    } else {
-      // Half lined or Full lined - open popup for fabric selection
-      onUpdate({ 
-        customType: type,
-        liningMeshType: type, // Set mesh type immediately
-        liningType: "custom"
-      })
-      setShowFabricPopup(true) // Open popup for fabric selection
-      console.log(`🎨 Selected lining type:`, { 
-        type, 
-        liningMeshType: type,
-        message: type === "custom-coloured" ? "Half Lined - opening fabric selector" : "Full Lined - opening fabric selector"
-      })
-    }
+    // Half lined or Full lined - open popup for fabric selection
+    onUpdate({ 
+      customType: type,
+      liningMeshType: type, // Set mesh type immediately
+      liningType: "custom"
+    })
+    setShowFabricPopup(true) // Open popup for fabric selection
+    console.log(`🎨 Selected lining type:`, { 
+      type, 
+      liningMeshType: type,
+      message: type === "custom-coloured" ? "Half Lined - opening fabric selector" : "Full Lined - opening fabric selector"
+    })
   }
 
   const handleFabricSelect = (fabricId: string, fabricImage: string) => {
@@ -167,14 +180,12 @@ export function LiningSelectionStep({
   const getCustomTypeLabel = () => {
     if (!customType) return "Select type"
     if (customType === "custom-coloured") return "Half Lined"
-    if (customType === "unlined") return "Unlined"
     if (customType === "quilted") return "Full Lined"
     return "Select type"
   }
 
   const getCustomTypePrice = () => {
     if (customType === "custom-coloured") return "+€25.00"
-    if (customType === "unlined") return "-€15.00"
     if (customType === "quilted") return "+€35.00"
     return ""
   }
@@ -238,28 +249,8 @@ export function LiningSelectionStep({
                     Choose your custom lining type:
                   </p>
                   
-                  {/* 3 Icon Options */}
-                  <div className="grid grid-cols-3 gap-2">
-                    {/* Unlined */}
-                    <button
-                      onClick={() => handleCustomTypeSelect("unlined")}
-                      className={`
-                        p-3 rounded-lg border-2 transition-all
-                        ${customType === "unlined"
-                          ? 'border-amber-500 bg-amber-50'
-                          : 'border-gray-200 hover:border-amber-300 hover:bg-amber-50'
-                        }
-                      `}
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <svg className={`w-6 h-6 ${customType === "unlined" ? 'text-amber-600' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                        <span className="text-xs font-medium text-center">Unlined</span>
-                        <Badge variant="secondary" className="text-xs">-€15</Badge>
-                      </div>
-                    </button>
-
+                  {/* 2 Icon Options */}
+                  <div className="grid grid-cols-2 gap-2">
                     {/* Half Lined */}
                     <button
                       onClick={() => handleCustomTypeSelect("custom-coloured")}
@@ -336,24 +327,22 @@ export function LiningSelectionStep({
               )}
             </div>
 
-            {/* No Lining */}
+            {/* Unlined */}
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="none" id="lining-none" />
-                <Label htmlFor="lining-none" className="flex items-center gap-2 cursor-pointer flex-1">
-                  <span className="font-medium">No Lining</span>
-                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
-                    -€15.00
+                <RadioGroupItem value="unlined" id="lining-unlined" />
+                <Label htmlFor="lining-unlined" className="flex items-center gap-2 cursor-pointer flex-1">
+                  <span className="font-medium">Unlined</span>
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                    Included
                   </Badge>
                 </Label>
               </div>
-              {liningType === "none" && (
-                <Alert className="ml-6 mt-2 border-amber-200 bg-amber-50">
-                  <Info className="h-3 w-3 text-amber-600" />
-                  <AlertDescription className="text-xs text-amber-800">
-                    Unlined body with sleeve lining only for better breathability
-                  </AlertDescription>
-                </Alert>
+              {liningType === "unlined" && (
+                <p className="text-xs text-gray-600 ml-6">
+                  Unlined jacket body with only sleeve lining for structure. 
+                  Provides better breathability and a more casual drape.
+                </p>
               )}
             </div>
           </RadioGroup>

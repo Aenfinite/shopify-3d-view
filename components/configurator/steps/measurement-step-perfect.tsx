@@ -76,7 +76,7 @@ const GARMENT_MEASUREMENTS = {
       { 
         key: "front_length", 
         label: "Front Length", 
-        description: "Measure from shoulder to desired front length.", 
+        description: "Measure from your shoulder to the base of your thumb.", 
         detailedGuide: "Measure from the high point of your shoulder down the front to where you want the jacket to end.",
         unit: "cm",
         videoUrl: "https://youtu.be/Yi1Zd1MigyM",
@@ -107,7 +107,7 @@ const GARMENT_MEASUREMENTS = {
         detailedGuide: "Measure from one shoulder point to the other across your back.",
         unit: "cm",
         videoUrl: "https://youtu.be/8bT5sg4-Q0o",
-        sketchImage: "/images/jacket/shoulder.png"
+        sketchImage: "/images/jacket/shoulder-measurement.png"
       },
       { 
         key: "backmass", 
@@ -143,7 +143,7 @@ const GARMENT_MEASUREMENTS = {
         detailedGuide: "With arms relaxed, wrap the tape around the fullest part of your upper arm without tensing the muscles. Record the measurement.",
         unit: "cm",
         videoUrl: "https://youtu.be/h5GvZbTVSH8",
-        sketchImage: "/images/jacket/biceps.png"
+        sketchImage: "/images/jacket/bicep-measurement.png"
       },
       { 
         key: "wrist", 

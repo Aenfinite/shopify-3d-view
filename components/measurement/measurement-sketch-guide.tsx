@@ -48,7 +48,8 @@ export function MeasurementSketchGuide({ selectedSketch, onSketchSelect }: Measu
         "Use a jacket that fits you perfectly",
         "Make sure the jacket is not stretched",
         "Measure at the widest part of the chest"
-      ]
+      ],
+      imageUrl: "/images/jacket/chest.png"
     },
     {
       id: 2,
@@ -66,7 +67,8 @@ export function MeasurementSketchGuide({ selectedSketch, onSketchSelect }: Measu
         "This affects how fitted the jacket will be",
         "Consider the style you prefer",
         "Measure where the jacket naturally narrows"
-      ]
+      ],
+      imageUrl: "/images/jacket/waist.png"
     },
     {
       id: 3,
@@ -84,7 +86,8 @@ export function MeasurementSketchGuide({ selectedSketch, onSketchSelect }: Measu
         "This is the most important measurement",
         "Cannot be easily altered later",
         "Should match your natural shoulder width"
-      ]
+      ],
+      imageUrl: "/images/jacket/shoulder-width.png"
     },
     {
       id: 4,
@@ -102,7 +105,8 @@ export function MeasurementSketchGuide({ selectedSketch, onSketchSelect }: Measu
         "Typically shows 1/4 to 1/2 inch of shirt cuff",
         "Can be adjusted during fitting",
         "Consider arm length and posture"
-      ]
+      ],
+      imageUrl: "/images/jacket/sleeve-length.png"
     },
     {
       id: 5,
@@ -120,7 +124,8 @@ export function MeasurementSketchGuide({ selectedSketch, onSketchSelect }: Measu
         "Should cover your bottom curve",
         "Classic length is thumb knuckle when arms hang",
         "Longer lengths are more formal"
-      ]
+      ],
+      imageUrl: "/images/jacket/back-length.png"
     },
     {
       id: 6,
@@ -138,7 +143,8 @@ export function MeasurementSketchGuide({ selectedSketch, onSketchSelect }: Measu
         "Wider lapels are more classic/formal",
         "Narrower lapels are more modern",
         "Should complement your body type"
-      ]
+      ],
+      imageUrl: "/images/jacket/front-length.png"
     }
   ]
 
@@ -169,11 +175,19 @@ export function MeasurementSketchGuide({ selectedSketch, onSketchSelect }: Measu
             onClick={() => onSketchSelect(sketch.id)}
           >
             <CardContent className="p-4">
-              <div className="aspect-square bg-gray-100 rounded flex items-center justify-center mb-3 border-2 border-dashed border-gray-300">
-                <div className="text-center">
-                  <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-1" />
-                  <div className="text-xs text-gray-500">Sketch {sketch.id}</div>
-                </div>
+              <div className="aspect-square bg-gray-100 rounded flex items-center justify-center mb-3 border-2 border-dashed border-gray-300 overflow-hidden">
+                {sketch.imageUrl ? (
+                  <img 
+                    src={sketch.imageUrl} 
+                    alt={sketch.title}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <div className="text-center">
+                    <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-1" />
+                    <div className="text-xs text-gray-500">Sketch {sketch.id}</div>
+                  </div>
+                )}
               </div>
               <div className="text-sm font-medium mb-1">{sketch.title}</div>
               <div className="text-xs text-gray-600">{sketch.garmentPart}</div>
@@ -209,21 +223,29 @@ export function MeasurementSketchGuide({ selectedSketch, onSketchSelect }: Measu
           
           <CardContent className="space-y-6">
             {/* Sketch Image */}
-            <div className="aspect-[4/3] bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
-              <div className="text-center">
-                <ImageIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 font-medium">
-                  {currentSketch.title} Measurement Guide
-                </p>
-                <p className="text-sm text-gray-500 mt-2">
-                  Detailed sketch showing exactly where and how to measure your {currentSketch.garmentPart.toLowerCase()}
-                </p>
-                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                  <p className="text-xs text-yellow-800">
-                    Your measurement sketches will be displayed here when uploaded to the /public/sketches/ folder
+            <div className="aspect-[4/3] bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 overflow-hidden">
+              {currentSketch.imageUrl ? (
+                <img 
+                  src={currentSketch.imageUrl} 
+                  alt={currentSketch.title}
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="text-center">
+                  <ImageIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 font-medium">
+                    {currentSketch.title} Measurement Guide
                   </p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Detailed sketch showing exactly where and how to measure your {currentSketch.garmentPart.toLowerCase()}
+                  </p>
+                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                    <p className="text-xs text-yellow-800">
+                      Your measurement sketches will be displayed here when uploaded to the /public/sketches/ folder
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Instructions */}

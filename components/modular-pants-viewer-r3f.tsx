@@ -14,6 +14,52 @@ import { pantsConfigs, pantsFrontPocketConfigs, pantsBackPocketConfigs, pantsCuf
 // Examples: 0x4a4a4a (lighter), 0x3a3a3a (medium), 0x2a2a2a (darker), 0x1a1a1a (very dark)
 const PANTS_BASE_COLOR = 0x6a6a6a
 
+// Material names that are NOT fabric — skip fabric color/texture on these
+const NON_FABRIC_MATERIALS = ['filobottoni', 'bottone', 'filobottone']
+
+// Helper: Check if a mesh/material is fabric (not a button or thread)
+function isFabricMesh(child: THREE.Mesh): boolean {
+  const materialName = ((child.material as THREE.MeshStandardMaterial)?.name || '').toLowerCase()
+  const meshName = (child.name || '').toLowerCase()
+  // Skip button and thread meshes
+  return !NON_FABRIC_MATERIALS.some(skip => materialName.includes(skip) || meshName.includes(skip))
+}
+
+// Helper: Apply fabric styling to a loaded GLTF scene
+// Material values matched to jacket viewer for consistent appearance
+function applyPantsFabric(scene: THREE.Group, fabricColor?: string) {
+  scene.traverse((child) => {
+    if (child instanceof THREE.Mesh && child.material) {
+      const material = child.material as THREE.MeshStandardMaterial
+      if (!material.isMeshStandardMaterial) return
+
+      if (isFabricMesh(child)) {
+        // Fabric mesh — fully matte fabric, zero shine
+        material.color.setHex(PANTS_BASE_COLOR)
+        material.roughness = 1.0          // 100% roughness — completely matte
+        material.metalness = 0.0          // Zero metalness — fabric is not metallic
+        material.envMapIntensity = 0.0    // No environment reflection at all
+        material.flatShading = false      // Smooth shading for realistic cloth
+        material.needsUpdate = true
+
+        if (fabricColor) {
+          applyFabricCustomization(child, fabricColor, PANTS_BASE_COLOR)
+          // Override AFTER applyFabricCustomization (it can set higher values)
+          material.envMapIntensity = 0.0
+          material.roughness = 1.0
+          material.metalness = 0.0
+          material.needsUpdate = true
+        }
+      } else {
+        // Button / thread — keep original material, just ensure quality
+        material.roughness = Math.max(material.roughness, 0.5)
+        material.envMapIntensity = 0.1
+        material.needsUpdate = true
+      }
+    }
+  })
+}
+
 export interface BasicPantsCustomization {
   fabricColor?: string
   fabricType?: string
@@ -87,78 +133,21 @@ function PantsModel({
       new Promise<THREE.Group>((resolve, reject) => {
         loader.load(stylePath, (gltf) => {
           const scene = gltf.scene.clone()
-          // Apply fabric color with jacket-like material properties
-          scene.traverse((child) => {
-            if (child instanceof THREE.Mesh && child.material) {
-              // First ensure proper material setup
-              const material = child.material as THREE.MeshStandardMaterial
-              if (material.isMeshStandardMaterial) {
-                // Set base color to darker gray like jackets
-                material.color.setHex(PANTS_BASE_COLOR)
-                material.roughness = 0.85
-                material.metalness = 0.0
-                material.envMapIntensity = 0.2
-                material.needsUpdate = true
-              }
-              
-              // Then apply custom fabric color/texture
-              if (customizations.fabricColor) {
-                applyFabricCustomization(child, customizations.fabricColor!, PANTS_BASE_COLOR)
-              }
-            }
-          })
+          applyPantsFabric(scene, customizations.fabricColor)
           resolve(scene)
         }, undefined, reject)
       }),
       new Promise<THREE.Group>((resolve, reject) => {
         loader.load(beltLoopsPath, (gltf) => {
           const scene = gltf.scene.clone()
-          // Apply fabric color to belt loops with jacket-like material properties
-          scene.traverse((child) => {
-            if (child instanceof THREE.Mesh && child.material) {
-              // First ensure proper material setup
-              const material = child.material as THREE.MeshStandardMaterial
-              if (material.isMeshStandardMaterial) {
-                // Set base color to darker gray like jackets
-                material.color.setHex(PANTS_BASE_COLOR)
-                material.roughness = 0.85
-                material.metalness = 0.0
-                material.envMapIntensity = 0.2
-                material.needsUpdate = true
-              }
-              
-              // Then apply custom fabric color/texture
-              if (customizations.fabricColor) {
-                applyFabricCustomization(child, customizations.fabricColor!, PANTS_BASE_COLOR)
-              }
-            }
-          })
+          applyPantsFabric(scene, customizations.fabricColor)
           resolve(scene)
         }, undefined, reject)
       }),
       new Promise<THREE.Group>((resolve, reject) => {
         loader.load(waistbandPath, (gltf) => {
           const scene = gltf.scene.clone()
-          // Apply fabric color to waistband with jacket-like material properties
-          scene.traverse((child) => {
-            if (child instanceof THREE.Mesh && child.material) {
-              // First ensure proper material setup
-              const material = child.material as THREE.MeshStandardMaterial
-              if (material.isMeshStandardMaterial) {
-                // Set base color to darker gray like jackets
-                material.color.setHex(PANTS_BASE_COLOR)
-                material.roughness = 0.85
-                material.metalness = 0.0
-                material.envMapIntensity = 0.2
-                material.needsUpdate = true
-              }
-              
-              // Then apply custom fabric color/texture
-              if (customizations.fabricColor) {
-                applyFabricCustomization(child, customizations.fabricColor!, PANTS_BASE_COLOR)
-              }
-            }
-          })
+          applyPantsFabric(scene, customizations.fabricColor)
           resolve(scene)
         }, undefined, reject)
       })
@@ -191,23 +180,7 @@ function PantsModel({
       pocketPath,
       (gltf) => {
         const scene = gltf.scene.clone()
-        // Apply fabric color to front pocket
-        scene.traverse((child) => {
-          if (child instanceof THREE.Mesh && child.material) {
-            const material = child.material as THREE.MeshStandardMaterial
-            if (material.isMeshStandardMaterial) {
-              material.color.setHex(PANTS_BASE_COLOR)
-              material.roughness = 0.85
-              material.metalness = 0.0
-              material.envMapIntensity = 0.2
-              material.needsUpdate = true
-            }
-            
-            if (customizations.fabricColor) {
-              applyFabricCustomization(child, customizations.fabricColor!, PANTS_BASE_COLOR)
-            }
-          }
-        })
+        applyPantsFabric(scene, customizations.fabricColor)
         setFrontPocket(scene)
         console.log(`✅ Front pocket loaded: ${frontPocketStyle}`)
       },
@@ -237,23 +210,7 @@ function PantsModel({
             pocketPath,
             (gltf) => {
               const scene = gltf.scene.clone()
-              // Apply fabric color to back pocket
-              scene.traverse((child) => {
-                if (child instanceof THREE.Mesh && child.material) {
-                  const material = child.material as THREE.MeshStandardMaterial
-                  if (material.isMeshStandardMaterial) {
-                    material.color.setHex(PANTS_BASE_COLOR)
-                    material.roughness = 0.85
-                    material.metalness = 0.0
-                    material.envMapIntensity = 0.2
-                    material.needsUpdate = true
-                  }
-                  
-                  if (customizations.fabricColor) {
-                    applyFabricCustomization(child, customizations.fabricColor!, PANTS_BASE_COLOR)
-                  }
-                }
-              })
+              applyPantsFabric(scene, customizations.fabricColor)
               resolve(scene)
             },
             undefined,
@@ -293,23 +250,7 @@ function PantsModel({
       cuffPath,
       (gltf) => {
         const scene = gltf.scene.clone()
-        // Apply fabric color to bottom cuff
-        scene.traverse((child) => {
-          if (child instanceof THREE.Mesh && child.material) {
-            const material = child.material as THREE.MeshStandardMaterial
-            if (material.isMeshStandardMaterial) {
-              material.color.setHex(PANTS_BASE_COLOR)
-              material.roughness = 0.85
-              material.metalness = 0.0
-              material.envMapIntensity = 0.2
-              material.needsUpdate = true
-            }
-            
-            if (customizations.fabricColor) {
-              applyFabricCustomization(child, customizations.fabricColor!, PANTS_BASE_COLOR)
-            }
-          }
-        })
+        applyPantsFabric(scene, customizations.fabricColor)
         setBottomCuff(scene)
         console.log(`✅ Bottom cuff loaded: ${cuffStyle}`)
       },
@@ -345,23 +286,7 @@ function PantsModel({
             extensionPath,
             (gltf) => {
               const scene = gltf.scene.clone()
-              // Apply fabric color to waistband extension
-              scene.traverse((child) => {
-                if (child instanceof THREE.Mesh && child.material) {
-                  const material = child.material as THREE.MeshStandardMaterial
-                  if (material.isMeshStandardMaterial) {
-                    material.color.setHex(PANTS_BASE_COLOR)
-                    material.roughness = 0.85
-                    material.metalness = 0.0
-                    material.envMapIntensity = 0.2
-                    material.needsUpdate = true
-                  }
-                  
-                  if (customizations.fabricColor) {
-                    applyFabricCustomization(child, customizations.fabricColor!, PANTS_BASE_COLOR)
-                  }
-                }
-              })
+              applyPantsFabric(scene, customizations.fabricColor)
               resolve(scene)
             },
             undefined,
@@ -507,18 +432,29 @@ export default function ModularPantsViewerR3F({
         }}
       >
         <color attach="background" args={["#f5f5f5"]} />
-        <fog attach="fog" args={["#f5f5f5", 5, 20]} />
+        <fog attach="fog" args={["#f5f5f5", 15, 40]} />
         
-        <ambientLight intensity={0.25} />
+        {/* Brighter lighting for fully-matte fabric */}
+        <ambientLight intensity={0.9} />
+
+        {/* Main key light */}
         <directionalLight
-          position={[5, 5, 5]}
-          intensity={0.5}
+          position={[5, 8, 5]}
+          intensity={1.2}
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
+          shadow-bias={-0.0001}
         />
-        <directionalLight position={[-5, 3, -5]} intensity={0.2} />
-        <spotLight position={[0, 10, 0]} angle={0.3} intensity={0.15} />
+
+        {/* Fill light from the side */}
+        <directionalLight position={[-5, 3, -3]} intensity={0.6} />
+
+        {/* Rim light from behind */}
+        <directionalLight position={[0, 3, -5]} intensity={0.3} />
+
+        {/* Bottom fill light */}
+        <hemisphereLight args={['#ffffff', '#666666', 0.35]} />
 
         <Suspense fallback={<LoadingOverlay />}>
           <PantsModel customizations={customizations} />
@@ -533,14 +469,15 @@ export default function ModularPantsViewerR3F({
           ref={controlsRef}
           enablePan={false}
           enableZoom={true}
-          minDistance={2}
-          maxDistance={8}
+          minDistance={0.5}
+          maxDistance={20}
           maxPolarAngle={Math.PI / 1.8}
           minPolarAngle={Math.PI / 6}
           target={[0, 0, 0]}
         />
 
-        <Environment preset="studio" />
+        {/* Environment for professional look — low intensity to avoid shiny reflections */}
+        <Environment preset="studio" environmentIntensity={0.2} />
       </Canvas>
     </div>
   )

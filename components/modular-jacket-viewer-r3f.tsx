@@ -193,11 +193,11 @@ function ModularJacketModel({
     if (customizations.chestPocket) {
       const { chestPocketConfigs } = require('@/lib/3d/configs')
       const chestPocketPath = chestPocketConfigs[customizations.chestPocket]
-      if (chestPocketPath) {
+      if (chestPocketPath !== undefined) {
         updatedConfig.secondary.chestPocket = chestPocketPath
         console.log("🎒 Loading chest pocket:", {
           selection: customizations.chestPocket,
-          file: chestPocketPath
+          file: chestPocketPath || "(none - hiding pocket)"
         })
       }
     }
@@ -307,8 +307,8 @@ function CameraController({ rotationY = 0 }: { rotationY?: number }) {
   const currentRotation = useRef(0)
 
   useEffect(() => {
-    camera.position.set(0, 0, 5)
-    camera.lookAt(0, 0, 0)
+    camera.position.set(0, 0.8, 7.0)
+    camera.lookAt(0, 0.5, 0)
   }, [camera])
 
   useEffect(() => {
@@ -322,13 +322,13 @@ function CameraController({ rotationY = 0 }: { rotationY?: number }) {
     if (Math.abs(diff) > 0.01) {
       currentRotation.current += diff * 0.15
       
-      const radius = 5
-      const y = 0
+      const radius = 7.0
+      const y = 0.8
       const x = radius * Math.sin(currentRotation.current)
       const z = radius * Math.cos(currentRotation.current)
       
       camera.position.set(x, y, z)
-      camera.lookAt(0, 0, 0)
+      camera.lookAt(0, 0.5, 0)
     }
   })
 
@@ -413,6 +413,11 @@ export default function ModularJacketViewer({
         updatedConfig.secondary.fullyLined = ""
         updatedConfig.secondary.halfLining = ""
         console.log("🎨 No lining models loaded (unlined)")
+      } else if (customizations.liningMeshType === "standard") {
+        // Standard lining - restore base config lining (fullyLined with original GLTF texture)
+        updatedConfig.secondary.fullyLined = baseConfig.secondary.fullyLined
+        updatedConfig.secondary.halfLining = ""
+        console.log("🎨 Standard lining - restoring base config fullyLined:", baseConfig.secondary.fullyLined)
       }
     }
 
@@ -446,11 +451,11 @@ export default function ModularJacketViewer({
     if (customizations?.chestPocket) {
       const { chestPocketConfigs } = require('@/lib/3d/configs')
       const chestPocketPath = chestPocketConfigs[customizations.chestPocket]
-      if (chestPocketPath) {
+      if (chestPocketPath !== undefined) {
         updatedConfig.secondary.chestPocket = chestPocketPath
         console.log("👔 Loading chest pocket:", {
           selection: customizations.chestPocket,
-          file: chestPocketPath,
+          file: chestPocketPath || "(none - hiding pocket)",
           availableConfigs: Object.keys(chestPocketConfigs)
         })
       } else {
@@ -476,6 +481,7 @@ export default function ModularJacketViewer({
           // Show threads for "4 buttons with holes"
           updatedConfig.secondary.sleeveButtonThread = "/models/jackets/Sleeve/Working/Thread/LastThread.gltf"
           updatedConfig.secondary.sleeve4ButtonThread = "/models/jackets/Sleeve/Working/Thread/4Button.gltf"
+          updatedConfig.secondary.sleeveNoThread = "" // Clear NoThread model when using threads
           console.log("🧵 Loading sleeve button threads:", {
             selection: customizations.sleeveButtons,
             showThreads: true,
@@ -485,9 +491,15 @@ export default function ModularJacketViewer({
           // Remove threads for "4 buttons no holes" by setting to empty string
           updatedConfig.secondary.sleeveButtonThread = ""
           updatedConfig.secondary.sleeve4ButtonThread = ""
+          // Load the NoThread model if available
+          if (sleeveConfig.noThreadModel) {
+            updatedConfig.secondary.sleeveNoThread = sleeveConfig.noThreadModel
+            console.log("🔘 Loading NoThread model:", sleeveConfig.noThreadModel)
+          }
           console.log("🔘 Loading sleeve buttons WITHOUT threads:", {
             selection: customizations.sleeveButtons,
-            showThreads: false
+            showThreads: false,
+            noThreadModel: sleeveConfig.noThreadModel || 'none'
           })
         }
         
@@ -587,7 +599,7 @@ export default function ModularJacketViewer({
   return (
     <div className={`w-full h-full ${className}`}>
       <Canvas
-        camera={{ position: [0, 0, 5], fov: 50 }}
+        camera={{ position: [0, 0.8, 7.0], fov: 45 }}
         shadows
         gl={{ 
           antialias: true, 
@@ -596,6 +608,7 @@ export default function ModularJacketViewer({
         }}
         onCreated={({ gl, camera, scene }) => {
           gl.setClearColor(0x000000, 0)
+          camera.lookAt(0, 0.5, 0)
           console.log("📷 Camera positioned at:", camera.position)
           console.log("🎬 Scene initialized with", scene.children.length, "children")
         }}
@@ -662,7 +675,7 @@ export default function ModularJacketViewer({
             enableRotate={true}
             minDistance={0.5}
             maxDistance={50}
-            target={[0, 0, 0]}
+            target={[0, 0.5, 0]}
             autoRotate={false}
             onEnd={() => {
               console.log("🎮 Camera controls updated")

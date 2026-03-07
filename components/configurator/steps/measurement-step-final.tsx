@@ -191,15 +191,7 @@ const GARMENT_MEASUREMENTS = {
   },
   jacket: {
     measurements: [
-      {
-        key: "neck",
-        label: "Neck",
-        description: "Measure around the base of your neck where the collar sits.",
-        detailedGuide: "Stand upright and look straight ahead. Place the tape just below the larynx and wrap it horizontally around the neck where it meets the shoulders. Leave a finger’s width of space between the tape and the neck. Record the measurement.",
-        unit: "cm",
-        videoUrl: "https://youtu.be/8eTJzzDZ-Ps",
-        sketchImage: "/images/jacket/image.png"
-      },
+    
       {
         key: "chest",
         label: "Chest",
@@ -234,7 +226,7 @@ const GARMENT_MEASUREMENTS = {
         detailedGuide: "With arms relaxed, wrap the tape around the fullest part of your upper arm without tensing the muscles. Record the measurement.",
         unit: "cm",
         videoUrl: "https://youtu.be/h5GvZbTVSH8",
-        sketchImage: "/images/jacket/biceps.png"
+        sketchImage: "/images/jacket/bicep-measurement.png"
       },
       {
         key: "forearm",
@@ -261,7 +253,7 @@ const GARMENT_MEASUREMENTS = {
         detailedGuide: "Have someone assist. Measure from the outer edge of one shoulder bone to the other, slightly curved over the shoulders. Ensure start and end points are level. Record the measurement.",
         unit: "cm",
         videoUrl: "https://youtu.be/8bT5sg4-Q0o",
-        sketchImage: "/images/jacket/shoulder-width.png"
+        sketchImage: "/images/jacket/shoulder-measurement.png"
       },
       {
         key: "armhole",
@@ -485,7 +477,7 @@ const GARMENT_MEASUREMENTS = {
         detailedGuide: "Have someone help you measure across your back from the edge of one shoulder to the edge of the other.",
         unit: "cm",
         videoUrl: "https://youtu.be/8bT5sg4-Q0o",
-        sketchImage: "/measurement-guides/jacket/shoulder-sketch.svg"
+        sketchImage: "/images/jacket/shoulder-measurement.png"
       },
       {
         key: "sleeve",
@@ -496,15 +488,7 @@ const GARMENT_MEASUREMENTS = {
         videoUrl: "https://youtu.be/D9StvHaSgM8",
         sketchImage: "/measurement-guides/jacket/sleeve-sketch.svg"
       },
-      {
-        key: "neck",
-        label: "Neck Circumference",
-        description: "Measure around the neck where collar sits.",
-        detailedGuide: "Place the measuring tape around your neck at the base, where your collar would normally sit. Make sure the tape is snug but not tight.",
-        unit: "cm",
-        videoUrl: "https://youtu.be/8eTJzzDZ-Ps",
-        sketchImage: "/measurement-guides/shirt/neck-sketch.svg"
-      },
+      
       {
         key: "jacket_length",
         label: "Jacket Length",
@@ -548,7 +532,7 @@ const GARMENT_MEASUREMENTS = {
         detailedGuide: "Measure about 1 inch below the underarm, straight across the sleeve.",
         unit: "cm",
         videoUrl: "https://youtu.be/h5GvZbTVSH8",
-        sketchImage: "/images/jacket/biceps.png"
+        sketchImage: "/images/jacket/bicep-measurement.png"
       },
       {
         key: "outseam",
@@ -615,7 +599,7 @@ const GARMENT_MEASUREMENTS = {
         detailedGuide: "Have someone help you measure across your back from the edge of one shoulder to the edge of the other.",
         unit: "cm",
         videoUrl: "https://youtu.be/8bT5sg4-Q0o",
-        sketchImage: "/measurement-guides/jacket/shoulder-sketch.svg"
+        sketchImage: "/images/jacket/shoulder-measurement.png"
       },
       {
         key: "sleeve",
@@ -633,7 +617,7 @@ const GARMENT_MEASUREMENTS = {
         detailedGuide: "Measure about 1 inch below the underarm, straight across the sleeve.",
         unit: "cm",
         videoUrl: "https://youtu.be/h5GvZbTVSH8",
-        sketchImage: "/images/jacket/biceps.png"
+        sketchImage: "/images/jacket/bicep-measurement.png"
       },
       {
         key: "back_length",
@@ -659,8 +643,7 @@ const GARMENT_MEASUREMENTS = {
         description: "Measure around the neck where collar sits.",
         detailedGuide: "Place the measuring tape around your neck at the base, where your collar would normally sit. Make sure the tape is snug but not tight.",
         unit: "cm",
-        videoUrl: "https://youtu.be/8eTJzzDZ-Ps",
-        sketchImage: "/measurement-guides/shirt/neck-sketch.svg"
+        videoUrl: "https://youtu.be/8eTJzzDZ-Ps"
       },
       {
         key: "sleeve_opening",
@@ -686,8 +669,7 @@ const GARMENT_MEASUREMENTS = {
         description: "Measure from collar to first button.",
         detailedGuide: "With the blazer laid flat and buttoned, measure from the shoulder point where the seam meets the collar straight down the front to the center of the first button.",
         unit: "cm",
-        videoUrl: "https://youtu.be/8eTJzzDZ-Ps",
-        sketchImage: "/images/jacket/image.png"
+        videoUrl: "https://youtu.be/8eTJzzDZ-Ps"
       },
       {
         key: "vent_length",
@@ -1046,29 +1028,24 @@ export function MeasurementStep({
 
                 {/* SKETCH METHOD - Different Layout */}
                 {currentMethod === "sketches" && (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Sketch Diagram Section */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-green-800">{getCurrentField().label}</h3>
-                      <div className="aspect-square bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-                        {getCurrentField().sketchImage ? (
+                  <div className={getCurrentField().sketchImage ? "grid grid-cols-1 lg:grid-cols-2 gap-6" : "max-w-2xl mx-auto"}>
+                    {/* Sketch Diagram Section - Only show if sketchImage exists */}
+                    {getCurrentField().sketchImage && (
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-green-800">{getCurrentField().label}</h3>
+                        <div className="aspect-square bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
                           <img
                             src={getCurrentField().sketchImage}
                             alt={`Measurement guide for €{getCurrentField().label}`}
                             className="max-w-full max-h-full object-contain"
                           />
-                        ) : (
-                          <div className="text-center">
-                            <Edit3 className="w-16 h-16 text-gray-400 mx-auto mb-2" />
-                            <p className="text-gray-500">Measurement Diagram</p>
-                          </div>
-                        )}
+                        </div>
+                        <div className="bg-green-50 p-4 rounded-lg">
+                          <h4 className="font-medium text-green-800 mb-2">Step-by-Step Guide</h4>
+                          <p className="text-sm text-green-700">{getCurrentField().detailedGuide}</p>
+                        </div>
                       </div>
-                      <div className="bg-green-50 p-4 rounded-lg">
-                        <h4 className="font-medium text-green-800 mb-2">Step-by-Step Guide</h4>
-                        <p className="text-sm text-green-700">{getCurrentField().detailedGuide}</p>
-                      </div>
-                    </div>
+                    )}
 
                     {/* Input Section */}
                     <div className="space-y-4">

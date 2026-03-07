@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -39,12 +39,9 @@ export function FabricColorSelector({
   // Get fabric type name for display
   const getFabricTypeName = (fabricId: string) => {
     const fabricNames: Record<string, string> = {
-      'wool-blend': 'Wool Blend',
-      'premium-wool': 'Premium Wool',
-      'cashmere-blend': 'Cashmere Blend',
-      'summer-wool': 'Summer Wool',
-      'tweed': 'Tweed',
-      'linen-blend': 'Linen Blend'
+      'wool-blend': 'Poly Visc Performance',
+      'premium-wool': 'Merino Wool / Lycra',
+      'washable-wool': 'Premium Wool/Poly'
     }
     return fabricNames[fabricId] || fabricId
   }
@@ -184,3 +181,4 @@ export function FabricColorSelector({
     </div>
   )
 }
+

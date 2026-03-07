@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -55,63 +55,33 @@ const JACKET_STEPS = [
     options: [
       {
         id: "wool-blend",
-        name: "Wool Blend",
+        name: "Poly Visc Performance",
         price: 0,
-        image: "/placeholder.svg?height=60&width=60&text=Wool",
-        description: "Classic business fabric - Perfect for year-round wear",
-        weight: "Medium weight",
-        season: "All seasons",
-        availableColors: ["charcoal", "navy", "black", "brown", "gray"]
+        image: "/fabrics/FabricsJacket/02.3716.01.jpg",
+        description: "Refined for business, Comfortable for everyday wear",
+        weight: "Medium",
+        season: "Year round",
+        availableColors: ["texture-1", "texture-2", "texture-3", "texture-4", "texture-5", "texture-6", "texture-7", "texture-8", "texture-9", "texture-10", "texture-11", "texture-12", "texture-13", "texture-14", "texture-15"]
       },
       {
         id: "premium-wool",
-        name: "Premium Wool",
+        name: "Merino Wool / Lycra",
         price: 50,
-        image: "/placeholder.svg?height=60&width=60&text=Premium",
-        description: "Luxury Italian wool - Superior drape and comfort",
-        weight: "Medium-heavy weight",
-        season: "Fall/Winter",
-        availableColors: ["charcoal", "navy", "black", "brown"]
+        image: "/fabrics/FabricsJacket/XHS23L6001-7-reduced.jpg",
+        description: "Refined for business, Comfortable for everyday wear",
+        weight: "Medium to light",
+        season: "Year round",
+        availableColors: ["texture-16", "texture-17"]
       },
       {
-        id: "cashmere-blend",
-        name: "Cashmere Blend",
-        price: 120,
-        image: "/placeholder.svg?height=60&width=60&text=Cashmere",
-        description: "Ultra-soft cashmere blend - Ultimate luxury",
-        weight: "Light-medium weight",
-        season: "Fall/Winter/Spring",
-        availableColors: ["charcoal", "navy", "brown", "camel"]
-      },
-      {
-        id: "summer-wool",
-        name: "Summer Wool",
-        price: 30,
-        image: "/placeholder.svg?height=60&width=60&text=Summer",
-        description: "Lightweight tropical wool - Breathable and cool",
-        weight: "Lightweight",
-        season: "Spring/Summer",
-        availableColors: ["light-gray", "navy", "charcoal", "beige"]
-      },
-      {
-        id: "tweed",
-        name: "Tweed",
-        price: 80,
-        image: "/placeholder.svg?height=60&width=60&text=Tweed",
-        description: "Traditional tweed - Textured and durable",
-        weight: "Heavy weight",
-        season: "Fall/Winter",
-        availableColors: ["brown", "green", "gray", "charcoal"]
-      },
-      {
-        id: "linen-blend",
-        name: "Linen Blend",
-        price: 40,
-        image: "/placeholder.svg?height=60&width=60&text=Linen",
-        description: "Linen-wool blend - Natural and breathable",
-        weight: "Lightweight",
-        season: "Spring/Summer",
-        availableColors: ["beige", "light-blue", "white", "light-gray"]
+        id: "washable-wool",
+        name: "Premium Wool/Poly",
+        price: 50,
+        image: "/fabrics/FabricsJacket/XHS23T9001-5-reduced.jpg",
+        description: "Refined for business or when thoughtfully matched with jeans or chinos for a smarter look",
+        weight: "Light",
+        season: "Year round",
+        availableColors: ["texture-18", "texture-19", "texture-20"]
       },
     ],
   },
@@ -120,17 +90,13 @@ const JACKET_STEPS = [
     title: "Select Fabric Color",
     key: "fabric-color",
     colors: [
-      { id: "charcoal", name: "Charcoal", hex: "#36454F", fabrics: ["wool-blend", "premium-wool", "cashmere-blend", "summer-wool", "tweed"] },
-      { id: "navy", name: "Navy", hex: "#000080", fabrics: ["wool-blend", "premium-wool", "cashmere-blend", "summer-wool"] },
-      { id: "black", name: "Black", hex: "#000000", fabrics: ["wool-blend", "premium-wool"] },
-      { id: "brown", name: "Brown", hex: "#8B4513", fabrics: ["wool-blend", "premium-wool", "cashmere-blend", "tweed"] },
-      { id: "gray", name: "Gray", hex: "#808080", fabrics: ["wool-blend", "tweed"] },
-      { id: "light-gray", name: "Light Gray", hex: "#D3D3D3", fabrics: ["summer-wool", "linen-blend"] },
-      { id: "green", name: "Forest Green", hex: "#228B22", fabrics: ["tweed"] },
-      { id: "beige", name: "Beige", hex: "#F5F5DC", fabrics: ["summer-wool", "linen-blend"] },
-      { id: "camel", name: "Camel", hex: "#C19A6B", fabrics: ["cashmere-blend"] },
-      { id: "light-blue", name: "Light Blue", hex: "#ADD8E6", fabrics: ["linen-blend"] },
-      { id: "white", name: "White", hex: "#FFFFFF", fabrics: ["linen-blend"] },
+      { id: "texture-1", name: "Jet Black", hex: "#000000", fabrics: ["wool-blend"] },
+      { id: "texture-16", name: "Charcoal", hex: "#36454F", fabrics: ["wool-blend", "premium-wool"] },
+      { id: "texture-6", name: "Warm Almond", hex: "#C19A6B", fabrics: ["wool-blend"] },
+      { id: "texture-17", name: "Navy", hex: "#000080", fabrics: ["premium-wool"] },
+      { id: "texture-18", name: "Classic Black", hex: "#1a1a1a", fabrics: ["washable-wool"] },
+      { id: "texture-19", name: "Classic Navy", hex: "#1b2a4a", fabrics: ["washable-wool"] },
+      { id: "texture-20", name: "Classic Charcoal", hex: "#3d3d3d", fabrics: ["washable-wool"] },
     ],
   },
   {
@@ -1437,3 +1403,5 @@ export function WireframeConfigurator({
     </div>
   )
 }
+
+

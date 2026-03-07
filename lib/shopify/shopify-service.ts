@@ -55,6 +55,50 @@ export function prepareLineItemProperties(customizationData: CustomizationData):
   return lineItemProperties
 }
 
+/**
+ * Enhanced line-item property builder that also attaches
+ * confirmed measurements and customer email for the
+ * measurement profile system.
+ */
+export function prepareEnhancedLineItemProperties(
+  customizationData: CustomizationData,
+  extra?: {
+    customerEmail?: string
+    confirmedMeasurements?: Record<string, number>
+    fitPreference?: string
+    shoulderType?: string
+    backShape?: string
+    bellyType?: string
+    measurementMethod?: string
+  }
+): Record<string, string> {
+  // Start with the base properties
+  const props = prepareLineItemProperties(customizationData)
+
+  if (!extra) return props
+
+  // Customer email for order linking
+  if (extra.customerEmail) {
+    props["Customer_Email"] = extra.customerEmail
+  }
+
+  // Confirmed measurements (override any existing measurement keys)
+  if (extra.confirmedMeasurements) {
+    Object.entries(extra.confirmedMeasurements).forEach(([key, value]) => {
+      props[`Measurement_${key}`] = `${value} cm`
+    })
+  }
+
+  // Fit/body profile
+  if (extra.fitPreference) props["Fit_Preference"] = extra.fitPreference
+  if (extra.shoulderType) props["Shoulder_Type"] = extra.shoulderType
+  if (extra.backShape) props["Back_Shape"] = extra.backShape
+  if (extra.bellyType) props["Belly_Type"] = extra.bellyType
+  if (extra.measurementMethod) props["Measurement_Method"] = extra.measurementMethod
+
+  return props
+}
+
 // Function to add item to Shopify cart
 export async function addToShopifyCart(item: ShopifyCartItem): Promise<{ success: boolean; cartUrl: string }> {
   try {
