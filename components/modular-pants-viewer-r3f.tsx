@@ -107,6 +107,7 @@ function PantsModel({
   const [backPockets, setBackPockets] = useState<THREE.Group[]>([])
   const [bottomCuff, setBottomCuff] = useState<THREE.Group | null>(null)
   const [waistbandExtensions, setWaistbandExtensions] = useState<THREE.Group[]>([])
+  const [modelScale, setModelScale] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
 
   const loader = useMemo(() => {
@@ -153,11 +154,20 @@ function PantsModel({
       })
     ])
       .then(([style, loops, waist]) => {
+        const bbox = new THREE.Box3().setFromObject(style)
+        const size = bbox.getSize(new THREE.Vector3())
+        const desiredHeight = 2.6
+        const computedScale = size.y > 0.0001 ? desiredHeight / size.y : 1
+
         setPantsStyle(style)
         setBeltLoops(loops)
         setWaistband(waist)
+        setModelScale(computedScale)
         setIsLoading(false)
-        console.log("✅ Pants models loaded successfully")
+        console.log("✅ Pants models loaded successfully", {
+          height: Number(size.y.toFixed(3)),
+          scale: Number(computedScale.toFixed(3)),
+        })
       })
       .catch((error) => {
         console.error("❌ Error loading pants models:", error)
@@ -310,7 +320,7 @@ function PantsModel({
   }
 
   return (
-    <group position={[0, 0, 0]}>
+    <group position={[0, 0, 0]} scale={[modelScale, modelScale, modelScale]}>
       <primitive object={pantsStyle} position={[0, 0, 0]} />
       <primitive object={beltLoops} position={[0, 0, 0]} />
       <primitive object={waistband} position={[0, 0, 0]} />
@@ -424,7 +434,7 @@ export default function ModularPantsViewerR3F({
     <div className={`w-full h-full ${className}`}>
       <Canvas
         shadows
-        camera={{ position: [0, 0.5, 4], fov: 50 }}
+        camera={{ position: [0, 0.4, 2.9], fov: 45 }}
         gl={{
           antialias: true,
           alpha: true,
@@ -469,11 +479,11 @@ export default function ModularPantsViewerR3F({
           ref={controlsRef}
           enablePan={false}
           enableZoom={true}
-          minDistance={0.5}
-          maxDistance={20}
+          minDistance={1.8}
+          maxDistance={8}
           maxPolarAngle={Math.PI / 1.8}
           minPolarAngle={Math.PI / 6}
-          target={[0, 0, 0]}
+          target={[0, -0.1, 0]}
         />
 
         {/* Environment for professional look — low intensity to avoid shiny reflections */}

@@ -1,6 +1,6 @@
 {
 	"asset":{
-		"generator":"Khronos glTF Blender I/O v4.5.47",
+		"generator":"Khronos glTF Blender I/O v5.0.21",
 		"version":"2.0"
 	},
 	"scene":0,
@@ -17,20 +17,20 @@
 			"mesh":0,
 			"name":"S14.011",
 			"rotation":[
-				0.6644479632377625,
+				0.6644480228424072,
 				0,
 				0,
 				0.7473345398902893
 			],
 			"scale":[
 				0.014908064156770706,
-				0.014908064156770706,
-				0.014908064156770706
+				0.01490806508809328,
+				0.01490806508809328
 			],
 			"translation":[
 				0.0010646888986229897,
 				0.23977041244506836,
-				-0.00588679825887084
+				-0.004501890391111374
 			]
 		}
 	],
@@ -88,48 +88,48 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":2278,
+			"count":4556,
 			"max":[
 				7.25166130065918,
-				-7.362811088562012,
-				-11.382503509521484
+				-7.104559898376465,
+				-11.35207462310791
 			],
 			"min":[
-				6.400074005126953,
-				-7.8806681632995605,
-				-12.27724552154541
+				-7.25166130065918,
+				-7.622416973114014,
+				-12.246816635131836
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":2278,
+			"count":4556,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":2278,
+			"count":4556,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5123,
-			"count":6192,
+			"count":12384,
 			"type":"SCALAR"
 		},
 		{
 			"bufferView":4,
 			"componentType":5126,
-			"count":672,
+			"count":1344,
 			"max":[
 				9.759805679321289,
 				-3.2084062099456787,
 				-10.96288013458252
 			],
 			"min":[
-				2.847241163253784,
+				-9.759805679321289,
 				-8.029290199279785,
 				-14.349921226501465
 			],
@@ -138,133 +138,133 @@
 		{
 			"bufferView":5,
 			"componentType":5126,
-			"count":672,
+			"count":1344,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":6,
 			"componentType":5126,
-			"count":672,
+			"count":1344,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":7,
 			"componentType":5123,
-			"count":3408,
+			"count":6816,
 			"type":"SCALAR"
 		},
 		{
 			"bufferView":8,
 			"componentType":5126,
-			"count":260,
+			"count":520,
 			"max":[
 				6.971717357635498,
-				-7.5503058433532715,
-				-11.707395553588867
+				-7.292054653167725,
+				-11.676966667175293
 			],
 			"min":[
-				6.7072529792785645,
-				-7.772005081176758,
-				-11.958242416381836
+				-6.971717357635498,
+				-7.513753890991211,
+				-11.927813529968262
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":9,
 			"componentType":5126,
-			"count":260,
+			"count":520,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":10,
 			"componentType":5126,
-			"count":260,
+			"count":520,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":11,
 			"componentType":5123,
-			"count":1296,
+			"count":2592,
 			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":27336,
+			"byteLength":54672,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":27336,
-			"byteOffset":27336,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":18224,
+			"byteLength":54672,
 			"byteOffset":54672,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":12384,
-			"byteOffset":72896,
+			"byteLength":36448,
+			"byteOffset":109344,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":24768,
+			"byteOffset":145792,
 			"target":34963
 		},
 		{
 			"buffer":0,
-			"byteLength":8064,
-			"byteOffset":85280,
+			"byteLength":16128,
+			"byteOffset":170560,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":8064,
-			"byteOffset":93344,
+			"byteLength":16128,
+			"byteOffset":186688,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":5376,
-			"byteOffset":101408,
+			"byteLength":10752,
+			"byteOffset":202816,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":6816,
-			"byteOffset":106784,
+			"byteLength":13632,
+			"byteOffset":213568,
 			"target":34963
 		},
 		{
 			"buffer":0,
-			"byteLength":3120,
-			"byteOffset":113600,
+			"byteLength":6240,
+			"byteOffset":227200,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":3120,
-			"byteOffset":116720,
+			"byteLength":6240,
+			"byteOffset":233440,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":2080,
-			"byteOffset":119840,
+			"byteLength":4160,
+			"byteOffset":239680,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":2592,
-			"byteOffset":121920,
+			"byteLength":5184,
+			"byteOffset":243840,
 			"target":34963
 		}
 	],
 	"buffers":[
 		{
-			"byteLength":124512,
+			"byteLength":249024,
 			"uri":"Flap.bin"
 		}
 	]

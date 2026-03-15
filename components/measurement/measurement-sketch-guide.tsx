@@ -27,11 +27,11 @@ interface MeasurementSketch {
 interface MeasurementSketchGuideProps {
   selectedSketch?: number
   onSketchSelect: (sketchId: number) => void
+  garmentType?: "jacket" | "pants"
 }
 
-export function MeasurementSketchGuide({ selectedSketch, onSketchSelect }: MeasurementSketchGuideProps) {
-  // Measurement sketches for garment measurements
-  const measurementSketches: MeasurementSketch[] = [
+export function MeasurementSketchGuide({ selectedSketch, onSketchSelect, garmentType = "jacket" }: MeasurementSketchGuideProps) {
+  const jacketMeasurementSketches: MeasurementSketch[] = [
     {
       id: 1,
       title: "Jacket Chest Width",
@@ -148,6 +148,184 @@ export function MeasurementSketchGuide({ selectedSketch, onSketchSelect }: Measu
     }
   ]
 
+  const pantsMeasurementSketches: MeasurementSketch[] = [
+    {
+      id: 1,
+      title: "Waistband Circumference",
+      description: "Measure waistband width flat and convert to full circumference",
+      garmentPart: "Waistband",
+      instructions: [
+        "Lay the trousers flat on a table and make sure the waistband is fully straightened and stretched evenly from end to end.",
+        "Measure at the top edge across the waistband, from the outermost point on one side to the outermost point on the other side.",
+        "Since this measurement is taken on a flat garment, multiply the measured width by two to obtain the full waistband circumference.",
+        "Add 1 cm to the total to allow minimal ease and ensure comfortable fit.",
+        "Enter this final result into the system."
+      ],
+      tips: [
+        "Keep the waistband edge fully aligned before measuring.",
+        "Apply the +1 cm ease only for waistband circumference.",
+        "Example: 38 cm x 2 = 76 cm; 76 cm + 1 cm = 77 cm final."
+      ],
+      imageUrl: "/images/sketch/pants/Waistband-Circumference.jpeg"
+    },
+    {
+      id: 2,
+      title: "Hip Circumference",
+      description: "Measure across the widest hip point and double it",
+      garmentPart: "Hip",
+      instructions: [
+        "Lay the trousers flat on a table, ensuring the fabric is smooth and the legs and waistband are fully straightened.",
+        "Locate the widest part of the trousers, usually around the hip area, slightly below the waistband.",
+        "Measure straight across the garment at this widest point, from one side seam to the other, keeping the fabric flat and free of hidden folds.",
+        "Since this measurement is taken on a flat-lay garment, double the measured width to calculate the full hip circumference.",
+        "Enter this final result into the system."
+      ],
+      tips: [
+        "Do not pull fabric tight while taking width.",
+        "Use the widest true hip location, not a guessed midpoint.",
+        "Double-check for hidden folds under pockets."
+      ],
+      imageUrl: "/images/sketch/pants/hip-circumference.jpeg"
+    },
+    {
+      id: 3,
+      title: "Front Rise",
+      description: "Measure from top front waistband to front crotch intersection",
+      garmentPart: "Front Rise",
+      instructions: [
+        "Lay the trousers flat on a smooth, even surface, ensuring the waistband and legs are fully straightened with no folds.",
+        "Locate the top edge of the front waistband.",
+        "Find the front crotch point where the front fly seam meets the crotch seam between the legs.",
+        "Measure straight down from the top of the front waistband to this crotch intersection point, keeping the measuring tape vertical and taut.",
+        "The number you obtain is the Front Rise."
+      ],
+      tips: [
+        "Measure vertically, not along seam curves.",
+        "Confirm the front fly intersection before measuring.",
+        "Keep trousers flat and symmetric."
+      ],
+      imageUrl: "/images/sketch/pants/Front-rise.jpeg"
+    },
+    {
+      id: 4,
+      title: "Back Rise (Back Fly)",
+      description: "Measure from top back waistband to crotch intersection",
+      garmentPart: "Back Rise",
+      instructions: [
+        "Lay the trousers flat on a smooth surface, making sure the waistband and legs are fully straightened with no wrinkles.",
+        "Locate the top edge of the waistband at the back of the trousers.",
+        "Identify the crotch point where the two inseams meet and where the side seam intersects the crotch seam.",
+        "Measure straight down from the top of the back waistband to this crotch intersection point, keeping the measuring tape vertical and taut.",
+        "The number you obtain is the Back Rise."
+      ],
+      tips: [
+        "Back rise is usually longer than front rise.",
+        "Do not angle tape toward the seat curve.",
+        "Recheck crotch intersection for consistency."
+      ],
+      imageUrl: "/images/sketch/pants/back-rise.jpeg"
+    },
+    {
+      id: 5,
+      title: "Full Length (Outseam)",
+      description: "Measure full outer seam from waistband top to hem",
+      garmentPart: "Outseam",
+      instructions: [
+        "Lay the trousers flat on a table, ensuring both legs are straight and the fabric is smooth with no creases.",
+        "Locate the top edge of the waistband on the side of the trousers.",
+        "Measure down along the outer seam, starting from the very top of the waistband.",
+        "Continue measuring all the way down the outer side seam until you reach the bottom of the hem.",
+        "The number you obtain is the total trouser outseam length."
+      ],
+      tips: [
+        "Keep the tape following the side seam line precisely.",
+        "Align both legs before selecting the seam side.",
+        "Use the same side seam each time for repeat checks."
+      ],
+      imageUrl: "/images/sketch/pants/Full-Length.jpeg"
+    },
+    {
+      id: 6,
+      title: "Inseam",
+      description: "Measure inner seam from crotch point to hem",
+      garmentPart: "Inseam",
+      instructions: [
+        "Lay the trousers flat on a table, ensuring both legs are straightened and the fabric has no folds or creases.",
+        "Locate the crotch point where the inseams of both legs meet.",
+        "Measure from the crotch point down along the inner seam of the trouser leg.",
+        "Continue measuring all the way to the bottom of the hem.",
+        "This total length is the inseam measurement."
+      ],
+      tips: [
+        "Follow the inner seam stitching line, not a straight shortcut.",
+        "Flatten the leg seam before measuring.",
+        "Check both legs if trouser twist is suspected."
+      ],
+      imageUrl: "/images/sketch/pants/Inseam.jpeg"
+    },
+    {
+      id: 7,
+      title: "Thigh Circumference",
+      description: "Measure 3 cm below crotch across thigh and double it",
+      garmentPart: "Thigh",
+      instructions: [
+        "Lay one trouser leg flat on a smooth table, ensuring the fabric is straightened with no folds or creases.",
+        "Locate the crotch point where the inseams meet.",
+        "Measure approximately 3 cm downward from the crotch point along the inside of the trouser leg.",
+        "Measure straight across the leg at this point, from one side to the other, keeping the fabric flat.",
+        "Since this measurement is taken on a flat-lay garment, double the result to calculate full thigh circumference.",
+        "Enter this final result into the system."
+      ],
+      tips: [
+        "Keep the 3 cm offset consistent every time.",
+        "Measure one leg only on a perfectly flat setup.",
+        "Do not include folds inside the leg tube."
+      ],
+      imageUrl: "/images/sketch/pants/thigh-circumference.jpeg"
+    },
+    {
+      id: 8,
+      title: "Knee Circumference",
+      description: "Measure at inseam midpoint across knee and double it",
+      garmentPart: "Knee",
+      instructions: [
+        "Lay the trousers flat on an even surface, making sure the legs are fully straightened.",
+        "Locate the knee position, approximately at the halfway point of the inseam length.",
+        "Measure straight across the leg at this level, from one side to the other, keeping the fabric smooth and flat.",
+        "Double this measurement to determine the total knee circumference.",
+        "Enter this final result into the system."
+      ],
+      tips: [
+        "Mark the midpoint lightly before measuring width.",
+        "Keep left and right side seams aligned.",
+        "Use the same method as hem measurement for consistency."
+      ],
+      imageUrl: "/images/sketch/pants/knee-circumference.jpeg"
+    },
+    {
+      id: 9,
+      title: "Hem",
+      description: "Measure opening width at leg hem and double it",
+      garmentPart: "Hem",
+      instructions: [
+        "Lay the trousers flat on a smooth surface, ensuring the bottom of each leg is fully straightened.",
+        "Locate the hem at the very bottom edge of the trouser leg.",
+        "Measure straight across the hem from one side to the other, keeping the fabric flat and edges aligned.",
+        "Double this measurement to determine the total hem circumference.",
+        "Enter this final result into the system."
+      ],
+      tips: [
+        "Ensure hem edge is not rolled while measuring.",
+        "Measure perpendicular to the leg opening.",
+        "Recheck after repositioning once for accuracy."
+      ],
+      imageUrl: "/images/sketch/pants/hem.jpeg"
+    }
+  ]
+
+  // Measurement sketches for garment measurements
+  const measurementSketches: MeasurementSketch[] = garmentType === "pants" ? pantsMeasurementSketches : jacketMeasurementSketches
+
   const currentSketch = selectedSketch ? measurementSketches.find(s => s.id === selectedSketch) : null
 
   return (
@@ -156,8 +334,8 @@ export function MeasurementSketchGuide({ selectedSketch, onSketchSelect }: Measu
       <Alert className="bg-red-50 border-red-200">
         <AlertTriangle className="h-4 w-4 text-red-600" />
         <AlertDescription className="text-red-800">
-          <strong>Critical Notice:</strong> These are GARMENT measurements from your existing clothes. 
-          We will use these measurements EXACTLY as provided without adding any ease. 
+          <strong>Critical Notice:</strong> These are GARMENT measurements from your existing clothes.
+          We will use these measurements EXACTLY as provided without adding any ease unless explicitly stated in the sketch instructions.
           Choose a garment that fits you perfectly.
         </AlertDescription>
       </Alert>
@@ -307,7 +485,7 @@ export function MeasurementSketchGuide({ selectedSketch, onSketchSelect }: Measu
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <h4 className="font-medium text-blue-900 mb-2">What You'll Need:</h4>
                   <ul className="text-sm text-blue-800 space-y-1">
-                    <li>• Your best-fitting jacket</li>
+                    <li>{garmentType === "pants" ? "• Your best-fitting trousers" : "• Your best-fitting jacket"}</li>
                     <li>• Measuring tape</li>
                     <li>• Flat surface</li>
                     <li>• Good lighting</li>
@@ -319,7 +497,7 @@ export function MeasurementSketchGuide({ selectedSketch, onSketchSelect }: Measu
                   <h4 className="font-medium text-amber-900 mb-2">Important Rules:</h4>
                   <ul className="text-sm text-amber-800 space-y-1">
                     <li>• Lay garment completely flat</li>
-                    <li>• Button all buttons</li>
+                    <li>{garmentType === "pants" ? "• Keep waistband and legs fully straight" : "• Button all buttons"}</li>
                     <li>• Measure in centimeters (cm)</li>
                     <li>• These measurements are used EXACTLY</li>
                     <li>• No ease will be added</li>
@@ -341,7 +519,7 @@ export function MeasurementSketchGuide({ selectedSketch, onSketchSelect }: Measu
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   <ImageIcon className="w-4 h-4 mr-2" />
-                  Start with Sketch 1: Chest Width
+                  {garmentType === "pants" ? "Start with Sketch 1: Waistband Circumference" : "Start with Sketch 1: Chest Width"}
                 </Button>
               </div>
             </div>

@@ -76,6 +76,8 @@ export function MeasurementModal({
   const [garmentMeasurements, setGarmentMeasurements] = useState<Record<string, string>>({})
   const [selectedVideo, setSelectedVideo] = useState<number | null>(null)
   const [selectedSketch, setSelectedSketch] = useState<number | null>(null)
+  const normalizedTitle = title.toLowerCase()
+  const isPantsProduct = normalizedTitle.includes("trouser") || normalizedTitle.includes("pants")
 
   // Body Measurements (from 14 videos)
   const bodyMeasurementFields: BodyMeasurement[] = [
@@ -96,14 +98,26 @@ export function MeasurementModal({
   ]
 
   // Garment Measurements (from sketches - for existing garment measurements)
-  const garmentMeasurementFields: GarmentMeasurement[] = [
-    { id: "garment_chest", name: "Jacket Chest Width", description: "Chest width of your favorite jacket", sketchNumber: 1, required: true, placeholder: "e.g., 56" },
-    { id: "garment_waist", name: "Jacket Waist Width", description: "Waist width of your favorite jacket", sketchNumber: 2, required: true, placeholder: "e.g., 50" },
-    { id: "garment_shoulder", name: "Shoulder Seam Length", description: "Shoulder seam of your favorite jacket", sketchNumber: 3, required: true, placeholder: "e.g., 48" },
-    { id: "garment_sleeve", name: "Sleeve Length", description: "Sleeve length of your favorite jacket", sketchNumber: 4, required: true, placeholder: "e.g., 65" },
-    { id: "garment_length", name: "Jacket Length", description: "Total length of your favorite jacket", sketchNumber: 5, required: true, placeholder: "e.g., 74" },
-    { id: "garment_lapel", name: "Lapel Width", description: "Width of the lapel", sketchNumber: 6, required: false, placeholder: "e.g., 9" }
-  ]
+  const garmentMeasurementFields: GarmentMeasurement[] = isPantsProduct
+    ? [
+        { id: "waistband_circumference", name: "Waistband Circumference", description: "Flat waistband width x 2, then add 1 cm", sketchNumber: 1, required: true, placeholder: "e.g., 77" },
+        { id: "hip_circumference", name: "Hip Circumference", description: "Widest flat hip width x 2", sketchNumber: 2, required: true, placeholder: "e.g., 104" },
+        { id: "front_rise", name: "Front Rise", description: "Top front waistband to front crotch intersection", sketchNumber: 3, required: true, placeholder: "e.g., 27" },
+        { id: "back_rise", name: "Back Rise", description: "Top back waistband to crotch intersection", sketchNumber: 4, required: true, placeholder: "e.g., 38" },
+        { id: "outseam", name: "Full Length (Outseam)", description: "Top of outer waistband to bottom hem", sketchNumber: 5, required: true, placeholder: "e.g., 103" },
+        { id: "inseam", name: "Inseam", description: "Crotch point to bottom hem along inner seam", sketchNumber: 6, required: true, placeholder: "e.g., 78" },
+        { id: "thigh_circumference", name: "Thigh Circumference", description: "Flat width at 3 cm below crotch x 2", sketchNumber: 7, required: true, placeholder: "e.g., 62" },
+        { id: "knee_circumference", name: "Knee Circumference", description: "Flat width at knee level x 2", sketchNumber: 8, required: true, placeholder: "e.g., 44" },
+        { id: "hem_circumference", name: "Hem", description: "Flat hem width x 2", sketchNumber: 9, required: true, placeholder: "e.g., 38" }
+      ]
+    : [
+        { id: "garment_chest", name: "Jacket Chest Width", description: "Chest width of your favorite jacket", sketchNumber: 1, required: true, placeholder: "e.g., 56" },
+        { id: "garment_waist", name: "Jacket Waist Width", description: "Waist width of your favorite jacket", sketchNumber: 2, required: true, placeholder: "e.g., 50" },
+        { id: "garment_shoulder", name: "Shoulder Seam Length", description: "Shoulder seam of your favorite jacket", sketchNumber: 3, required: true, placeholder: "e.g., 48" },
+        { id: "garment_sleeve", name: "Sleeve Length", description: "Sleeve length of your favorite jacket", sketchNumber: 4, required: true, placeholder: "e.g., 65" },
+        { id: "garment_length", name: "Jacket Length", description: "Total length of your favorite jacket", sketchNumber: 5, required: true, placeholder: "e.g., 74" },
+        { id: "garment_lapel", name: "Lapel Width", description: "Width of the lapel", sketchNumber: 6, required: false, placeholder: "e.g., 9" }
+      ]
 
   const handleBodyMeasurementChange = (id: string, value: string) => {
     setBodyMeasurements(prev => ({ ...prev, [id]: value }))
@@ -241,6 +255,7 @@ export function MeasurementModal({
             <MeasurementSketchGuide 
               selectedSketch={selectedSketch ?? undefined} 
               onSketchSelect={setSelectedSketch}
+              garmentType={isPantsProduct ? "pants" : "jacket"}
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

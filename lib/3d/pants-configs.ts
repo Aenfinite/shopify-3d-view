@@ -24,7 +24,7 @@ export const pantsConfigs: Record<string, PantsConfig> = {
   },
   'one-pleat': {
     priority: {
-      style: "/models/pants/FrontStyle/1Pleat.gltf",
+      style: "/models/pants/FrontStyle/1Pleats.gltf",
       beltLoops: "/models/pants/BeltLoops/01.gltf",
       waistband: "/models/pants/Backandbasebeltarea/Basemodel.gltf"
     },

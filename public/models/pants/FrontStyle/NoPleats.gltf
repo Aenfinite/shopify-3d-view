@@ -1,6 +1,6 @@
 {
 	"asset":{
-		"generator":"Khronos glTF Blender I/O v4.5.47",
+		"generator":"Khronos glTF Blender I/O v5.0.21",
 		"version":"2.0"
 	},
 	"scene":0,
@@ -20,12 +20,12 @@
 	],
 	"materials":[
 		{
-			"name":"default"
+			"name":"default.003"
 		}
 	],
 	"meshes":[
 		{
-			"name":"Tessuto",
+			"name":"Tessuto.003",
 			"primitives":[
 				{
 					"attributes":{
@@ -43,10 +43,10 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":110879,
+			"count":111564,
 			"max":[
-				0.1816280633211136,
-				0.47797635197639465,
+				0.18575789034366608,
+				0.4792782664299011,
 				0.13065189123153687
 			],
 			"min":[
@@ -59,13 +59,13 @@
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":110879,
+			"count":111564,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":110879,
+			"count":111564,
 			"type":"VEC2"
 		},
 		{
@@ -78,32 +78,32 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":1330548,
+			"byteLength":1338768,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":1330548,
-			"byteOffset":1330548,
+			"byteLength":1338768,
+			"byteOffset":1338768,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":887032,
-			"byteOffset":2661096,
+			"byteLength":892512,
+			"byteOffset":2677536,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":2412000,
-			"byteOffset":3548128,
+			"byteOffset":3570048,
 			"target":34963
 		}
 	],
 	"buffers":[
 		{
-			"byteLength":5960128,
+			"byteLength":5982048,
 			"uri":"NoPleats.bin"
 		}
 	]
