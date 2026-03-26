@@ -188,6 +188,8 @@ export function UniversalConfigurator({
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [cameraRotationY, setCameraRotationY] = useState(0) // Camera Y-axis rotation for viewing different parts
   const [cameraTargetY, setCameraTargetY] = useState(0) // Camera vertical target position
+  const [cameraZoom, setCameraZoom] = useState<number | undefined>(undefined) // Camera zoom distance override
+  const [shirtMonogramText, setShirtMonogramText] = useState("") // Shirt monogram text input
 
   // ─── Auto-detect Shopify customer on mount ──────────────────────────────
   useEffect(() => {
@@ -291,8 +293,10 @@ export function UniversalConfigurator({
   const isJacketLiningStep = currentStepData?.type === "custom" && currentStepData?.customComponent === "jacket-lining"
   const isMonogramStep = currentStepData?.id === "jacket-monogram" || currentStepData?.customComponent === "monogram"
   const isEmbroideredMonogramStep = currentStepData?.id === "embroidered-monogram" || currentStepData?.customComponent === "embroidered-monogram"
+  const isShirtMonogramTextStep = currentStepData?.id === "shirt-monogram-text" || currentStepData?.customComponent === "shirt-monogram-text"
   const isFabricTypeStep = currentStepData?.id === "fabric-type"
   const isFabricColorStep = currentStepData?.id === "fabric-color"
+  const isContrastPopupStep = currentStepData?.id === "collar-cuff-contrast"
 
   // Calculate total price including measurement surcharge
   const calculatePrice = () => {
@@ -350,7 +354,7 @@ export function UniversalConfigurator({
     const optionId = currentStepData.id.toLowerCase()
 
     // Define camera angles and target heights for different parts
-    const cameraSettings: Record<string, { angle: number; targetY: number }> = {
+    const cameraSettings: Record<string, { angle: number; targetY: number; zoom?: number }> = {
       // Back view for vents and back pockets (180°, normal height)
       'jacket-vent-style': { angle: Math.PI, targetY: 0 },
       'back-pocket': { angle: Math.PI, targetY: 0 },
@@ -386,25 +390,85 @@ export function UniversalConfigurator({
       'waist-band-extension': { angle: -Math.PI / 2, targetY: 0.2 }, // Left side view, waist height
       'waistband-style': { angle: -Math.PI / 2, targetY: 0.2 }, // Left side view
       'waistband-extension': { angle: -Math.PI / 2, targetY: 0.2 }, // Left side view
+
+      // Shirt-specific angles
+      'collar-style': { angle: 0, targetY: 0.4 },          // Front, look up at collar
+      'shirt-collar': { angle: 0, targetY: 0.4 },
+      'sleeve-style': { angle: Math.PI / 4, targetY: 0.1 }, // Slight angle to see sleeves
+      'shirt-sleeve': { angle: Math.PI / 4, targetY: 0.1 },
+      'cuff-style': { angle: Math.PI / 4, targetY: -0.2 },  // Angle, look at cuffs
+      'shirt-cuff': { angle: Math.PI / 4, targetY: -0.2 },
+      'shirt-chest-pocket': { angle: 0, targetY: 0.2 },     // Front, chest height
+      'shirt-front': { angle: 0, targetY: 0 },               // Front view
+      'front-placket': { angle: 0, targetY: 0 },
+      'collar-cuff-contrast': { angle: 0, targetY: 0.65, zoom: 1.1 },           // Tight on collar
+      'contrast-collar-color': { angle: 0, targetY: 0.65, zoom: 1.1 },
+      'contrast-collar-texture': { angle: 0, targetY: 0.65, zoom: 1.1 },        // Collar texture select
+      'contrast-cuff-color': { angle: Math.PI / 5, targetY: -0.45, zoom: 1.1 },
+      'contrast-cuff-texture': { angle: Math.PI / 5, targetY: -0.45, zoom: 1.1 }, // Cuff texture select
+      // Shirt monogram placements
+      'shirt-monogram-position': { angle: 0, targetY: 0, zoom: undefined },
+      'shirt-monogram-text': { angle: 0, targetY: 0, zoom: undefined },
+      'shirt-monogram-color': { angle: 0, targetY: 0, zoom: undefined },
     }
 
     // Find the appropriate camera settings
-    const settings = cameraSettings[optionId] ?? { angle: 0, targetY: 0 }
+    const settings = cameraSettings[optionId] ?? { angle: 0, targetY: 0, zoom: undefined }
 
     setCameraRotationY(settings.angle)
     setCameraTargetY(settings.targetY)
+    setCameraZoom(settings.zoom)
     console.log(`📷 Camera for ${optionId}: ${(settings.angle * 180 / Math.PI).toFixed(0)}°, targetY: ${settings.targetY.toFixed(2)}`)
   }, [currentStep, currentStepData])
 
-  const nextStep = () => {
-    if (currentStep < totalSteps - 1) {
-      setCurrentStep(currentStep + 1)
+  // Check if a step should be skipped (e.g. contrast color steps when contrast is not enabled)
+  const shouldSkipStep = (stepIndex: number, stateOverride?: typeof configuratorState): boolean => {
+    const state = stateOverride ?? configuratorState
+    const stepData = customizationOptions[stepIndex]
+    if (!stepData) return false
+    // Skip contrast color steps when collar-cuff-contrast is set to "no"
+    if (stepData.id === "contrast-collar-color" || stepData.id === "contrast-cuff-color" ||
+        stepData.id === "contrast-collar-texture" || stepData.id === "contrast-cuff-texture") {
+      const contrastSelection = state["collar-cuff-contrast"]
+      if (!contrastSelection || contrastSelection.valueId === "no-contrast") {
+        return true
+      }
+    }
+    // Skip shirt monogram text/color when no monogram position selected
+    if (stepData.id === "shirt-monogram-text" || stepData.id === "shirt-monogram-color") {
+      const posSelection = state["shirt-monogram-position"]
+      if (!posSelection || posSelection.valueId === "no-monogram") {
+        return true
+      }
+    }
+    // Skip cuff style step when half-sleeve is selected (half sleeves have no cuffs)
+    if (stepData.id === "cuff-style") {
+      const sleeveSelection = state["sleeve-style"]
+      if (sleeveSelection && sleeveSelection.valueId === "half-sleeve") {
+        return true
+      }
+    }
+    return false
+  }
+
+  const nextStep = (stateOverride?: typeof configuratorState) => {
+    let next = currentStep + 1
+    // Skip steps that should not be shown
+    while (next < totalSteps && shouldSkipStep(next, stateOverride)) {
+      next++
+    }
+    if (next < totalSteps) {
+      setCurrentStep(next)
     }
   }
 
   const prevStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1)
+    let prev = currentStep - 1
+    while (prev >= 0 && shouldSkipStep(prev)) {
+      prev--
+    }
+    if (prev >= 0) {
+      setCurrentStep(prev)
     }
   }
 
@@ -588,6 +652,10 @@ export function UniversalConfigurator({
       if (option?.id === "monogram-color") {
         return monogramData.position === "no-monogram" || monogramData.color !== ""
       }
+      if (option?.id === "shirt-monogram-text") {
+        const posSelection = configuratorState["shirt-monogram-position"]
+        return !posSelection || posSelection.valueId === "no-monogram" || shirtMonogramText.trim() !== ""
+      }
       return option && configuratorState[option.id]
     } else if (stepIndex === customizationOptions.length + 1) {
       // Measurement step
@@ -629,8 +697,8 @@ export function UniversalConfigurator({
           customizations.mainColor = selection.color
           console.log("Setting fabric color:", selection.color)
         }
-        // Handle other colors but NOT for button color changes or monogram thread color
-        else if (selection.color && !option.name.toLowerCase().includes("button") && !option.name.toLowerCase().includes("monogram")) {
+        // Handle other colors but NOT for button color changes, monogram thread color, or contrast colors
+        else if (selection.color && !option.name.toLowerCase().includes("button") && !option.name.toLowerCase().includes("monogram") && !option.id.startsWith("contrast-")) {
           const colorValue = selection.color || value.color
           const optionNameLower = option.name.toLowerCase().replace(/\s+/g, "")
 
@@ -782,6 +850,59 @@ export function UniversalConfigurator({
           customizations.waistbandExtension = value.value
           customizations.waistband_extension = value.value
           customizations["waist-band-extension"] = value.value
+        }
+
+        // Handle shirt-specific customizations
+        if (option.id === "collar-style" || option.id === "shirt-collar") {
+          console.log("👔 Setting shirt collar style:", value.value)
+          customizations.collarStyle = value.value
+          customizations["collar-style"] = value.value
+        } else if (option.id === "sleeve-style" || option.id === "shirt-sleeve") {
+          console.log("👔 Setting shirt sleeve style:", value.value)
+          customizations.sleeveStyle = value.value
+          customizations["sleeve-style"] = value.value
+        } else if (option.id === "cuff-style" || option.id === "shirt-cuff") {
+          console.log("👔 Setting shirt cuff style:", value.value)
+          customizations.cuffStyle = value.value
+          customizations["cuff-style"] = value.value
+        } else if (option.id === "shirt-chest-pocket") {
+          console.log("👔 Setting shirt chest pocket:", value.value)
+          customizations.chestPocket = value.value
+          customizations["chest-pocket"] = value.value
+        } else if (option.id === "shirt-front" || option.id === "front-placket") {
+          console.log("👔 Setting shirt front placket:", value.value)
+          customizations.frontStyle = value.value
+          customizations["front-style"] = value.value
+        } else if (option.id === "collar-cuff-contrast") {
+          console.log("👔 Setting collar/cuff contrast:", value.value)
+          customizations.contrastEnabled = value.value === "yes"
+          customizations["contrast-enabled"] = value.value === "yes"
+        } else if (option.id === "contrast-collar-texture") {
+          console.log("👔 Setting contrast collar texture:", selection.color || value.value)
+          const tex = selection.color || value.value
+          customizations.contrastCollarTexture = tex
+          customizations["contrast-collar-texture"] = tex
+        } else if (option.id === "contrast-cuff-texture") {
+          console.log("👔 Setting contrast cuff texture:", selection.color || value.value)
+          const tex = selection.color || value.value
+          customizations.contrastCuffTexture = tex
+          customizations["contrast-cuff-texture"] = tex
+        } else if (option.id === "contrast-collar-color") {
+          console.log("👔 Setting contrast collar color:", value.value || selection.color)
+          customizations.contrastCollarColor = selection.color || value.value
+          customizations["contrast-collar-color"] = selection.color || value.value
+        } else if (option.id === "contrast-cuff-color") {
+          console.log("👔 Setting contrast cuff color:", value.value || selection.color)
+          customizations.contrastCuffColor = selection.color || value.value
+          customizations["contrast-cuff-color"] = selection.color || value.value
+        } else if (option.id === "shirt-monogram-position") {
+          console.log("👔 Setting shirt monogram position:", value.value)
+          customizations.monogramPosition = value.value
+          customizations["shirt-monogram-position"] = value.value
+        } else if (option.id === "shirt-monogram-color") {
+          console.log("👔 Setting shirt monogram color:", selection.color || value.value)
+          customizations.monogramColor = selection.color || value.value
+          customizations["shirt-monogram-color"] = selection.color || value.value
         }
 
         // Handle ALL other style customizations by mapping option names to customization keys
@@ -952,6 +1073,11 @@ export function UniversalConfigurator({
       liningMeshType: customizations.liningMeshType,
       liningType: liningSelectionData.liningType
     })
+
+    // Inject shirt monogram text (stored in separate state, not in configuratorState)
+    if (shirtMonogramText.trim()) {
+      customizations.monogramText = shirtMonogramText.trim()
+    }
 
     console.log("Generated customizations for 3D model:", customizations)
     console.log("🔍 Front style in customizations:", {
@@ -1331,11 +1457,13 @@ export function UniversalConfigurator({
                           ? "Lining & Monogram"
                           : isMonogramStep || isEmbroideredMonogramStep
                             ? "Embroidered Monogram"
-                            : isFabricTypeStep
-                              ? <>{currentStepData?.name} <span className="font-normal text-gray-400">&#8212; Fabric - next colors</span></>
-                              : currentStepData?.name || "Customize"}
+                            : isShirtMonogramTextStep
+                              ? "Enter Monogram Text"
+                              : isFabricTypeStep
+                                ? <>{currentStepData?.name} <span className="font-normal text-gray-400">&#8212; Fabric - next colors</span></>
+                                : currentStepData?.name || "Customize"}
               </h2>
-              {!isMeasurementConfirmStep && !isMeasurementStep && !isFitPreferenceStep && !isLiningSelectionStep && !isJacketLiningStep && !isMonogramStep && !isEmbroideredMonogramStep && currentStepData && currentStepData.values && (
+              {!isMeasurementConfirmStep && !isMeasurementStep && !isFitPreferenceStep && !isLiningSelectionStep && !isJacketLiningStep && !isMonogramStep && !isEmbroideredMonogramStep && !isShirtMonogramTextStep && currentStepData && currentStepData.values && (
                 <Badge variant="secondary" className="text-xs flex-shrink-0 hidden sm:inline-flex">
                   {(() => { const count = isFabricColorStep ? getFilteredColors().length : currentStepData.values.length; return `${count} option${count !== 1 ? 's' : ''}`; })()}
                 </Badge>
@@ -1620,6 +1748,23 @@ export function UniversalConfigurator({
                       updateMonogramData(updates)
                     }}
                   />
+                ) : isShirtMonogramTextStep ? (
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-500">Enter up to 3 characters (initials) or a short name. It will be embroidered at your chosen placement.</p>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        maxLength={10}
+                        value={shirtMonogramText}
+                        onChange={(e) => setShirtMonogramText(e.target.value)}
+                        placeholder="e.g. RHS"
+                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-2xl font-serif tracking-widest text-center focus:border-blue-400 focus:outline-none transition-colors"
+                        autoFocus
+                      />
+                      <span className="absolute right-3 bottom-3 text-xs text-gray-400">{shirtMonogramText.length}/10</span>
+                    </div>
+                    <p className="text-xs text-gray-400 text-center">Preview updates on the image to the left ←</p>
+                  </div>
                 ) : isFabricTypeStep ? (
                   <FabricTypeSelector
                     selectedFabricType={configuratorState["fabric-type"]?.valueId}
@@ -1751,10 +1896,19 @@ export function UniversalConfigurator({
                                 `}
                               >
                                 <div className="text-center">
-                                  <div
-                                    className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-lg mx-auto mb-2 border border-gray-300 shadow-sm"
-                                    style={{ backgroundColor: value.color || value.value }}
-                                  />
+                                  {(() => {
+                                    const swatchVal = value.thumbnail || value.color || value.value
+                                    const isImg = swatchVal && (swatchVal.startsWith("/") || swatchVal.startsWith("http"))
+                                    return (
+                                      <div
+                                        className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-lg mx-auto mb-2 border border-gray-300 shadow-sm overflow-hidden"
+                                        style={isImg
+                                          ? { backgroundImage: `url("${swatchVal}")`, backgroundSize: "cover", backgroundPosition: "center" }
+                                          : { backgroundColor: swatchVal || "#e5e7eb" }
+                                        }
+                                      />
+                                    )
+                                  })()}
                                   <div className="text-xs sm:text-sm font-medium text-gray-900 leading-tight break-words">
                                     {value.name}
                                   </div>
@@ -1775,7 +1929,7 @@ export function UniversalConfigurator({
                       )}
 
                       {/* Non-Color Options - Fully Responsive List Layout */}
-                      {(currentStepData.type === "texture" || currentStepData.type === "component") && (
+                      {(currentStepData.type === "texture" || currentStepData.type === "component") && !isContrastPopupStep && (
                         <div>
                           <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">
                             Choose {currentStepData.name}
@@ -1879,7 +2033,7 @@ export function UniversalConfigurator({
               {currentStep < totalSteps - 1 ? (
                 <>
                   <Button
-                    onClick={nextStep}
+                    onClick={() => nextStep()}
                     size="sm"
                     disabled={isFitPreferenceStep && (!measurementData.fitPreference || !measurementData.shoulderType || !measurementData.backShape || !measurementData.bellyType)}
                     className="bg-blue-600 hover:bg-blue-700 flex-1 h-10 sm:h-11 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1935,7 +2089,7 @@ export function UniversalConfigurator({
           {/* 3D Model Viewer - FULL HEIGHT with better styling */}
           <div className="absolute inset-0 w-full h-full rounded-lg lg:rounded-none overflow-hidden">
             <ModelViewer
-              key={`model-${configuratorState["jacket-front-style"]?.valueId || 'default'}-${configuratorState["front-pocket"]?.valueId || 'no-pocket'}-${configuratorState["chest-pocket"]?.valueId || 'no-chest'}-${configuratorState["jacket-sleeve-buttons"]?.valueId || 'default-sleeve'}-${configuratorState["jacket-vent-style"]?.valueId || 'default-vent'}`}
+              key={`model-${configuratorState["jacket-front-style"]?.valueId || 'default'}-${configuratorState["front-pocket"]?.valueId || 'no-pocket'}-${configuratorState["chest-pocket"]?.valueId || 'no-chest'}-${configuratorState["jacket-sleeve-buttons"]?.valueId || 'default-sleeve'}-${configuratorState["jacket-vent-style"]?.valueId || 'default-vent'}-${configuratorState["collar-style"]?.valueId || 'default-collar'}-${configuratorState["sleeve-style"]?.valueId || 'default-sleeve-shirt'}-${configuratorState["cuff-style"]?.valueId || 'default-cuff'}-${configuratorState["shirt-chest-pocket"]?.valueId || 'no-shirt-pocket'}-${configuratorState["front-placket"]?.valueId || 'default-placket'}-${configuratorState["collar-cuff-contrast"]?.valueId || 'no-contrast'}`}
               modelUrl={getModelUrl()}
               useGLTF={productType === "jacket" || productType === "pants"}
               gltfModelPath={productType === "jacket" ? "/models/jackets/basic-jacket.gltf" : productType === "pants" ? "/models/pants/Style/Flat/Normal.gltf" : undefined}
@@ -1943,6 +2097,7 @@ export function UniversalConfigurator({
               layerControls={generateLayerControls()}
               cameraRotationY={cameraRotationY}
               cameraTargetY={cameraTargetY}
+              cameraZoom={cameraZoom}
             />
           </div>
 
@@ -1985,6 +2140,88 @@ export function UniversalConfigurator({
             </div>
           )}
 
+          {/* Shirt Monogram Preview Box */}
+          {(() => {
+            const showShirtMonoPreview =
+              (isShirtMonogramTextStep || currentStepData?.id === "shirt-monogram-color") &&
+              configuratorState["shirt-monogram-position"]?.valueId &&
+              configuratorState["shirt-monogram-position"].valueId !== "no-monogram"
+            if (!showShirtMonoPreview) return null
+
+            const placement = configuratorState["shirt-monogram-position"].valueId
+            const imgMap: Record<string, string> = {
+              "mg-rightcuff": "/images/monogram/mg-rightcuff.png",
+              "mg-leftcuff":  "/images/monogram/mg-leftcuff.png",
+              "mg-bottom":    "/images/monogram/mg-bottom.png",
+              "mg-pocket":    "/images/monogram/mg-pocket.png",
+            }
+            // % positions within each reference image — tuned to where embroidery physically sits
+            // mg-bottom reference: "AB" appears bottom-left near the front placket seam (~17% left, ~82% top)
+            // mg-pocket reference: monogram sits centered on/above the pocket (pocket is in the right half of frame)
+            const overlayMap: Record<string, { top: string; left: string; size: string; rotate: string }> = {
+              "mg-rightcuff": { top: "71%", left: "58%", size: "11px", rotate: "-4deg" },
+              "mg-leftcuff":  { top: "71%", left: "34%", size: "11px", rotate:  "4deg" },
+              "mg-bottom":    { top: "74%", left: "11%", size: "10px", rotate:  "0deg" },
+              "mg-pocket":    { top: "36%", left: "38%", size:  "9px", rotate:  "0deg" },
+            }
+            const img = imgMap[placement]
+            if (!img) return null
+            const ov = overlayMap[placement] ?? { top: "50%", left: "50%", size: "10px", rotate: "0deg" }
+            const rawColor = configuratorState["shirt-monogram-color"]?.color ||
+                             THREAD_COLORS.find(c => c.id === configuratorState["shirt-monogram-color"]?.valueId)?.color
+            const threadColor: string = typeof rawColor === "string" ? rawColor : "#1e3a8a"
+
+            return (
+              <div
+                className="absolute z-20 pointer-events-none"
+                style={{ left: "calc(50% - 96px)", bottom: "24px" }}
+              >
+                <div className="bg-white rounded-xl shadow-2xl border border-blue-300 overflow-hidden"
+                     style={{ width: "192px" }}>
+                  <div className="px-2 pt-2 pb-1 text-center">
+                    <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Monogram Preview</span>
+                  </div>
+                  <div className="relative mx-2 mb-2 rounded-lg overflow-hidden" style={{ aspectRatio: "1/1" }}>
+                    <img
+                      src={img}
+                      alt="monogram placement"
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    />
+                    {shirtMonogramText ? (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: ov.top,
+                          left: ov.left,
+                          transform: `translate(-50%, -50%) rotate(${ov.rotate})`,
+                          color: threadColor,
+                          fontFamily: "'Georgia', serif",
+                          fontStyle: "normal",
+                          fontWeight: "600",
+                          fontSize: ov.size,
+                          letterSpacing: "0.07em",
+                          whiteSpace: "nowrap",
+                          lineHeight: 1,
+                          textRendering: "geometricPrecision",
+                        }}
+                      >
+                        {shirtMonogramText}
+                      </div>
+                    ) : (
+                      <div style={{
+                        position: "absolute", bottom: "6px", left: "6px",
+                        fontSize: "9px", color: "#9ca3af", background: "rgba(255,255,255,0.75)",
+                        padding: "1px 4px", borderRadius: "3px"
+                      }}>
+                        type initials →
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+
           {/* Bottom Instructions - removed (moved to top) */}
 
           {/* Mobile Price Indicator */}
@@ -2007,6 +2244,57 @@ export function UniversalConfigurator({
           </div>
         </div>
       </div>
+
+      {/* Contrast Popup Modal */}
+      {isContrastPopupStep && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 overflow-hidden">
+            {/* Fabric preview banner */}
+            <div className="relative h-32 overflow-hidden">
+              <img
+                src="/fabrics/ContrastFabric/image.png"
+                alt="Contrast fabric"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-1">
+                <h2 className="text-xl font-bold text-white tracking-wide">Collar &amp; Cuff Contrast</h2>
+                <p className="text-white/80 text-xs">Apply a contrast fabric to collar &amp; cuffs?</p>
+              </div>
+            </div>
+            {/* Choices */}
+            <div className="p-5 grid grid-cols-2 gap-3">
+              <button
+                onClick={() => { selectOption("collar-cuff-contrast", "no-contrast", 0, "no"); nextStep() }}
+                className="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-gray-200 hover:border-gray-400 bg-gray-50 hover:bg-gray-100 transition-all duration-200 cursor-pointer"
+              >
+                <div className="w-14 h-14 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center shadow-sm">
+                  <X className="w-6 h-6 text-gray-400" />
+                </div>
+                <div className="text-center">
+                  <div className="font-semibold text-gray-800 text-sm">No, thanks</div>
+                  <div className="text-xs text-gray-400 mt-0.5">Keep same fabric</div>
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  const newState = { ...configuratorState, "collar-cuff-contrast": { optionId: "collar-cuff-contrast", valueId: "yes-contrast", price: 15, value: "yes" } }
+                  selectOption("collar-cuff-contrast", "yes-contrast", 15, "yes")
+                  nextStep(newState)
+                }}
+                className="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-blue-400 bg-blue-50 hover:bg-blue-100 hover:border-blue-500 hover:shadow-md transition-all duration-200 cursor-pointer"
+              >
+                <div className="w-14 h-14 rounded-xl overflow-hidden border-2 border-blue-200 shadow-sm">
+                  <img src="/fabrics/ContrastFabric/image.png" alt="Contrast" className="w-full h-full object-cover" />
+                </div>
+                <div className="text-center">
+                  <div className="font-semibold text-blue-900 text-sm">Yes, add it</div>
+                  <div className="text-xs text-blue-500 font-medium mt-0.5">+€15</div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Checkout Modal */}
       <CheckoutModal

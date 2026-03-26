@@ -34,7 +34,7 @@ function applyPantsFabric(scene: THREE.Group, fabricColor?: string) {
       if (isFabricMesh(child)) {
         if (fabricColor) {
           // Use the same fabric pipeline as jacket to preserve swatch fidelity.
-          applyFabricCustomization(child, fabricColor)
+          applyFabricCustomization(child, fabricColor, undefined, 'trousers')
         } else {
           // Fallback neutral cloth look before a fabric is selected.
           materials.forEach((material) => {

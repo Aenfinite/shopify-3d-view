@@ -341,87 +341,366 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
   })
 }
 
+// ── PBR Fabric Texture System ─────────────────────────────────────────────────
+// Uses real PBR maps (normal + roughness) stored locally in /public/textures/fabric/.
+// Only the PBR maps are used — the user's chosen COLOR drives material.color, so
+// all color customization continues to work perfectly.
+//
+// Jacket / Trousers maps (Polyhaven rough_linen, CC0):
+//   linen_nor_gl_1k.jpg  — OpenGL normal map  (structured woven linen relief)
+//   linen_rough_1k.jpg   — Roughness map       (linen matte variation)
+//
+// Shirt maps (ambientCG Fabric019, CC0):
+//   shirt_nor_gl_1k.jpg  — OpenGL normal map  (fine soft-cotton weave)
+//   shirt_rough_1k.jpg   — Roughness map       (cotton matte variation)
+
+interface FabricPBRMaps {
+  normalMap: THREE.Texture | null
+  roughnessMap: THREE.Texture | null
+}
+
+// Jacket / Trousers — Polyhaven rough_linen
+let _fabricPBR: FabricPBRMaps | null = null
+let _fabricPBRPromise: Promise<FabricPBRMaps> | null = null
+
+// Shirt — ambientCG Fabric019 (fine cotton weave)
+let _shirtPBR: FabricPBRMaps | null = null
+let _shirtPBRPromise: Promise<FabricPBRMaps> | null = null
+
+function configureFabricTex(
+  tex: THREE.Texture,
+  repeatU = 8,
+  repeatV = 8,
+  rotationDeg = 0,
+): THREE.Texture {
+  tex.wrapS = THREE.RepeatWrapping
+  tex.wrapT = THREE.RepeatWrapping
+  tex.repeat.set(repeatU, repeatV)
+  tex.anisotropy = 8
+  if (rotationDeg !== 0) {
+    tex.rotation = (rotationDeg * Math.PI) / 180
+    tex.center.set(0.5, 0.5)
+  }
+  return tex
+}
+
 /**
- * Applies a color or texture to a mesh's material with realistic fabric properties
- * @param mesh - The mesh to apply the material to
- * @param color - Either a hex color string (e.g., "#ff0000") or a texture path (e.g., "/images/fabric/IMG-20250831-WA0001.jpg")
- * @param baseColor - Optional base color multiplier for textures (e.g., 0xaaaaaa for jackets, 0x1a1a1a for darker pants)
+ * Blends a loaded THREE.Texture toward neutral gray using a canvas compositing step.
+ * This reduces the contrast of the source map so it reads as very subtle surface
+ * variation rather than a visible structured pattern.
+ *
+ * @param tex        - The source THREE.Texture (must have an image already loaded)
+ * @param blendAlpha - 0 = pure neutral gray (invisible), 1 = original (no change).
+ *                     0.18 gives barely-perceptible, natural-feeling variation.
+ * @param neutralL   - Neutral luminance to blend toward (128 = mid-gray for roughness,
+ *                     128 = flat normal for normal maps)
  */
-function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number = 0xaaaaaa) {
+function softenTexture(tex: THREE.Texture, blendAlpha = 0.18, neutralL = 128): THREE.Texture {
+  if (typeof document === 'undefined') return tex
+  try {
+    const src = tex.image as HTMLImageElement | HTMLCanvasElement | null
+    if (!src) return tex
+    const w = (src as HTMLImageElement).naturalWidth || (src as HTMLCanvasElement).width || 512
+    const h = (src as HTMLImageElement).naturalHeight || (src as HTMLCanvasElement).height || 512
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')!
+    // Step 1: fill with neutral gray
+    ctx.fillStyle = `rgb(${neutralL},${neutralL},${neutralL})`
+    ctx.fillRect(0, 0, w, h)
+    // Step 2: draw the original texture on top with low opacity — blends it softly
+    ctx.globalAlpha = blendAlpha
+    ctx.drawImage(src as CanvasImageSource, 0, 0, w, h)
+    ctx.globalAlpha = 1
+    // Step 3: create a new CanvasTexture from the composited result
+    const softened = new THREE.CanvasTexture(canvas)
+    softened.wrapS = tex.wrapS
+    softened.wrapT = tex.wrapT
+    softened.repeat.copy(tex.repeat)
+    softened.rotation = tex.rotation
+    softened.center.copy(tex.center)
+    softened.anisotropy = tex.anisotropy
+    return softened
+  } catch {
+    return tex // fallback: use original if anything fails
+  }
+}
+
+/**
+ * Eagerly starts loading PBR maps and caches the promise.
+ * Safe to call multiple times — only one load is ever started.
+ */
+export function preloadFabricPBR(): void {
+  if (_fabricPBRPromise) return
+  const loader = new THREE.TextureLoader()
+  _fabricPBRPromise = Promise.all([
+    new Promise<THREE.Texture | null>(resolve =>
+      loader.load('/textures/fabric/linen_nor_gl_1k.jpg', t => {
+        const configured = configureFabricTex(t, 5, 5, 7)
+        resolve(softenTexture(configured, 0.18, 128)) // blend toward flat-normal gray
+      }, undefined, () => resolve(null))
+    ),
+    new Promise<THREE.Texture | null>(resolve =>
+      loader.load('/textures/fabric/linen_rough_1k.jpg', t => {
+        const configured = configureFabricTex(t, 5, 5, 7)
+        resolve(softenTexture(configured, 0.22, 180)) // blend toward smooth (light gray) for roughness
+      }, undefined, () => resolve(null))
+    ),
+  ]).then(([normalMap, roughnessMap]) => {
+    _fabricPBR = { normalMap, roughnessMap }
+    console.log('✅ Fabric PBR maps loaded (softened):', { normalMap: !!normalMap, roughnessMap: !!roughnessMap })
+    return _fabricPBR
+  })
+}
+
+/**
+ * Eagerly starts loading shirt-specific PBR maps (ambientCG Fabric019 — fine cotton).
+ * Safe to call multiple times — only one load is ever started.
+ */
+export function preloadShirtPBR(): void {
+  if (_shirtPBRPromise) return
+  const loader = new THREE.TextureLoader()
+  _shirtPBRPromise = Promise.all([
+    new Promise<THREE.Texture | null>(resolve =>
+      loader.load('/textures/fabric/shirt_nor_gl_1k.jpg', t => {
+        // Fine poplin: 7× repeat (smaller tiles), 22% opacity — barely-there on zoom
+        const configured = configureFabricTex(t, 7, 7, 3)
+        resolve(softenTexture(configured, 0.22, 128))
+      }, undefined, () => resolve(null))
+    ),
+    new Promise<THREE.Texture | null>(resolve =>
+      loader.load('/textures/fabric/shirt_rough_1k.jpg', t => {
+        const configured = configureFabricTex(t, 7, 7, 3)
+        resolve(softenTexture(configured, 0.22, 185))
+      }, undefined, () => resolve(null))
+    ),
+  ]).then(([normalMap, roughnessMap]) => {
+    _shirtPBR = { normalMap, roughnessMap }
+    console.log('✅ Shirt PBR maps loaded (Fabric019):', { normalMap: !!normalMap, roughnessMap: !!roughnessMap })
+    return _shirtPBR
+  })
+}
+
+// Start loading immediately when this module is imported (client-side only)
+if (typeof window !== 'undefined') {
+  preloadFabricPBR()
+  preloadShirtPBR()
+}
+
+// ─── Per-garment material profiles ───────────────────────────────────────────
+// Each garment has slightly different surface behaviour:
+//   jacket  → visible woven grain, moderate sheen — structured tailoring fabric
+//   trousers → same linen maps but slightly stronger relief — dress trouser weight
+//   shirt   → no directional weave, near-zero reflections — soft cotton/poplin feel
+
+export type GarmentType = 'jacket' | 'trousers' | 'shirt'
+
+interface GarmentProfile {
+  useNormalMap: boolean    // include linen normal map (adds directional weave relief)
+  normalScale: number      // surface relief strength
+  useRoughnessMap: boolean // include linen roughness map (micro-variation)
+  roughness: number        // base diffuse roughness
+  sheen: number            // cross-fibre retro-reflection
+  sheenRoughness: number   // how diffuse the sheen is
+  envMapIntensity: number  // how much the environment reflects
+}
+
+const GARMENT_PROFILES: Record<GarmentType, GarmentProfile> = {
+  jacket: {
+    useNormalMap: true,
+    normalScale: 0.12,
+    useRoughnessMap: true,
+    roughness: 0.90,
+    sheen: 0.12,
+    sheenRoughness: 0.97,
+    envMapIntensity: 0.06,
+  },
+  trousers: {
+    // Slightly more relief than jacket — gives the micro-weave read needed on
+    // dress trouser fabric without being as bold as a woven jacket.
+    useNormalMap: true,
+    normalScale: 0.22,
+    useRoughnessMap: true,
+    roughness: 0.90,
+    sheen: 0.18,
+    sheenRoughness: 0.97,
+    envMapIntensity: 0.07,
+  },
+  shirt: {
+    // Fine poplin: texture exists only as a whisper — invisible at normal distance,
+    // barely detectable on close zoom. Almost smooth matte finish.
+    useNormalMap: true,
+    normalScale: 0.15,
+    useRoughnessMap: true,
+    roughness: 0.96,
+    sheen: 0.08,
+    sheenRoughness: 0.99,
+    envMapIntensity: 0.03,
+  },
+}
+
+/**
+ * Creates a MeshPhysicalMaterial tuned for realistic textile rendering.
+ * Profile is selected per garment type so each material behaves appropriately.
+ *
+ * Strategy:
+ *  • material.color  = user's chosen fabric color → color customization still works
+ *  • normalMap       = Polyhaven linen normal map  → woven surface relief (jacket/trousers)
+ *  • roughnessMap    = Polyhaven linen roughness   → matte, naturally varying finish
+ *  • sheen           = cross-fibre retro-reflection (soft highlight seen in real cloth)
+ *  • No metalness / minimal envMap → avoids plastic/glossy look
+ */
+/** Returns the correct PBR map set for the given garment type. */
+function getPBRForGarment(garmentType: GarmentType): FabricPBRMaps | null {
+  return garmentType === 'shirt' ? _shirtPBR : _fabricPBR
+}
+
+/** Returns the correct PBR promise for the given garment type (used for deferred patching). */
+function getPBRPromiseForGarment(garmentType: GarmentType): Promise<FabricPBRMaps> | null {
+  return garmentType === 'shirt' ? _shirtPBRPromise : _fabricPBRPromise
+}
+
+function createFabricPhysicalMaterial(
+  source: THREE.MeshStandardMaterial,
+  color: THREE.Color,
+  map: THREE.Texture | null,
+  garmentType: GarmentType = 'jacket',
+): THREE.MeshPhysicalMaterial {
+  const pbr = getPBRForGarment(garmentType) // may be null on very first render; maps applied in callback once ready
+  const profile = GARMENT_PROFILES[garmentType]
+  return new THREE.MeshPhysicalMaterial({
+    color,
+    map,                                   // user-supplied fabric image (if any)
+    roughness: profile.roughness,
+    metalness: 0.0,
+    envMapIntensity: profile.envMapIntensity,
+    // Normal map: garment-specific PBR set (linen for jacket/trousers, Fabric019 for shirt)
+    normalMap: (profile.useNormalMap && pbr?.normalMap) ? pbr.normalMap : undefined,
+    normalScale: new THREE.Vector2(profile.normalScale, profile.normalScale),
+    // Roughness map: garment-specific PBR set
+    roughnessMap: (profile.useRoughnessMap && pbr?.roughnessMap) ? pbr.roughnessMap : undefined,
+    // Sheen: tuned per garment profile
+    sheen: profile.sheen,
+    sheenRoughness: profile.sheenRoughness,
+    sheenColor: color.clone(),
+    flatShading: false,
+    // Preserve baked AO / emissive from the original GLTF
+    aoMap: source.aoMap,
+    aoMapIntensity: source.aoMapIntensity ?? 1,
+    emissive: source.emissive ? source.emissive.clone() : new THREE.Color(0),
+    emissiveMap: source.emissiveMap,
+  })
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Applies a color or texture to a mesh's material with realistic fabric properties.
+ * Upgrades to MeshPhysicalMaterial (sheen + PBR maps) for a natural textile appearance.
+ * @param mesh - The mesh to apply the material to
+ * @param color - Either a hex color string (e.g., "#ff0000") or a texture path
+ * @param baseColor - Base color multiplier for texture mode (default: 0xaaaaaa)
+ */
+function replaceMeshMaterial(
+  mesh: THREE.Mesh,
+  idx: number,
+  isMaterialArray: boolean,
+  physMat: THREE.MeshPhysicalMaterial,
+) {
+  if (isMaterialArray) {
+    ;(mesh.material as THREE.Material[])[idx] = physMat
+  } else {
+    mesh.material = physMat
+  }
+  const prevMat = mesh.userData._fabricPhysicalMat as THREE.MeshPhysicalMaterial | undefined
+  if (prevMat && prevMat !== physMat) prevMat.dispose()
+  mesh.userData._fabricPhysicalMat = physMat
+}
+
+function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number = 0xaaaaaa, garmentType: GarmentType = 'jacket') {
   if (!mesh.material) {
     console.warn(`⚠️ No material found on mesh: ${mesh.name}`)
     return
   }
 
-  // Handle both single materials and material arrays
-  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+  const isTexture = color.startsWith('/') || /\.(jpg|jpeg|png|webp)$/i.test(color)
+  const isMaterialArray = Array.isArray(mesh.material)
+  const rawMaterials: THREE.Material[] = isMaterialArray
+    ? [...(mesh.material as THREE.Material[])]
+    : [mesh.material as THREE.Material]
 
-  materials.forEach((material) => {
-    if (material instanceof THREE.MeshStandardMaterial) {
-      try {
-        // Check if this is a texture path (starts with / or contains image extension)
-        const isTexture = color.startsWith('/') || /\.(jpg|jpeg|png|webp)$/i.test(color)
-        
-        if (isTexture) {
-          // Load and apply texture
-          console.log(`🖼️ Loading fabric texture: ${color} for ${mesh.name}`)
-          const textureLoader = new THREE.TextureLoader()
-          textureLoader.load(
-            color,
-            (texture) => {
-              // Configure texture for realistic fabric appearance
-              texture.wrapS = THREE.RepeatWrapping
-              texture.wrapT = THREE.RepeatWrapping
-              texture.repeat.set(8, 8) // Increased repeat for smaller, more detailed pattern
-              
-              material.map = texture
-              material.color.setHex(baseColor) // Use custom base color for fabric appearance
-              
-              // Apply realistic fabric properties
-              material.roughness = 0.75  // Higher roughness for more matte fabric appearance
-              material.metalness = 0.0  // No metalness for pure fabric look
-              material.flatShading = false
-              material.envMapIntensity = 0.2  // Further reduced environment reflection
-              
-              material.needsUpdate = true
-              console.log(`✅ Applied fabric texture to ${mesh.name}`)
-            },
-            undefined,
-            (error) => {
-              console.error(`❌ Error loading texture ${color}:`, error)
-              // Fallback to a neutral color if texture fails
-              material.color.setHex(0x808080)
-              material.needsUpdate = true
+  rawMaterials.forEach((material, idx) => {
+    if (!(material instanceof THREE.MeshStandardMaterial)) return
+
+    try {
+      if (isTexture) {
+        // ── Texture / fabric-image path ───────────────────────────────────────
+        console.log(`🖼️ Loading fabric texture: ${color} for ${mesh.name}`)
+        const baseCol = new THREE.Color(baseColor)
+        const physMat = createFabricPhysicalMaterial(material, baseCol, null, garmentType)
+
+        replaceMeshMaterial(mesh, idx, isMaterialArray, physMat)
+
+        // If PBR maps are still loading, patch them in once ready
+        const _pbrForGarment = getPBRForGarment(garmentType)
+        const _pbrPromiseForGarment = getPBRPromiseForGarment(garmentType)
+        if (!_pbrForGarment && _pbrPromiseForGarment) {
+          const profile = GARMENT_PROFILES[garmentType]
+          _pbrPromiseForGarment.then(pbr => {
+            if (profile.useNormalMap && pbr.normalMap) {
+              physMat.normalMap = pbr.normalMap
+              physMat.normalScale.set(profile.normalScale, profile.normalScale)
             }
-          )
-        } else {
-          // Apply solid color
-          const newColor = new THREE.Color(color)
-          material.color.copy(newColor)
-          
-          // IMPORTANT: Remove any base textures that might darken the color
-          // This ensures buttons get the actual selected color, not a darkened version
-          if (material.map) {
-            console.log(`🔄 Removing base texture from ${mesh.name} to apply pure color`)
-            material.map = null
-          }
-          
-          // Apply professional suit fabric properties — matte, non-shiny
-          material.roughness = 0.92  // High roughness for realistic fabric without shine
-          material.metalness = 0.0   // No metalness for natural fabric appearance
-          
-          // Enable proper lighting response
-          material.flatShading = false  // Use smooth shading for realistic fabric
-          
-          // Low environment map to prevent shiny/glossy look on fabric
-          material.envMapIntensity = 0.15  // Subtle reflection only — avoids plastic look
-          
-          material.needsUpdate = true
-          console.log(`✅ Applied realistic fabric color ${color} to ${mesh.name}`)
+            if (profile.useRoughnessMap && pbr.roughnessMap) physMat.roughnessMap = pbr.roughnessMap
+            physMat.needsUpdate = true
+          })
         }
-      } catch (error) {
-        console.error(`❌ Error applying color/texture ${color} to ${mesh.name}:`, error)
+
+        const textureLoader = new THREE.TextureLoader()
+        textureLoader.load(
+          color,
+          (texture) => {
+            texture.wrapS = THREE.RepeatWrapping
+            texture.wrapT = THREE.RepeatWrapping
+            texture.repeat.set(6, 6)
+            physMat.map = texture
+            physMat.needsUpdate = true
+            console.log(`✅ Applied fabric texture to ${mesh.name}`)
+          },
+          undefined,
+          (error) => {
+            console.error(`❌ Error loading texture ${color}:`, error)
+            physMat.color.setHex(0x808080)
+            physMat.needsUpdate = true
+          }
+        )
+      } else {
+        // ── Solid colour path ─────────────────────────────────────────────────
+        const newColor = new THREE.Color(color)
+        const physMat = createFabricPhysicalMaterial(material, newColor, null, garmentType)
+
+        replaceMeshMaterial(mesh, idx, isMaterialArray, physMat)
+
+        // If PBR maps are still loading, patch them in once ready
+        const _pbrForGarment2 = getPBRForGarment(garmentType)
+        const _pbrPromiseForGarment2 = getPBRPromiseForGarment(garmentType)
+        if (!_pbrForGarment2 && _pbrPromiseForGarment2) {
+          const profile = GARMENT_PROFILES[garmentType]
+          _pbrPromiseForGarment2.then(pbr => {
+            if (profile.useNormalMap && pbr.normalMap) {
+              physMat.normalMap = pbr.normalMap
+              physMat.normalScale.set(profile.normalScale, profile.normalScale)
+            }
+            if (profile.useRoughnessMap && pbr.roughnessMap) physMat.roughnessMap = pbr.roughnessMap
+            physMat.needsUpdate = true
+          })
+        }
+
+        physMat.needsUpdate = true
+        console.log(`✅ Applied fabric material to ${mesh.name}: ${color}`)
       }
+    } catch (error) {
+      console.error(`❌ Error applying color/texture ${color} to ${mesh.name}:`, error)
     }
   })
 }
@@ -432,6 +711,11 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number =
  * @param color - Either a hex color string or a texture path
  * @param baseColor - Optional base color multiplier for textures (default: 0xaaaaaa for jackets)
  */
-export function applyFabricCustomization(mesh: THREE.Mesh, color: string, baseColor?: number) {
-  applyMaterialColor(mesh, color, baseColor)
+export function applyFabricCustomization(
+  mesh: THREE.Mesh,
+  color: string,
+  baseColor?: number,
+  garmentType: GarmentType = 'jacket',
+) {
+  applyMaterialColor(mesh, color, baseColor, garmentType)
 }

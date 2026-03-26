@@ -7,7 +7,11 @@ import * as THREE from "three"
 import { useJacketPart, preloadAllParts } from "@/lib/3d/jacket-part-loader"
 import { useJacketPerformance } from "@/lib/3d/hooks/use-jacket-performance"
 import { jacketConfigs } from "@/lib/3d/configs"
+import { preloadFabricPBR } from "@/lib/3d/customization-utils"
 import type { BasicJacketCustomization } from "@/types/configurator"
+
+// Kick off PBR texture download as early as possible
+if (typeof window !== 'undefined') preloadFabricPBR()
 
 interface ModularJacketViewerProps {
   customizations?: BasicJacketCustomization
@@ -644,31 +648,35 @@ export default function ModularJacketViewer({
             </>
           )}
           
-          {/* Professional lighting setup for high-quality suit fabric */}
-          {/* Soft ambient light for base illumination - matched to pants viewer */}
-          <ambientLight intensity={0.6} />
-          
-          {/* Main key light - from top-front for realistic fabric shading */}
+          {/* ── Lighting: tuned for natural textile appearance ─────────────── */}
+
+          {/* Soft ambient — even base without strong directionality */}
+          <ambientLight intensity={0.55} />
+
+          {/* Key light: reduced intensity + repositioned for gentler fabric shadows */}
           <directionalLight
-            position={[5, 8, 5]}
-            intensity={1.0}
+            position={[3, 7, 4]}
+            intensity={0.72}
             castShadow
             shadow-mapSize-width={2048}
             shadow-mapSize-height={2048}
             shadow-bias={-0.0001}
           />
-          
-          {/* Fill light from the side to reduce harsh shadows */}
-          <directionalLight position={[-5, 3, -3]} intensity={0.4} />
-          
-          {/* Rim light from behind for depth and professional highlight */}
-          <directionalLight position={[0, 3, -5]} intensity={0.2} />
-          
-          {/* Bottom fill light to prevent completely dark areas */}
-          <hemisphereLight args={['#ffffff', '#444444', 0.25]} />
-          
-          {/* Environment for professional sheen - "studio" preset for suit-like appearance */}
-          <Environment preset="studio" environmentIntensity={0.2} />
+
+          {/* Wide fill from the opposite side — softens shadow terminator on fabric */}
+          <directionalLight position={[-4, 4, 2]} intensity={0.5} />
+
+          {/* Gentle overhead fill to simulate soft studio top light */}
+          <directionalLight position={[0, 8, 1]} intensity={0.28} />
+
+          {/* Slight rim from behind for shoulder/collar separation */}
+          <directionalLight position={[0, 2, -4]} intensity={0.18} />
+
+          {/* Hemisphere: warm sky / cool ground tones for cloth-friendly colour cast */}
+          <hemisphereLight args={['#f4efe8', '#3a3a3a', 0.30]} />
+
+          {/* Studio environment — lowered so it adds subtle sheen without gloss */}
+          <Environment preset="studio" environmentIntensity={0.12} />
           <OrbitControls
             enablePan={true}
             enableZoom={true}

@@ -9,6 +9,8 @@ import { StandardJacketViewer } from "./standard-jacket-viewer"
 import { ModularJacketViewer, BasicJacketCustomization } from "./modular-jacket-viewer"
 import ModularJacketViewerR3F from "./modular-jacket-viewer-r3f"
 import ModularPantsViewerR3F from "./modular-pants-viewer-r3f"
+import ModularShirtViewerR3F from "./modular-shirt-viewer-r3f"
+import type { BasicShirtCustomization } from "./modular-shirt-viewer-r3f"
 
 interface ModelViewerProps {
   modelUrl: string
@@ -21,6 +23,7 @@ interface ModelViewerProps {
   useModularJacket?: boolean  // Flag for modular jacket system (NEW)
   cameraRotationY?: number  // Camera Y-axis rotation for viewing different parts (e.g., back view for vents)
   cameraTargetY?: number  // Camera vertical target position (Y-axis look-at height)
+  cameraZoom?: number  // Camera distance override for zoom
 }
 
 // Enhanced 3D Model Component with ALL customization support
@@ -1297,6 +1300,7 @@ export function ModelViewer({
   useModularJacket = true, // Default to modular jacket for jackets
   cameraRotationY = 0, // Camera Y-axis rotation
   cameraTargetY = 0, // Camera vertical target position
+  cameraZoom, // Camera distance override
 }: ModelViewerProps) {
   const [error, setError] = useState<string | null>(null)
 
@@ -1308,6 +1312,38 @@ export function ModelViewer({
   }
 
   const modelType = getModelType(modelUrl)
+
+  // If using modular shirt system
+  if (useModularJacket && modelType === "sample-shirt") {
+    const shirtCustomizations: BasicShirtCustomization = {
+      fabricColor: customizations.fabricColor || customizations.color || "#FFFFFF",
+      fabricType: customizations.fabricType || "cotton",
+      collarStyle: customizations.collarStyle || customizations["collar-style"] || "kent-collar",
+      sleeveStyle: customizations.sleeveStyle || customizations["sleeve-style"] || "full-sleeve",
+      cuffStyle: customizations.cuffStyle || customizations["cuff-style"] || "rounded-cuff",
+      chestPocket: customizations.chestPocket || customizations["chest-pocket"] || "no-pocket",
+      frontStyle: customizations.frontStyle || customizations["front-style"] || "box-placket",
+      contrastEnabled: customizations.contrastEnabled || customizations["contrast-enabled"] || false,
+      contrastCollarTexture: customizations.contrastCollarTexture || customizations["contrast-collar-texture"],
+      contrastCuffTexture: customizations.contrastCuffTexture || customizations["contrast-cuff-texture"],
+      buttonColor: customizations.buttonColor || customizations["button-color"] || "#333333",
+    }
+
+    console.log("👔 ModelViewer passing to ModularShirtViewerR3F:", {
+      shirtCustomizations,
+      allCustomizationsReceived: customizations,
+    })
+
+    return (
+      <ModularShirtViewerR3F
+        customizations={shirtCustomizations}
+        className={className}
+        cameraRotationY={cameraRotationY}
+        cameraTargetY={cameraTargetY}
+        cameraZoom={cameraZoom}
+      />
+    )
+  }
 
   // If using modular pants system
   if (useModularJacket && modelType === "sample-pants") {
