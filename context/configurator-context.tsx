@@ -4,8 +4,6 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from "
 import type { ConfiguratorMode } from "@/components/configurator/configurator-layout"
 import type { FabricOption, StyleOption, SizeOption, MeasurementSet } from "@/types/configurator"
 import { calculatePrice } from "@/lib/price-calculator"
-import { getFabrics } from "@/lib/firebase/fabric-service"
-import { getStyleOptions } from "@/lib/firebase/style-service"
 import {
   saveGuestCustomization,
   saveUserCustomization,
@@ -128,19 +126,11 @@ export function ConfiguratorProvider({ children, initialMode, productId }: Confi
   // Define total steps based on mode
   const totalSteps = mode === "MTM" ? 5 : 4 // MTM: Fabric, Style, Fit/Body, Measurements, Summary; MTO: Fabric, Style, Fit/Body, Size, Summary
 
-  // Load data from Firebase on initial render
+  // Load data on initial render
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true)
-
-        // Load fabrics from Firebase
-        const fabricData = await getFabrics()
-        setFabrics(fabricData)
-
-        // Load style options from Firebase
-        const styleData = await getStyleOptions()
-        setStyleOptions(styleData)
 
         // Check for a customization to resume from session storage
         const resumeData = sessionStorage.getItem("resume_customization")
@@ -153,18 +143,13 @@ export function ConfiguratorProvider({ children, initialMode, productId }: Confi
         }
       } catch (error) {
         console.error("Error loading data:", error)
-        toast({
-          title: "Error",
-          description: "Failed to load customization data. Please try again.",
-          variant: "destructive",
-        })
       } finally {
         setLoading(false)
       }
     }
 
     loadData()
-  }, [toast])
+  }, [])
 
   // Update selected styles
   const setStyleOption = (category: string, option: StyleOption) => {

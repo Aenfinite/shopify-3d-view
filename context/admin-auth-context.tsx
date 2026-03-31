@@ -1,6 +1,8 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { supabase } from "@/lib/supabase/client"
+import type { User } from "@supabase/supabase-js"
 
 interface AdminUser {
   id: string
@@ -11,8 +13,9 @@ interface AdminUser {
 
 interface AdminAuthContextType {
   user: AdminUser | null
-  login: (user: AdminUser) => void
-  logout: () => void
+  supabaseUser: User | null
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>
+  signOut: () => Promise<void>
   isAuthenticated: boolean
   loading: boolean
 }
@@ -21,41 +24,106 @@ const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefin
 
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AdminUser | null>(null)
+  const [supabaseUser, setSupabaseUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Check for existing session on mount
   useEffect(() => {
-    const checkAuth = () => {
+    // Check current session
+    const checkSession = async () => {
       try {
-        const savedUser = localStorage.getItem("admin-user")
-        if (savedUser) {
-          setUser(JSON.parse(savedUser))
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user) {
+          setSupabaseUser(session.user)
+          await loadAdminProfile(session.user.id)
         }
       } catch (error) {
-        console.error("Error checking auth:", error)
-        localStorage.removeItem("admin-user")
+        console.error("Error checking session:", error)
       } finally {
         setLoading(false)
       }
     }
 
-    checkAuth()
+    checkSession()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (session?.user) {
+          setSupabaseUser(session.user)
+          await loadAdminProfile(session.user.id)
+        } else {
+          setSupabaseUser(null)
+          setUser(null)
+        }
+      }
+    )
+
+    return () => subscription.unsubscribe()
   }, [])
 
-  const login = (userData: AdminUser) => {
-    setUser(userData)
-    localStorage.setItem("admin-user", JSON.stringify(userData))
+  const loadAdminProfile = async (authUserId: string) => {
+    const { data, error } = await supabase
+      .from("admin_users")
+      .select("*")
+      .eq("auth_user_id", authUserId)
+      .single()
+
+    if (error || !data) {
+      // User exists in auth but not in admin_users table
+      setUser(null)
+      return
+    }
+
+    setUser({
+      id: data.id,
+      email: data.email,
+      name: data.name,
+      role: data.role,
+    })
   }
 
-  const logout = () => {
+  const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (error) {
+      return { error: error.message }
+    }
+
+    if (data.user) {
+      // Verify user is an admin
+      const { data: adminData, error: adminError } = await supabase
+        .from("admin_users")
+        .select("*")
+        .eq("auth_user_id", data.user.id)
+        .single()
+
+      if (adminError || !adminData) {
+        await supabase.auth.signOut()
+        return { error: "You do not have admin access." }
+      }
+
+      setUser({
+        id: adminData.id,
+        email: adminData.email,
+        name: adminData.name,
+        role: adminData.role,
+      })
+    }
+
+    return { error: null }
+  }
+
+  const signOut = async () => {
+    await supabase.auth.signOut()
     setUser(null)
-    localStorage.removeItem("admin-user")
+    setSupabaseUser(null)
   }
 
-  const value = {
+  const value: AdminAuthContextType = {
     user,
-    login,
-    logout,
+    supabaseUser,
+    signIn,
+    signOut,
     isAuthenticated: !!user,
     loading,
   }

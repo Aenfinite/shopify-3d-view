@@ -1,6 +1,4 @@
-import { db } from "@/lib/firebase/firebase-config"
-import { collection, getDocs, doc, setDoc } from "firebase/firestore"
-
+// Firebase removed — translations are managed as static files.
 // Define supported languages
 export const supportedLanguages = [
   { code: "en", name: "English" },
@@ -30,56 +28,14 @@ export interface Translation {
 
 // Get all translations
 export async function getAllTranslations(): Promise<Translation[]> {
-  try {
-    const translationsCollection = collection(db, "translations")
-    const translationsSnapshot = await getDocs(translationsCollection)
-
-    if (translationsSnapshot.empty) {
-      return []
-    }
-
-    return translationsSnapshot.docs.map((doc) => ({
-      key: doc.id,
-      ...doc.data(),
-    })) as Translation[]
-  } catch (error) {
-    console.error("Error fetching translations:", error)
-    return []
-  }
+  return []
 }
 
-// Get translations by section
 export async function getTranslationsBySection(section: string): Promise<Translation[]> {
-  try {
-    const translationsCollection = collection(db, "translations")
-    const translationsSnapshot = await getDocs(translationsCollection)
-
-    if (translationsSnapshot.empty) {
-      return []
-    }
-
-    return translationsSnapshot.docs
-      .map((doc) => ({
-        key: doc.id,
-        ...doc.data(),
-      }))
-      .filter((translation) => translation.section === section) as Translation[]
-  } catch (error) {
-    console.error(`Error fetching translations for section €{section}:`, error)
-    return []
-  }
+  return []
 }
 
-// Save a translation
-export async function saveTranslation(translation: Translation): Promise<void> {
-  try {
-    const { key, ...data } = translation
-    await setDoc(doc(db, "translations", key), data)
-  } catch (error) {
-    console.error("Error saving translation:", error)
-    throw error
-  }
-}
+export async function saveTranslation(translation: Translation): Promise<void> {}
 
 // Get translations for a specific language
 export async function getTranslationsForLanguage(languageCode: string): Promise<Record<string, string>> {

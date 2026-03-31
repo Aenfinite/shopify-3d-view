@@ -68,48 +68,23 @@ const SAMPLE_PRODUCTS: Product[] = [
 ]
 
 export async function getProductById(productId: string): Promise<Product | null> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 100))
-
   const product = SAMPLE_PRODUCTS.find((p) => p.id === productId)
   return product || null
 }
 
 export async function getCustomizationOptions(productId: string): Promise<CustomizationOption[]> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 100))
-
   const options = SAMPLE_PRODUCTS_WITH_CUSTOMIZATION[productId as keyof typeof SAMPLE_PRODUCTS_WITH_CUSTOMIZATION]
   return options || []
 }
 
 export async function saveCustomizationOptions(productId: string, options: CustomizationOption[]): Promise<void> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 200))
-
-  // In a real app, this would save to Firebase
-  console.log(`Saving customization options for product €{productId}:`, options)
+  console.log(`Saving customization options for product ${productId}:`, options)
 }
 
 export async function getProductsWithCustomization(): Promise<Product[]> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 100))
-
   return SAMPLE_PRODUCTS.filter((product) => Object.keys(SAMPLE_PRODUCTS_WITH_CUSTOMIZATION).includes(product.id))
 }
 
 export async function getAllProducts(): Promise<Product[]> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 100))
-
   return SAMPLE_PRODUCTS
-}
-
-export function getSystemStatus() {
-  return {
-    firebaseConnected: false,
-    usingMockData: true,
-    totalProducts: SAMPLE_PRODUCTS.length,
-    lastSync: new Date().toISOString()
-  }
 }

@@ -1,21 +1,15 @@
-import { FabricList } from "@/components/admin/fabrics/fabric-list"
-import { Button } from "@/components/ui/button"
-import { PlusCircle } from "lucide-react"
-import Link from "next/link"
+import { FabricManager } from "@/components/admin/fabrics/fabric-manager"
 
 export default function FabricsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Fabrics</h1>
-        <Button asChild>
-          <Link href="/admin/fabrics/new">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Fabric
-          </Link>
-        </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Fabric Management</h1>
+          <p className="text-muted-foreground mt-1">Manage fabrics for all products. Add cotton, linen, or polyester fabrics with 3D preview.</p>
+        </div>
       </div>
-      <FabricList />
+      <FabricManager />
     </div>
   )
 }

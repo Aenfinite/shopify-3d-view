@@ -24,6 +24,7 @@ import {
 import { ModelViewer } from "@/components/3d-model-viewer"
 import { motion, AnimatePresence } from "framer-motion"
 import { getCustomizationOptions } from "@/lib/firebase/unified-product-service"
+import { getFabricsByProduct, type FabricRow } from "@/lib/supabase/service"
 import { MeasurementStep } from "./steps/measurement-step"
 import { JacketLiningStep } from "./steps/jacket-lining-step"
 import { LiningSelectionStep } from "./steps/lining-selection-step"
@@ -132,6 +133,7 @@ export function UniversalConfigurator({
   productType = "garment",
 }: UniversalConfiguratorProps) {
   const [customizationOptions, setCustomizationOptions] = useState<CustomizationOption[]>([])
+  const [supabaseFabrics, setSupabaseFabrics] = useState<FabricRow[]>([]) // for type-filtered color step
   const [currentStep, setCurrentStep] = useState(0)
   const [configuratorState, setConfiguratorState] = useState<ConfiguratorState>({})
   const [measurementData, setMeasurementData] = useState<MeasurementData>({
@@ -266,6 +268,78 @@ export function UniversalConfigurator({
         }
 
         setCustomizationOptions(options)
+
+        // ── Build fabric-type & fabric-color steps entirely from Supabase ─────────
+        // Admin adds fabrics via the Fabric Wizard (Supabase). Those fabrics are
+        // tagged with fabric_type (cotton | linen | polyester). We:
+        //  1. Derive the distinct type-categories and use them as fabric-type values
+        //  2. Store ALL supabase fabrics so getFilteredColors() can filter them
+        //  3. Create/replace the fabric-color option with ALL supabase fabrics
+        // Products that had hard-coded Firebase fabric values are overwritten here.
+        try {
+          const dbFabrics: FabricRow[] = await getFabricsByProduct(productId)
+          if (dbFabrics.length > 0) {
+            setSupabaseFabrics(dbFabrics)
+
+            // ── Step 1: fabric-type → category cards ──────────────────────────
+            const TYPE_LABELS: Record<string, string> = {
+              cotton: "Cotton (Poplin)",
+              linen: "Linen",
+              polyester: "Polyester",
+            }
+            const distinctTypes = Array.from(new Set(dbFabrics.map((f) => f.fabric_type)))
+            const fabricTypeValues = distinctTypes.map((t) => ({
+              id: t,
+              name: TYPE_LABELS[t] || t,
+              type: "texture" as const,
+              value: t,
+              price: 0,
+            }))
+
+            const fabricTypeIdx = options.findIndex((o) => o.id === "fabric-type")
+            if (fabricTypeIdx !== -1) {
+              options[fabricTypeIdx].values = fabricTypeValues
+            } else {
+              options.unshift({
+                id: "fabric-type",
+                name: "Select Fabric Type",
+                type: "texture",
+                category: "fabric",
+                values: fabricTypeValues,
+              })
+            }
+
+            // ── Step 2: fabric-color → all Supabase fabrics (filtered at render) ─
+            const fabricColorValues = dbFabrics.map((f) => ({
+              id: f.id,
+              name: f.name,
+              type: "color" as const,
+              value: f.color_hex || f.image_url || f.fabric_type,
+              price: f.price,
+              thumbnail: f.thumbnail_url || f.image_url || undefined,
+              color: f.color_hex || undefined,
+            }))
+
+            const fabricColorIdx = options.findIndex((o) => o.id === "fabric-color")
+            if (fabricColorIdx !== -1) {
+              options[fabricColorIdx].values = fabricColorValues
+            } else {
+              const insertAfter = options.findIndex((o) => o.id === "fabric-type")
+              options.splice(insertAfter + 1, 0, {
+                id: "fabric-color",
+                name: "Select Fabric",
+                type: "color",
+                category: "fabric",
+                values: fabricColorValues,
+              })
+            }
+
+            setCustomizationOptions([...options])
+          }
+        } catch (supaErr) {
+          // Non-fatal — Firebase options still display for non-fabric steps
+          console.warn("Could not load Supabase fabrics for product page:", supaErr)
+        }
 
         if (options.length === 0) {
           setError(`No customization options found for product ${productId}`)
@@ -1200,6 +1274,11 @@ export function UniversalConfigurator({
   // Fabric helper functions
   const getFabricDescription = (fabricId: string): string => {
     const descriptions: { [key: string]: string } = {
+      // Supabase fabric-type categories
+      "cotton": "Smooth, breathable, classic weave — everyday comfort",
+      "linen": "Textured, natural, relaxed feel — lightweight elegance",
+      "polyester": "Smooth, shiny, wrinkle-resistant — easy-care performance",
+      // Legacy hard-coded IDs
       "wool-blend": "Refined for business, Comfortable for everyday wear",
       "premium-wool": "Refined for business, Comfortable for everyday wear",
       "washable-wool": "Refined for business or when thoughtfully matched with jeans or chinos for a smarter look"
@@ -1209,6 +1288,9 @@ export function UniversalConfigurator({
 
   const getFabricWeight = (fabricId: string): string => {
     const weights: { [key: string]: string } = {
+      "cotton": "Light to medium",
+      "linen": "Light",
+      "polyester": "Light",
       "wool-blend": "Medium",
       "premium-wool": "Medium to light",
       "washable-wool": "Light"
@@ -1218,6 +1300,9 @@ export function UniversalConfigurator({
 
   const getFabricSeason = (fabricId: string): string => {
     const seasons: { [key: string]: string } = {
+      "cotton": "Spring / Summer",
+      "linen": "Spring / Summer",
+      "polyester": "Year round",
       "wool-blend": "Year round",
       "premium-wool": "Year round",
       "washable-wool": "Year round"
@@ -1226,16 +1311,22 @@ export function UniversalConfigurator({
   }
 
   const getFabricAvailableColors = (fabricId: string): string[] => {
-    // All 20 fabric textures from public/fabrics folder
+    // When Supabase fabrics are loaded, return only the IDs that match this type
+    if (supabaseFabrics.length > 0) {
+      return supabaseFabrics
+        .filter((f) => f.fabric_type === fabricId)
+        .map((f) => f.id)
+    }
+    // Fallback: legacy hard-coded IDs for old Firebase-only products
     const textureOptions = ["texture-1", "texture-2", "texture-3", "texture-4", "texture-5", "texture-6", "texture-7", "texture-8", "texture-9", "texture-10", "texture-11", "texture-12", "texture-13", "texture-14", "texture-15", "texture-16", "texture-17", "texture-18", "texture-19", "texture-20"]
-
     const fabricColors: { [key: string]: string[] } = {
-      // 78% Terylene, 18% Rayon, 4% Spandex - Performance Fabric (15 colors)
       "wool-blend": ["texture-1", "texture-2", "texture-3", "texture-4", "texture-5", "texture-6", "texture-7", "texture-8", "texture-9", "texture-10", "texture-11", "texture-12", "texture-13", "texture-14", "texture-15"],
-      // 97% Merino Wool, 3% Lycra - Superfine Merino with Lycra (2 colors)
       "premium-wool": ["texture-16", "texture-17"],
-      // 70% Merino Wool, 30% Polyester - Superfine Merino Washable (3 colors)
-      "washable-wool": ["texture-18", "texture-19", "texture-20"]
+      "washable-wool": ["texture-18", "texture-19", "texture-20"],
+      // New canonical IDs (cotton=premium wool/poly textures, linen=merino/lycra, polyester=poly visc)
+      "polyester": ["texture-1", "texture-2", "texture-3", "texture-4", "texture-5", "texture-6", "texture-7", "texture-8", "texture-9", "texture-10", "texture-11", "texture-12", "texture-13", "texture-14", "texture-15"],
+      "linen": ["texture-16", "texture-17"],
+      "cotton": ["texture-18", "texture-19", "texture-20"]
     }
     return fabricColors[fabricId] || textureOptions
   }
@@ -1244,7 +1335,10 @@ export function UniversalConfigurator({
     const features: { [key: string]: string[] } = {
       "wool-blend": ["Breathable", "Wrinkle Resistant", "Fast Drying", "Moisture Wicking", "4-Way Stretch", "Mechanical Stretch", "Machine washable"],
       "premium-wool": ["Breathable", "Wrinkle Resistant", "Fast Drying", "Moisture Wicking", "4-Way Stretch"],
-      "washable-wool": ["Breathable", "Wrinkle Resistant", "Fast Drying", "Moisture Wicking", "Mechanical Stretch", "Machine washable"]
+      "washable-wool": ["Breathable", "Wrinkle Resistant", "Fast Drying", "Moisture Wicking", "Mechanical Stretch", "Machine washable"],
+      "cotton": ["Breathable", "Machine washable"],
+      "linen": ["Breathable", "Fast Drying"],
+      "polyester": ["Wrinkle Resistant", "Fast Drying", "Moisture Wicking", "Machine washable"]
     }
     return features[fabricId] || []
   }
@@ -1321,6 +1415,72 @@ export function UniversalConfigurator({
         waterRepellent: false,
         odorResistant: false,
         uvProtection: false
+      },
+      "cotton": {
+        tone: "Soft & classic",
+        pattern: "Solid",
+        weave: "Plain / Poplin",
+        category: "Natural",
+        seasonality: "Spring / Summer",
+        weight: "Light to medium",
+        composition: "100% Cotton (Poplin)",
+        shine: "Matte",
+        opacity: "High opacity",
+        stretch: "None",
+        careInstructions: "Machine wash warm, tumble dry low",
+        suggestedOccasion: "Everyday wear, business casual, formal shirts",
+        breathable: true,
+        wrinkleResistant: false,
+        fastDrying: false,
+        moistureWicking: false,
+        machineWashable: true,
+        waterRepellent: false,
+        odorResistant: false,
+        uvProtection: false
+      },
+      "linen": {
+        tone: "Natural & textured",
+        pattern: "Plain",
+        weave: "Plain",
+        category: "Natural",
+        seasonality: "Spring / Summer",
+        weight: "Light",
+        composition: "100% Linen",
+        shine: "Slight sheen",
+        opacity: "Semi-opaque",
+        stretch: "None",
+        careInstructions: "Hand wash or machine wash gentle, air dry",
+        suggestedOccasion: "Resort, smart casual, summer occasions",
+        breathable: true,
+        wrinkleResistant: false,
+        fastDrying: true,
+        moistureWicking: false,
+        machineWashable: false,
+        waterRepellent: false,
+        odorResistant: false,
+        uvProtection: false
+      },
+      "polyester": {
+        tone: "Smooth & uniform",
+        pattern: "Solid",
+        weave: "Twill",
+        category: "Performance",
+        seasonality: "Year round",
+        weight: "Light",
+        composition: "100% Polyester",
+        shine: "Slight sheen",
+        opacity: "Very opaque",
+        stretch: "Mechanical Stretch",
+        careInstructions: "Machine wash cold, tumble dry low",
+        suggestedOccasion: "Travel, business, active lifestyle",
+        breathable: false,
+        wrinkleResistant: true,
+        fastDrying: true,
+        moistureWicking: true,
+        machineWashable: true,
+        waterRepellent: false,
+        odorResistant: false,
+        uvProtection: false
       }
     }
     return specs[fabricId] || {}
@@ -1340,9 +1500,16 @@ export function UniversalConfigurator({
     }
 
     // If fabric type is selected, filter colors
-    const availableColorIds = getFabricAvailableColors(selectedFabricType)
     return currentStepData?.values
-      .filter(v => availableColorIds.includes(v.id))
+      .filter(v => {
+        // Supabase case: filter by Supabase fabric IDs
+        if (supabaseFabrics.length > 0) {
+          return getFabricAvailableColors(selectedFabricType).includes(v.id)
+        }
+        // Sample file case: use fabricType tag if present, else show for any type
+        const tagged = (v as any).fabricType
+        return tagged ? tagged === selectedFabricType : true
+      })
       .map(v => ({
         id: v.id,
         name: v.name,
@@ -1769,12 +1936,17 @@ export function UniversalConfigurator({
                   <FabricTypeSelector
                     selectedFabricType={configuratorState["fabric-type"]?.valueId}
                     onFabricSelect={(fabricId, price) => {
-                      selectOption(
-                        "fabric-type",
-                        fabricId,
-                        price,
-                        fabricId
-                      )
+                      // Clear previous color selection when fabric type changes
+                      if (configuratorState["fabric-type"]?.valueId !== fabricId) {
+                        setConfiguratorState(prev => {
+                          const next = { ...prev }
+                          delete next["fabric-color"]
+                          return next
+                        })
+                      }
+                      selectOption("fabric-type", fabricId, price, fabricId)
+                      // Auto-advance to the fabric-color step
+                      nextStep()
                     }}
                     fabrics={currentStepData.values.map(value => ({
                       id: value.id,
@@ -1784,7 +1956,13 @@ export function UniversalConfigurator({
                       description: getFabricDescription(value.id),
                       weight: getFabricWeight(value.id),
                       season: getFabricSeason(value.id),
-                      availableColors: getFabricAvailableColors(value.id),
+                      availableColors: (() => {
+                        if (supabaseFabrics.length > 0) return getFabricAvailableColors(value.id)
+                        const colorOpt = customizationOptions.find(o => o.id === "fabric-color")
+                        return colorOpt
+                          ? colorOpt.values.filter(v => (v as any).fabricType === value.id).map(v => v.id)
+                          : getFabricAvailableColors(value.id)
+                      })(),
                       performanceFeatures: getFabricPerformanceFeatures(value.id),
                       technicalSpecs: getFabricTechnicalSpecs(value.id)
                     }))}

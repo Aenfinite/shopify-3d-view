@@ -18,12 +18,8 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const { login } = useAdminAuth()
+  const { signIn } = useAdminAuth()
   const router = useRouter()
-
-  // Demo credentials
-  const DEMO_EMAIL = "admin@shopify-mtm.com"
-  const DEMO_PASSWORD = "admin123"
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,34 +27,18 @@ export default function AdminLoginPage() {
     setLoading(true)
 
     try {
-      // Mock authentication - check against demo credentials
-      if (email === DEMO_EMAIL && password === DEMO_PASSWORD) {
-        // Simulate API call delay
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+      const { error: signInError } = await signIn(email, password)
 
-        // Mock successful login
-        login({
-          id: "admin-001",
-          email: DEMO_EMAIL,
-          name: "Demo Admin",
-          role: "admin",
-        })
-
-        router.push("/admin")
+      if (signInError) {
+        setError(signInError)
       } else {
-        setError("Invalid credentials. Use the demo credentials below.")
+        router.push("/admin")
       }
     } catch (err) {
       setError("Login failed. Please try again.")
     } finally {
       setLoading(false)
     }
-  }
-
-  const fillDemoCredentials = () => {
-    setEmail(DEMO_EMAIL)
-    setPassword(DEMO_PASSWORD)
-    setError("")
   }
 
   return (
@@ -131,31 +111,6 @@ export default function AdminLoginPage() {
                 {loading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
-
-            {/* Demo Credentials Section */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="w-4 h-4 text-blue-600" />
-                <h3 className="font-semibold text-blue-900">Demo Credentials</h3>
-              </div>
-              <div className="space-y-1 text-sm text-blue-800">
-                <p>
-                  <strong>Email:</strong> {DEMO_EMAIL}
-                </p>
-                <p>
-                  <strong>Password:</strong> {DEMO_PASSWORD}
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={fillDemoCredentials}
-                className="mt-3 w-full border-blue-300 text-blue-700 hover:bg-blue-100 bg-transparent"
-              >
-                Use Demo Credentials
-              </Button>
-            </div>
 
             {/* Features List */}
             <div className="mt-6 text-center">

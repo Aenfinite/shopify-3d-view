@@ -68,13 +68,25 @@ function applyShirtFabric(
       s => meshName.includes(s) || matNames.some(n => n.includes(s))
     )
     if (isNonFabric) {
+      // Distinguish button body from thread/eyelet so buttons stand out from fabric
+      const isButtonBody = ['bottone', 'gemelli'].some(
+        s => meshName.includes(s) || matNames.some(n => n.includes(s))
+      )
       const mats = Array.isArray(child.material)
         ? (child.material as THREE.Material[])
         : [child.material as THREE.Material]
       mats.forEach(m => {
         if (m instanceof THREE.MeshStandardMaterial) {
-          m.roughness = Math.max(m.roughness, 0.5)
-          m.envMapIntensity = 0.1
+          if (isButtonBody) {
+            // Buttons: pearl-like finish — lower roughness + soft sheen separates them visually
+            m.roughness = 0.30
+            m.metalness = Math.max(m.metalness, 0.08)
+            m.envMapIntensity = 0.45
+          } else {
+            // Thread, eyelets, embroidery: stay matte, blend with fabric
+            m.roughness = Math.max(m.roughness, 0.55)
+            m.envMapIntensity = 0.08
+          }
           m.needsUpdate = true
         }
       })
@@ -471,19 +483,22 @@ export default function ModularShirtViewerR3F({
         <color attach="background" args={["#f5f5f5"]} />
         <fog attach="fog" args={["#f5f5f5", 15, 40]} />
 
-        {/* Lighting — matched to pants viewer for consistency */}
-        <ambientLight intensity={0.9} />
+        {/* Lighting — soft studio setup for premium cotton look.
+             40% ambient reduction vs before creates real shadow depth.
+             Key from top-right, warm hemisphere, studio env = no harsh reflections. */}
+        <ambientLight intensity={0.50} />
         <directionalLight
-          position={[5, 8, 5]}
-          intensity={1.2}
+          position={[3, 8, 4]}
+          intensity={0.80}
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
           shadow-bias={-0.0001}
         />
-        <directionalLight position={[-5, 3, -3]} intensity={0.6} />
-        <directionalLight position={[0, 3, -5]} intensity={0.3} />
-        <hemisphereLight args={["#ffffff", "#666666", 0.35]} />
+        <directionalLight position={[-3, 5, 2]} intensity={0.45} />
+        <directionalLight position={[0, 4, -4]} intensity={0.20} />
+        <hemisphereLight args={["#f4efe8", "#3a3a3a", 0.28]} />
+        <Environment preset="studio" environmentIntensity={0.10} />
 
         <Suspense fallback={<LoadingOverlay />}>
           <ShirtModel customizations={customizations} />

@@ -7,15 +7,8 @@ import {
   LayoutDashboard,
   Shirt,
   Palette,
-  Scissors,
-  DollarSign,
-  Ruler,
   Settings,
-  Globe,
-  Users,
-  ShoppingCart,
   LogOut,
-  Bug,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -28,16 +21,9 @@ export function AdminSidebar() {
 
   const navigation = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { name: "Garments", href: "/admin/garments", icon: Shirt },
+    { name: "Products", href: "/admin/products", icon: Shirt },
     { name: "Fabrics", href: "/admin/fabrics", icon: Palette },
-    { name: "Style Options", href: "/admin/styles", icon: Scissors },
-    { name: "Pricing Rules", href: "/admin/pricing", icon: DollarSign },
-    { name: "Measurement Guides", href: "/admin/guides", icon: Ruler },
-    { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
-    { name: "Customers", href: "/admin/customers", icon: Users },
-    { name: "Translations", href: "/admin/translations", icon: Globe },
     { name: "Settings", href: "/admin/settings", icon: Settings },
-    { name: "Debug", href: "/admin/debug", icon: Bug },
   ]
 
   return (

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { getProducts, type Product } from "@/lib/firebase/product-service"
+import { getAllProducts, type Product } from "@/lib/firebase/unified-product-service"
 import { Loader2, ShoppingCart, Eye } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -26,7 +26,10 @@ export default function ProductList({ category, limit = 12 }: ProductListProps) 
         setError(null)
 
         console.log("Fetching products with category:", category)
-        const { products: fetchedProducts } = await getProducts(category, undefined, limit)
+        const allProducts = await getAllProducts()
+        const fetchedProducts = category
+          ? allProducts.filter((p) => p.category === category)
+          : allProducts.slice(0, limit)
 
         console.log("Fetched products:", fetchedProducts.length)
         setProducts(fetchedProducts)
@@ -95,36 +98,24 @@ export default function ProductList({ category, limit = 12 }: ProductListProps) 
             <CardHeader className="p-0">
               <div className="aspect-[3/4] relative overflow-hidden rounded-t-lg">
                 <Image
-                  src={product.imageUrl || "/placeholder.svg?height=400&width=300"}
+                  src={product.images?.[0] || "/placeholder.svg?height=400&width=300"}
                   alt={product.name}
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-300"
                 />
-                {product.customizable && <Badge className="absolute top-2 left-2 bg-primary">Customizable</Badge>}
-                {!product.available && (
-                  <Badge variant="secondary" className="absolute top-2 right-2">
-                    Out of Stock
-                  </Badge>
-                )}
+                {!!(product as any).customizable && <Badge className="absolute top-2 left-2 bg-primary">Customizable</Badge>}
               </div>
             </CardHeader>
             <CardContent className="p-4">
               <CardTitle className="text-lg mb-2 line-clamp-1">{product.name}</CardTitle>
               <CardDescription className="text-sm mb-3 line-clamp-2">{product.description}</CardDescription>
               <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold">€{product.price.toFixed(2)}</span>
+                <span className="text-2xl font-bold">€{product.basePrice.toFixed(2)}</span>
                 <Badge variant="outline" className="capitalize">
                   {product.category}
                 </Badge>
               </div>
-              {product.fabricOptions && product.fabricOptions.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-xs text-muted-foreground">
-                    Fabrics: {product.fabricOptions.slice(0, 2).join(", ")}
-                    {product.fabricOptions.length > 2 && ` +€{product.fabricOptions.length - 2} more`}
-                  </p>
-                </div>
-              )}
+
             </CardContent>
             <CardFooter className="p-4 pt-0 flex gap-2">
               <Button asChild variant="outline" className="flex-1">
@@ -133,14 +124,14 @@ export default function ProductList({ category, limit = 12 }: ProductListProps) 
                   View Details
                 </Link>
               </Button>
-              {product.customizable ? (
+              {(product as any).customizable ? (
                 <Button asChild className="flex-1" style={{ backgroundColor: '#236495', color: '#fff' }}>
                   <Link href={`/product/€{product.id}`}>Customize Now</Link>
                 </Button>
               ) : (
-                <Button className="flex-1" disabled={!product.available}>
+                <Button className="flex-1">
                   <ShoppingCart className="mr-2 h-4 w-4" />
-                  {product.available ? "Add to Cart" : "Out of Stock"}
+                  Add to Cart
                 </Button>
               )}
             </CardFooter>

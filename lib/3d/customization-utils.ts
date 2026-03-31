@@ -357,6 +357,8 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
 interface FabricPBRMaps {
   normalMap: THREE.Texture | null
   roughnessMap: THREE.Texture | null
+  bumpMap?: THREE.Texture | null
+  aoMap?: THREE.Texture | null
 }
 
 // Jacket / Trousers — Polyhaven rough_linen
@@ -366,6 +368,50 @@ let _fabricPBRPromise: Promise<FabricPBRMaps> | null = null
 // Shirt — ambientCG Fabric019 (fine cotton weave)
 let _shirtPBR: FabricPBRMaps | null = null
 let _shirtPBRPromise: Promise<FabricPBRMaps> | null = null
+
+// Shirt surface noise — procedural canvas bump for micro-irregularity / natural variation
+let _shirtSurfaceNoise: THREE.CanvasTexture | null = null
+
+/**
+ * Generates a smooth large-scale procedural noise texture used as a bumpMap
+ * on shirt fabric. Simulates subtle fabric tension, soft folds, and micro-variation
+ * that breaks up the otherwise uniform surface. Uses overlapping sine waves at low
+ * frequency so the pattern is organic, not digital-looking.
+ */
+function getShirtSurfaceNoise(): THREE.CanvasTexture | null {
+  if (typeof document === 'undefined') return null
+  if (_shirtSurfaceNoise) return _shirtSurfaceNoise
+  const size = 512
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')!
+  const imageData = ctx.createImageData(size, size)
+  const data = imageData.data
+  for (let y = 0; y < size; y++) {
+    const ny = y / size
+    for (let x = 0; x < size; x++) {
+      const nx = x / size
+      // Three overlapping low-frequency sine waves — organic, no grid feel
+      const v1 = Math.sin(nx * 5.1 + 0.9) * Math.cos(ny * 4.3 + 1.4)
+      const v2 = Math.sin(nx * 2.7 + ny * 3.8 + 0.6)
+      const v3 = Math.cos(nx * 6.2 - ny * 2.3 + 2.5)
+      const combined = v1 * 0.5 + v2 * 0.3 + v3 * 0.2 // weighted blend
+      // ±20 gray range around mid-gray — very subtle, just enough to break uniformity
+      const gray = Math.round(128 + combined * 20)
+      const i = (y * size + x) * 4
+      data[i] = data[i + 1] = data[i + 2] = Math.max(0, Math.min(255, gray))
+      data[i + 3] = 255
+    }
+  }
+  ctx.putImageData(imageData, 0, 0)
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.wrapS = THREE.RepeatWrapping
+  tex.wrapT = THREE.RepeatWrapping
+  tex.repeat.set(1.5, 1.5) // large scale — simulates broad tension zones, not fine grain
+  _shirtSurfaceNoise = tex
+  return tex
+}
 
 function configureFabricTex(
   tex: THREE.Texture,
@@ -381,6 +427,8 @@ function configureFabricTex(
     tex.rotation = (rotationDeg * Math.PI) / 180
     tex.center.set(0.5, 0.5)
   }
+  // Required: tell GPU to re-upload with updated wrap/repeat settings
+  tex.needsUpdate = true
   return tex
 }
 
@@ -455,29 +503,55 @@ export function preloadFabricPBR(): void {
 }
 
 /**
- * Eagerly starts loading shirt-specific PBR maps (ambientCG Fabric019 — fine cotton).
+ * Eagerly starts loading shirt-specific PBR maps (Superellipse Cotton Poplin — photogrammetry-scanned).
+ * Maps: Normal (RGB), Roughness, Height (→ bumpMap), AO.
+ * Drop the purchased files into /public/textures/fabric/ with these names:
+ *   shirt_nor_gl.jpg  — Normal map (OpenGL RGB)
+ *   shirt_rough.jpg   — Roughness map
+ *   shirt_height.jpg  — Height map (used as bumpMap)
+ *   shirt_ao.jpg      — Ambient Occlusion map
  * Safe to call multiple times — only one load is ever started.
  */
 export function preloadShirtPBR(): void {
   if (_shirtPBRPromise) return
   const loader = new THREE.TextureLoader()
+  // Simple loader — configure tiling directly, NO softenTexture canvas processing.
+  // The scanned maps are already calibrated; canvas copies waste memory and cause silent failures.
+  const loadRaw = (path: string) =>
+    new Promise<THREE.Texture | null>(resolve =>
+      loader.load(
+        path,
+        t => {
+          // CRITICAL: PBR utility maps (normal, roughness, height, AO) are raw data —
+          // NOT color images. THREE.TextureLoader defaults to SRGBColorSpace which
+          // applies gamma correction and completely corrupts normal/bump values,
+          // making the surface appear perfectly flat.
+          // NoColorSpace = no gamma transform = raw float values preserved.
+          t.colorSpace = THREE.NoColorSpace
+          configureFabricTex(t, 4, 4, 0)
+          console.log(`📦 Loaded shirt map: ${path} (${t.image?.width}×${t.image?.height})`)
+          resolve(t)
+        },
+        undefined,
+        (err) => {
+          console.warn(`⚠️ Failed to load shirt map: ${path}`, err)
+          resolve(null)
+        },
+      )
+    )
   _shirtPBRPromise = Promise.all([
-    new Promise<THREE.Texture | null>(resolve =>
-      loader.load('/textures/fabric/shirt_nor_gl_1k.jpg', t => {
-        // Fine poplin: 7× repeat (smaller tiles), 22% opacity — barely-there on zoom
-        const configured = configureFabricTex(t, 7, 7, 3)
-        resolve(softenTexture(configured, 0.22, 128))
-      }, undefined, () => resolve(null))
-    ),
-    new Promise<THREE.Texture | null>(resolve =>
-      loader.load('/textures/fabric/shirt_rough_1k.jpg', t => {
-        const configured = configureFabricTex(t, 7, 7, 3)
-        resolve(softenTexture(configured, 0.22, 185))
-      }, undefined, () => resolve(null))
-    ),
-  ]).then(([normalMap, roughnessMap]) => {
-    _shirtPBR = { normalMap, roughnessMap }
-    console.log('✅ Shirt PBR maps loaded (Fabric019):', { normalMap: !!normalMap, roughnessMap: !!roughnessMap })
+    loadRaw('/textures/fabric/shirt_nor_gl.jpg'),
+    loadRaw('/textures/fabric/shirt_rough.jpg'),
+    loadRaw('/textures/fabric/shirt_height.jpg'),
+    loadRaw('/textures/fabric/shirt_ao.jpg'),
+  ]).then(([normalMap, roughnessMap, bumpMap, aoMap]) => {
+    _shirtPBR = { normalMap, roughnessMap, bumpMap, aoMap }
+    console.log('✅ Shirt PBR maps loaded (Superellipse Cotton Poplin):', {
+      normalMap: !!normalMap,
+      roughnessMap: !!roughnessMap,
+      bumpMap: !!bumpMap,
+      aoMap: !!aoMap,
+    })
     return _shirtPBR
   })
 }
@@ -528,28 +602,33 @@ const GARMENT_PROFILES: Record<GarmentType, GarmentProfile> = {
     envMapIntensity: 0.07,
   },
   shirt: {
-    // Fine poplin: texture exists only as a whisper — invisible at normal distance,
-    // barely detectable on close zoom. Almost smooth matte finish.
+    // Superellipse Cotton Poplin — photogrammetry-scanned PBR set.
+    // normalScale 0.75: scanned normal maps need strong scale to be visible.
+    // roughness 0.72: cotton matte look (Astra spec: 0.68–0.75).
     useNormalMap: true,
-    normalScale: 0.15,
+    normalScale: 0.75,
     useRoughnessMap: true,
-    roughness: 0.96,
-    sheen: 0.08,
-    sheenRoughness: 0.99,
-    envMapIntensity: 0.03,
+    roughness: 0.72,
+    sheen: 0.18,
+    sheenRoughness: 0.98,
+    envMapIntensity: 0.08,
   },
+}
+
+// Optional PBR override — lets callers (admin wizard sliders) override the hard-coded
+// GARMENT_PROFILES values with user-configured values from pbr_settings.
+export interface PBROverride {
+  roughness?: number
+  normalScale?: number
+  bumpScale?: number
+  sheen?: number
 }
 
 /**
  * Creates a MeshPhysicalMaterial tuned for realistic textile rendering.
  * Profile is selected per garment type so each material behaves appropriately.
- *
- * Strategy:
- *  • material.color  = user's chosen fabric color → color customization still works
- *  • normalMap       = Polyhaven linen normal map  → woven surface relief (jacket/trousers)
- *  • roughnessMap    = Polyhaven linen roughness   → matte, naturally varying finish
- *  • sheen           = cross-fibre retro-reflection (soft highlight seen in real cloth)
- *  • No metalness / minimal envMap → avoids plastic/glossy look
+ * pbrOverride (if provided) takes priority over the hard-coded GARMENT_PROFILES,
+ * allowing the admin wizard sliders to actually affect the 3D preview.
  */
 /** Returns the correct PBR map set for the given garment type. */
 function getPBRForGarment(garmentType: GarmentType): FabricPBRMaps | null {
@@ -566,28 +645,41 @@ function createFabricPhysicalMaterial(
   color: THREE.Color,
   map: THREE.Texture | null,
   garmentType: GarmentType = 'jacket',
+  pbrOverride?: PBROverride,
 ): THREE.MeshPhysicalMaterial {
   const pbr = getPBRForGarment(garmentType) // may be null on very first render; maps applied in callback once ready
   const profile = GARMENT_PROFILES[garmentType]
+
+  // pbrOverride values come from admin wizard sliders — use them when provided
+  const roughness    = pbrOverride?.roughness    ?? profile.roughness
+  const normalScale  = pbrOverride?.normalScale  ?? profile.normalScale
+  const bumpScale    = pbrOverride?.bumpScale    ?? (garmentType === 'shirt' ? 0.20 : 0)
+  const sheen        = pbrOverride?.sheen        ?? profile.sheen
+
   return new THREE.MeshPhysicalMaterial({
     color,
     map,                                   // user-supplied fabric image (if any)
-    roughness: profile.roughness,
+    roughness,
     metalness: 0.0,
     envMapIntensity: profile.envMapIntensity,
     // Normal map: garment-specific PBR set (linen for jacket/trousers, Fabric019 for shirt)
     normalMap: (profile.useNormalMap && pbr?.normalMap) ? pbr.normalMap : undefined,
-    normalScale: new THREE.Vector2(profile.normalScale, profile.normalScale),
+    normalScale: new THREE.Vector2(normalScale, normalScale),
     // Roughness map: garment-specific PBR set
     roughnessMap: (profile.useRoughnessMap && pbr?.roughnessMap) ? pbr.roughnessMap : undefined,
-    // Sheen: tuned per garment profile
-    sheen: profile.sheen,
+    // Height map as bumpMap (shirt: scanned map preferred; others: no bump unless override says so)
+    bumpMap: garmentType === 'shirt' ? (pbr?.bumpMap ?? getShirtSurfaceNoise()) : (bumpScale > 0 ? (pbr?.bumpMap ?? undefined) : undefined),
+    bumpScale,
+    // Specular: shirt cotton is non-reflective (0.25 vs MeshPhysical default of 1.0)
+    specularIntensity: garmentType === 'shirt' ? 0.25 : 1.0,
+    // Sheen: cross-fibre retro-reflection
+    sheen,
     sheenRoughness: profile.sheenRoughness,
     sheenColor: color.clone(),
     flatShading: false,
-    // Preserve baked AO / emissive from the original GLTF
-    aoMap: source.aoMap,
-    aoMapIntensity: source.aoMapIntensity ?? 1,
+    // AO: prefer scanned AO map for shirt; fall back to GLTF-baked AO for jacket/trousers
+    aoMap: (garmentType === 'shirt' && pbr?.aoMap) ? pbr.aoMap : source.aoMap,
+    aoMapIntensity: (garmentType === 'shirt' && pbr?.aoMap) ? 1.0 : (source.aoMapIntensity ?? 1),
     emissive: source.emissive ? source.emissive.clone() : new THREE.Color(0),
     emissiveMap: source.emissiveMap,
   })
@@ -617,13 +709,13 @@ function replaceMeshMaterial(
   mesh.userData._fabricPhysicalMat = physMat
 }
 
-function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number = 0xaaaaaa, garmentType: GarmentType = 'jacket') {
+function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number = 0xaaaaaa, garmentType: GarmentType = 'jacket', repeatX = 6, repeatY = 6, pbrOverride?: PBROverride) {
   if (!mesh.material) {
     console.warn(`⚠️ No material found on mesh: ${mesh.name}`)
     return
   }
 
-  const isTexture = color.startsWith('/') || /\.(jpg|jpeg|png|webp)$/i.test(color)
+  const isTexture = color.startsWith('/') || color.startsWith('data:') || /\.(jpg|jpeg|png|webp)$/i.test(color)
   const isMaterialArray = Array.isArray(mesh.material)
   const rawMaterials: THREE.Material[] = isMaterialArray
     ? [...(mesh.material as THREE.Material[])]
@@ -637,7 +729,7 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number =
         // ── Texture / fabric-image path ───────────────────────────────────────
         console.log(`🖼️ Loading fabric texture: ${color} for ${mesh.name}`)
         const baseCol = new THREE.Color(baseColor)
-        const physMat = createFabricPhysicalMaterial(material, baseCol, null, garmentType)
+        const physMat = createFabricPhysicalMaterial(material, baseCol, null, garmentType, pbrOverride)
 
         replaceMeshMaterial(mesh, idx, isMaterialArray, physMat)
 
@@ -649,9 +741,12 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number =
           _pbrPromiseForGarment.then(pbr => {
             if (profile.useNormalMap && pbr.normalMap) {
               physMat.normalMap = pbr.normalMap
-              physMat.normalScale.set(profile.normalScale, profile.normalScale)
+              const ns = pbrOverride?.normalScale ?? profile.normalScale
+              physMat.normalScale.set(ns, ns)
             }
             if (profile.useRoughnessMap && pbr.roughnessMap) physMat.roughnessMap = pbr.roughnessMap
+            if (pbr.bumpMap) { physMat.bumpMap = pbr.bumpMap; physMat.bumpScale = pbrOverride?.bumpScale ?? 0.20 }
+            if (pbr.aoMap) { physMat.aoMap = pbr.aoMap; physMat.aoMapIntensity = 1.0 }
             physMat.needsUpdate = true
           })
         }
@@ -662,7 +757,8 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number =
           (texture) => {
             texture.wrapS = THREE.RepeatWrapping
             texture.wrapT = THREE.RepeatWrapping
-            texture.repeat.set(6, 6)
+            texture.repeat.set(repeatX, repeatY)
+            texture.colorSpace = THREE.SRGBColorSpace
             physMat.map = texture
             physMat.needsUpdate = true
             console.log(`✅ Applied fabric texture to ${mesh.name}`)
@@ -677,7 +773,7 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number =
       } else {
         // ── Solid colour path ─────────────────────────────────────────────────
         const newColor = new THREE.Color(color)
-        const physMat = createFabricPhysicalMaterial(material, newColor, null, garmentType)
+        const physMat = createFabricPhysicalMaterial(material, newColor, null, garmentType, pbrOverride)
 
         replaceMeshMaterial(mesh, idx, isMaterialArray, physMat)
 
@@ -689,9 +785,12 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number =
           _pbrPromiseForGarment2.then(pbr => {
             if (profile.useNormalMap && pbr.normalMap) {
               physMat.normalMap = pbr.normalMap
-              physMat.normalScale.set(profile.normalScale, profile.normalScale)
+              const ns = pbrOverride?.normalScale ?? profile.normalScale
+              physMat.normalScale.set(ns, ns)
             }
             if (profile.useRoughnessMap && pbr.roughnessMap) physMat.roughnessMap = pbr.roughnessMap
+            if (pbr.bumpMap) { physMat.bumpMap = pbr.bumpMap; physMat.bumpScale = pbrOverride?.bumpScale ?? 0.20 }
+            if (pbr.aoMap) { physMat.aoMap = pbr.aoMap; physMat.aoMapIntensity = 1.0 }
             physMat.needsUpdate = true
           })
         }
@@ -716,6 +815,9 @@ export function applyFabricCustomization(
   color: string,
   baseColor?: number,
   garmentType: GarmentType = 'jacket',
+  repeatX = 6,
+  repeatY = 6,
+  pbrOverride?: PBROverride,
 ) {
-  applyMaterialColor(mesh, color, baseColor, garmentType)
+  applyMaterialColor(mesh, color, baseColor, garmentType, repeatX, repeatY, pbrOverride)
 }
