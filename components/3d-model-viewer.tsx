@@ -1318,6 +1318,9 @@ export function ModelViewer({
     const shirtCustomizations: BasicShirtCustomization = {
       fabricColor: customizations.fabricColor || customizations.color || "#FFFFFF",
       fabricType: customizations.fabricType || "cotton",
+      fabricRepeatX: customizations.fabricRepeatX,
+      fabricRepeatY: customizations.fabricRepeatY,
+      fabricPbr: customizations.fabricPbr,
       collarStyle: customizations.collarStyle || customizations["collar-style"] || "kent-collar",
       sleeveStyle: customizations.sleeveStyle || customizations["sleeve-style"] || "full-sleeve",
       cuffStyle: customizations.cuffStyle || customizations["cuff-style"] || "rounded-cuff",
@@ -1349,6 +1352,9 @@ export function ModelViewer({
   if (useModularJacket && modelType === "sample-pants") {
     const basicCustomizations = {
       fabricColor: customizations.fabricColor || customizations.color || "#8B4513",
+      fabricPbr: customizations.fabricPbr,
+      fabricRepeatX: customizations.fabricRepeatX,
+      fabricRepeatY: customizations.fabricRepeatY,
       fabricType: customizations.fabricType || "cotton",
       frontStyle: customizations.frontStyle || customizations["front-style"] || "flat-front",
       frontPocket: customizations.frontPocket || customizations["front-pocket"],
@@ -1379,6 +1385,9 @@ export function ModelViewer({
     const basicCustomizations: BasicJacketCustomization = {
       fabricColor: customizations.fabricColor || customizations.color || "#000080",
       fabricType: customizations.fabricType || "wool",
+      fabricPbr: customizations.fabricPbr,
+      fabricRepeatX: customizations.fabricRepeatX,
+      fabricRepeatY: customizations.fabricRepeatY,
       buttonColor: customizations.buttonColor || "#333333",
       threadColor: customizations.threadColor || "#000000",
       liningColor: customizations.liningColor,

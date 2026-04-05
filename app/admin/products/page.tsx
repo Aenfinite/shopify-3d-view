@@ -24,7 +24,7 @@ export default function ProductsPage() {
         const allProducts = await getAllProducts()
         const enriched = await Promise.all(
           allProducts.map(async (p) => {
-            const [options, fabrics] = await Promise.all([
+            const [options,  fabrics] = await Promise.all([
               getCustomizationOptions(p.id),
               getFabricsByProduct(p.id),
             ])

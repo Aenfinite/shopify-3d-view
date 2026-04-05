@@ -1,5 +1,7 @@
 import { FabricManager } from "@/components/admin/fabrics/fabric-manager"
 
+export const dynamic = "force-dynamic"
+
 export default function FabricsPage() {
   return (
     <div className="space-y-6">

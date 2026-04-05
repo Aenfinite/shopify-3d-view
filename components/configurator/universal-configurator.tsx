@@ -269,72 +269,117 @@ export function UniversalConfigurator({
 
         setCustomizationOptions(options)
 
-        // ── Build fabric-type & fabric-color steps entirely from Supabase ─────────
+        // ── Build fabric-color step from Supabase; keep fabric-type step from static data ─────────
         // Admin adds fabrics via the Fabric Wizard (Supabase). Those fabrics are
         // tagged with fabric_type (cotton | linen | polyester). We:
-        //  1. Derive the distinct type-categories and use them as fabric-type values
+        //  1. Keep the static fabric-type step values (from sample data) so all type
+        //     categories always appear regardless of what's in the DB.
+        //     Only if there's no static fabric-type step do we derive types from DB.
         //  2. Store ALL supabase fabrics so getFilteredColors() can filter them
         //  3. Create/replace the fabric-color option with ALL supabase fabrics
-        // Products that had hard-coded Firebase fabric values are overwritten here.
         try {
           const dbFabrics: FabricRow[] = await getFabricsByProduct(productId)
           if (dbFabrics.length > 0) {
-            setSupabaseFabrics(dbFabrics)
 
-            // ── Step 1: fabric-type → category cards ──────────────────────────
-            const TYPE_LABELS: Record<string, string> = {
-              cotton: "Cotton (Poplin)",
-              linen: "Linen",
-              polyester: "Polyester",
-            }
-            const distinctTypes = Array.from(new Set(dbFabrics.map((f) => f.fabric_type)))
-            const fabricTypeValues = distinctTypes.map((t) => ({
-              id: t,
-              name: TYPE_LABELS[t] || t,
-              type: "texture" as const,
-              value: t,
-              price: 0,
-            }))
+            // ── Check if the static fabric-color step already has fabricType-tagged values ──
+            const existingColorOpt = options.find((o) => o.id === "fabric-color")
+            const staticValuesHaveTypeTags = existingColorOpt?.values.some(
+              (v) => !!(v as any).fabricType
+            ) ?? false
 
-            const fabricTypeIdx = options.findIndex((o) => o.id === "fabric-type")
-            if (fabricTypeIdx !== -1) {
-              options[fabricTypeIdx].values = fabricTypeValues
+            if (staticValuesHaveTypeTags) {
+              // ── Static data path: keep all static swatches AND append Supabase uploads ──
+              // Convert DB fabrics to color values tagged with their fabricType so
+              // getFilteredColors() can filter them exactly like the static swatches.
+              const uploadedColorValues = dbFabrics.map((f) => ({
+                id: f.id,
+                name: f.name,
+                type: "color" as const,
+                value: f.color_hex || f.image_url || f.fabric_type,
+                price: f.price,
+                thumbnail: f.thumbnail_url || f.image_url || undefined,
+                color: f.color_hex || f.image_url || undefined,
+                pbrSettings: f.pbr_settings,
+                // Tag with fabricType so the tag-based filter in getFilteredColors works
+                fabricType: f.fabric_type,
+              }))
+
+              const fabricColorIdx = options.findIndex((o) => o.id === "fabric-color")
+              if (fabricColorIdx !== -1) {
+                // Merge: static swatches first, then any NEW Supabase-uploaded ones.
+                // Deduplicate by both id AND image value — seeded Supabase entries that
+                // mirror existing static swatches (same image URL) must be skipped so
+                // they don't inflate a fabric type's color count.
+                const existingIds = new Set(options[fabricColorIdx].values.map((v) => v.id))
+                const existingValues = new Set(options[fabricColorIdx].values.map((v) => v.value))
+                const newUploads = uploadedColorValues.filter(
+                  (v) => !existingIds.has(v.id) && !existingValues.has(v.value)
+                )
+                options[fabricColorIdx].values = [
+                  ...options[fabricColorIdx].values,
+                  ...newUploads,
+                ]
+              }
+              // fabric-type step is already present in static options — leave it as-is
+              setCustomizationOptions([...options])
             } else {
-              options.unshift({
-                id: "fabric-type",
-                name: "Select Fabric Type",
-                type: "texture",
-                category: "fabric",
-                values: fabricTypeValues,
-              })
+              // ── Supabase data path: no static tagged colors, use DB fabrics ──
+              setSupabaseFabrics(dbFabrics)
+
+              // Step 1: fabric-type — derive from DB if no static step
+              const fabricTypeIdx = options.findIndex((o) => o.id === "fabric-type")
+              if (fabricTypeIdx === -1) {
+                const TYPE_LABELS: Record<string, string> = {
+                  cotton: "Cotton (Poplin)",
+                  linen: "Linen",
+                  polyester: "Polyester",
+                }
+                const distinctTypes = Array.from(new Set(dbFabrics.map((f) => f.fabric_type)))
+                const fabricTypeValues = distinctTypes.map((t) => ({
+                  id: t,
+                  name: TYPE_LABELS[t] || t,
+                  type: "texture" as const,
+                  value: t,
+                  price: 0,
+                }))
+                options.unshift({
+                  id: "fabric-type",
+                  name: "Select Fabric Type",
+                  type: "texture",
+                  category: "fabric",
+                  values: fabricTypeValues,
+                })
+              }
+
+              // Step 2: fabric-color — replace with Supabase fabrics
+              const fabricColorValues = dbFabrics.map((f) => ({
+                id: f.id,
+                name: f.name,
+                type: "color" as const,
+                value: f.color_hex || f.image_url || f.fabric_type,
+                price: f.price,
+                thumbnail: f.thumbnail_url || f.image_url || undefined,
+                color: f.color_hex || f.image_url || undefined,
+                pbrSettings: f.pbr_settings,
+                fabricType: f.fabric_type,
+              }))
+
+              const fabricColorIdx = options.findIndex((o) => o.id === "fabric-color")
+              if (fabricColorIdx !== -1) {
+                options[fabricColorIdx].values = fabricColorValues
+              } else {
+                const insertAfter = options.findIndex((o) => o.id === "fabric-type")
+                options.splice(insertAfter + 1, 0, {
+                  id: "fabric-color",
+                  name: "Select Fabric",
+                  type: "color",
+                  category: "fabric",
+                  values: fabricColorValues,
+                })
+              }
+
+              setCustomizationOptions([...options])
             }
-
-            // ── Step 2: fabric-color → all Supabase fabrics (filtered at render) ─
-            const fabricColorValues = dbFabrics.map((f) => ({
-              id: f.id,
-              name: f.name,
-              type: "color" as const,
-              value: f.color_hex || f.image_url || f.fabric_type,
-              price: f.price,
-              thumbnail: f.thumbnail_url || f.image_url || undefined,
-              color: f.color_hex || undefined,
-            }))
-
-            const fabricColorIdx = options.findIndex((o) => o.id === "fabric-color")
-            if (fabricColorIdx !== -1) {
-              options[fabricColorIdx].values = fabricColorValues
-            } else {
-              const insertAfter = options.findIndex((o) => o.id === "fabric-type")
-              options.splice(insertAfter + 1, 0, {
-                id: "fabric-color",
-                name: "Select Fabric",
-                type: "color",
-                category: "fabric",
-                values: fabricColorValues,
-              })
-            }
-
-            setCustomizationOptions([...options])
           }
         } catch (supaErr) {
           // Non-fatal — Firebase options still display for non-fabric steps
@@ -466,20 +511,20 @@ export function UniversalConfigurator({
       'waistband-extension': { angle: -Math.PI / 2, targetY: 0.2 }, // Left side view
 
       // Shirt-specific angles
-      'collar-style': { angle: 0, targetY: 0.4 },          // Front, look up at collar
-      'shirt-collar': { angle: 0, targetY: 0.4 },
+      'collar-style': { angle: 0, targetY: 0.7 },          // Front, look up at collar
+      'shirt-collar': { angle: 0, targetY: 0.7 },
       'sleeve-style': { angle: Math.PI / 4, targetY: 0.1 }, // Slight angle to see sleeves
       'shirt-sleeve': { angle: Math.PI / 4, targetY: 0.1 },
-      'cuff-style': { angle: Math.PI / 4, targetY: -0.2 },  // Angle, look at cuffs
-      'shirt-cuff': { angle: Math.PI / 4, targetY: -0.2 },
-      'shirt-chest-pocket': { angle: 0, targetY: 0.2 },     // Front, chest height
+      'cuff-style': { angle: Math.PI / 4, targetY: -0.5 },  // Angle, look at cuffs
+      'shirt-cuff': { angle: Math.PI / 4, targetY: -0.5 },
+      'shirt-chest-pocket': { angle: 0, targetY: 0.3 },     // Front, chest height
       'shirt-front': { angle: 0, targetY: 0 },               // Front view
       'front-placket': { angle: 0, targetY: 0 },
-      'collar-cuff-contrast': { angle: 0, targetY: 0.65, zoom: 1.1 },           // Tight on collar
-      'contrast-collar-color': { angle: 0, targetY: 0.65, zoom: 1.1 },
-      'contrast-collar-texture': { angle: 0, targetY: 0.65, zoom: 1.1 },        // Collar texture select
-      'contrast-cuff-color': { angle: Math.PI / 5, targetY: -0.45, zoom: 1.1 },
-      'contrast-cuff-texture': { angle: Math.PI / 5, targetY: -0.45, zoom: 1.1 }, // Cuff texture select
+      'collar-cuff-contrast': { angle: 0, targetY: 0.8, zoom: 1.1 },           // Tight on collar
+      'contrast-collar-color': { angle: 0, targetY: 0.8, zoom: 1.1 },
+      'contrast-collar-texture': { angle: 0, targetY: 0.8, zoom: 1.1 },        // Collar texture select
+      'contrast-cuff-color': { angle: Math.PI / 5, targetY: -0.55, zoom: 1.1 },
+      'contrast-cuff-texture': { angle: Math.PI / 5, targetY: -0.55, zoom: 1.1 }, // Cuff texture select
       // Shirt monogram placements
       'shirt-monogram-position': { angle: 0, targetY: 0, zoom: undefined },
       'shirt-monogram-text': { angle: 0, targetY: 0, zoom: undefined },
@@ -770,6 +815,19 @@ export function UniversalConfigurator({
           customizations.fabricColor = selection.color
           customizations.mainColor = selection.color
           console.log("Setting fabric color:", selection.color)
+          const pbrRaw = (value as any).pbrSettings ?? (selection as any).layerControls?.pbrSettings
+          if (pbrRaw) {
+            customizations.fabricPbr = {
+              roughness:   pbrRaw.roughness,
+              normalScale: pbrRaw.normal_scale,
+              bumpScale:   pbrRaw.bump_scale,
+              sheen:       pbrRaw.sheen,
+              darkness:    pbrRaw.darkness,
+              materialType: (value as any).fabricType,
+            }
+            customizations.fabricRepeatX = pbrRaw.repeat_x
+            customizations.fabricRepeatY = pbrRaw.repeat_y
+          }
         }
         // Handle other colors but NOT for button color changes, monogram thread color, or contrast colors
         else if (selection.color && !option.name.toLowerCase().includes("button") && !option.name.toLowerCase().includes("monogram") && !option.id.startsWith("contrast-")) {
@@ -1495,6 +1553,7 @@ export function UniversalConfigurator({
         id: v.id,
         name: v.name,
         hex: v.color || v.value,
+        pbrSettings: (v as any).pbrSettings,
         fabrics: []
       })) || []
     }
@@ -1514,6 +1573,7 @@ export function UniversalConfigurator({
         id: v.id,
         name: v.name,
         hex: v.color || v.value,
+        pbrSettings: (v as any).pbrSettings,
         fabrics: [selectedFabricType]
       })) || []
   }
@@ -1985,8 +2045,8 @@ export function UniversalConfigurator({
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
                       {getFilteredColors().map((color) => {
-                        // Check if this is a texture (starts with / or contains image extension)
-                        const isTexture = color.hex.startsWith('/') || /\.(jpg|jpeg|png|webp)$/i.test(color.hex)
+                        // Check if this is a texture (starts with / or https:// or contains image extension)
+                        const isTexture = color.hex.startsWith('/') || color.hex.startsWith('https://') || color.hex.startsWith('http://') || /\.(jpg|jpeg|png|webp)$/i.test(color.hex)
 
                         return (
                           <div
@@ -1997,7 +2057,8 @@ export function UniversalConfigurator({
                                 color.id,
                                 0,
                                 color.hex,
-                                color.hex
+                                color.hex,
+                                color.pbrSettings ? { pbrSettings: color.pbrSettings } : undefined
                               )
                             }}
                             className={`

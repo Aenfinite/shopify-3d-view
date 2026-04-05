@@ -32,6 +32,9 @@ function adjustColorBrightness(color: string, factor: number): string {
 export function applyCustomizations(object: THREE.Object3D, customizations: BasicJacketCustomization) {
   if (!customizations) return
   console.log("🎨 Applying customizations:", customizations)
+  const _fabricPbr = (customizations as any).fabricPbr as PBROverride | undefined
+  const _fabricRx: number = (customizations as any).fabricRepeatX ?? 6
+  const _fabricRy: number = (customizations as any).fabricRepeatY ?? 6
 
   object.traverse((child: THREE.Object3D) => {
     if (!(child instanceof THREE.Mesh)) return
@@ -50,7 +53,7 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
           nameLower.includes('patch') || nameLower.includes('cube')) {
         console.log(`🎯 Identified POCKET by name pattern: ${child.name} -> Applying FABRIC color`)
         if (customizations.fabricColor) {
-          applyMaterialColor(child, customizations.fabricColor)
+          applyMaterialColor(child, customizations.fabricColor, undefined, 'jacket', _fabricRx, _fabricRy, _fabricPbr)
           return
         }
       }
@@ -67,7 +70,7 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
           const isTexture = customizations.fabricColor.startsWith('/') || /\.(jpg|jpeg|png|webp)$/i.test(customizations.fabricColor)
           if (isTexture) {
             // Apply same texture for collar/lapel
-            applyMaterialColor(child, customizations.fabricColor)
+            applyMaterialColor(child, customizations.fabricColor, undefined, 'jacket', _fabricRx, _fabricRy, _fabricPbr)
           } else {
             // Apply a slightly darker shade for collar/lapel contrast (solid colors only)
             const darkerColor = adjustColorBrightness(customizations.fabricColor, 0.85)
@@ -81,7 +84,7 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
       if (nameLower.includes('thread') || nameLower.includes('stitching') || nameLower.includes('hole')) {
         console.log(`🧵 Identified THREAD by name pattern: ${child.name} -> Applying FABRIC color`)
         if (customizations.fabricColor) {
-          applyMaterialColor(child, customizations.fabricColor)
+          applyMaterialColor(child, customizations.fabricColor, undefined, 'jacket', _fabricRx, _fabricRy, _fabricPbr)
           return
         }
       }
@@ -147,7 +150,7 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
         case ColorCategories.MAIN_FABRIC:
           console.log(`🎨 Applying FABRIC color to: ${child.name}`)
           if (customizations.fabricColor) {
-            applyMaterialColor(child, customizations.fabricColor)
+            applyMaterialColor(child, customizations.fabricColor, undefined, 'jacket', _fabricRx, _fabricRy, _fabricPbr)
           }
           break
 
@@ -160,7 +163,7 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
             const isTexture = customizations.fabricColor.startsWith('/') || /\.(jpg|jpeg|png|webp)$/i.test(customizations.fabricColor)
             if (isTexture) {
               // Apply same texture for upper lapel
-              applyMaterialColor(child, customizations.fabricColor)
+              applyMaterialColor(child, customizations.fabricColor, undefined, 'jacket', _fabricRx, _fabricRy, _fabricPbr)
             } else {
               // Apply a slightly darker shade of fabric color for contrast (solid colors only)
               const darkerColor = adjustColorBrightness(customizations.fabricColor, 0.85)
@@ -178,7 +181,7 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
             const isTexture = customizations.fabricColor.startsWith('/') || /\.(jpg|jpeg|png|webp)$/i.test(customizations.fabricColor)
             if (isTexture) {
               // Apply same texture for lower lapel
-              applyMaterialColor(child, customizations.fabricColor)
+              applyMaterialColor(child, customizations.fabricColor, undefined, 'jacket', _fabricRx, _fabricRy, _fabricPbr)
             } else {
               // Apply a slightly darker shade of fabric color for contrast (solid colors only)
               const darkerColor = adjustColorBrightness(customizations.fabricColor, 0.85)
@@ -194,7 +197,7 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
             applyMaterialColor(child, customizations.buttonColor)
           } else if (customizations.fabricColor) {
             // Use fabric color for standard/matching buttons
-            applyMaterialColor(child, customizations.fabricColor)
+            applyMaterialColor(child, customizations.fabricColor, undefined, 'jacket', _fabricRx, _fabricRy, _fabricPbr)
           }
           break
 
@@ -202,7 +205,7 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
           console.log(`🧵 Applying THREAD color to: ${child.name}`)
           // Thread ALWAYS matches fabric color - IGNORE customizations.threadColor
           if (customizations.fabricColor) {
-            applyMaterialColor(child, customizations.fabricColor)
+            applyMaterialColor(child, customizations.fabricColor, undefined, 'jacket', _fabricRx, _fabricRy, _fabricPbr)
             console.log(`✅ Thread color FORCED to match fabric: ${customizations.fabricColor}`)
           }
           break
@@ -486,13 +489,13 @@ export function preloadFabricPBR(): void {
     new Promise<THREE.Texture | null>(resolve =>
       loader.load('/textures/fabric/linen_nor_gl_1k.jpg', t => {
         const configured = configureFabricTex(t, 5, 5, 7)
-        resolve(softenTexture(configured, 0.18, 128)) // blend toward flat-normal gray
+          resolve(softenTexture(configured, 0.65, 128)) // preserve 65% of normal data — subtle but clearly visible
       }, undefined, () => resolve(null))
     ),
     new Promise<THREE.Texture | null>(resolve =>
       loader.load('/textures/fabric/linen_rough_1k.jpg', t => {
         const configured = configureFabricTex(t, 5, 5, 7)
-        resolve(softenTexture(configured, 0.22, 180)) // blend toward smooth (light gray) for roughness
+        resolve(softenTexture(configured, 0.60, 180)) // preserve 60% of roughness variation
       }, undefined, () => resolve(null))
     ),
   ]).then(([normalMap, roughnessMap]) => {
@@ -583,23 +586,23 @@ interface GarmentProfile {
 const GARMENT_PROFILES: Record<GarmentType, GarmentProfile> = {
   jacket: {
     useNormalMap: true,
-    normalScale: 0.12,
+    normalScale: 0.35,
     useRoughnessMap: true,
     roughness: 0.90,
     sheen: 0.12,
     sheenRoughness: 0.97,
-    envMapIntensity: 0.06,
+    envMapIntensity: 0.15,
   },
   trousers: {
     // Slightly more relief than jacket — gives the micro-weave read needed on
     // dress trouser fabric without being as bold as a woven jacket.
     useNormalMap: true,
-    normalScale: 0.22,
+    normalScale: 0.45,
     useRoughnessMap: true,
     roughness: 0.90,
     sheen: 0.18,
     sheenRoughness: 0.97,
-    envMapIntensity: 0.07,
+    envMapIntensity: 0.18,
   },
   shirt: {
     // Superellipse Cotton Poplin — photogrammetry-scanned PBR set.
@@ -622,6 +625,10 @@ export interface PBROverride {
   normalScale?: number
   bumpScale?: number
   sheen?: number
+  /** -0.5 (lighten) … 0 (no change) … +0.5 (darken). Matches admin Darkness slider range. */
+  darkness?: number
+  /** Fabric material type — 'cotton' | 'linen' | 'polyester'. Routes correct PBR texture maps. */
+  materialType?: string
 }
 
 /**
@@ -631,13 +638,16 @@ export interface PBROverride {
  * allowing the admin wizard sliders to actually affect the 3D preview.
  */
 /** Returns the correct PBR map set for the given garment type. */
-function getPBRForGarment(garmentType: GarmentType): FabricPBRMaps | null {
-  return garmentType === 'shirt' ? _shirtPBR : _fabricPBR
+function getPBRForGarment(garmentType: GarmentType, materialType?: string): FabricPBRMaps | null {
+  // Cotton fabrics always use the cotton poplin (shirt) maps regardless of garment type
+  if (materialType === 'cotton' || garmentType === 'shirt') return _shirtPBR
+  return _fabricPBR
 }
 
 /** Returns the correct PBR promise for the given garment type (used for deferred patching). */
-function getPBRPromiseForGarment(garmentType: GarmentType): Promise<FabricPBRMaps> | null {
-  return garmentType === 'shirt' ? _shirtPBRPromise : _fabricPBRPromise
+function getPBRPromiseForGarment(garmentType: GarmentType, materialType?: string): Promise<FabricPBRMaps> | null {
+  if (materialType === 'cotton' || garmentType === 'shirt') return _shirtPBRPromise
+  return _fabricPBRPromise
 }
 
 function createFabricPhysicalMaterial(
@@ -647,7 +657,7 @@ function createFabricPhysicalMaterial(
   garmentType: GarmentType = 'jacket',
   pbrOverride?: PBROverride,
 ): THREE.MeshPhysicalMaterial {
-  const pbr = getPBRForGarment(garmentType) // may be null on very first render; maps applied in callback once ready
+  const pbr = getPBRForGarment(garmentType, pbrOverride?.materialType) // may be null on very first render; maps applied in callback once ready
   const profile = GARMENT_PROFILES[garmentType]
 
   // pbrOverride values come from admin wizard sliders — use them when provided
@@ -656,8 +666,20 @@ function createFabricPhysicalMaterial(
   const bumpScale    = pbrOverride?.bumpScale    ?? (garmentType === 'shirt' ? 0.20 : 0)
   const sheen        = pbrOverride?.sheen        ?? profile.sheen
 
+  // Apply darkness: positive darkens (lerp toward black), negative lightens (lerp toward white).
+  // darkness = 0 leaves the color unchanged.
+  let finalColor = color
+  if (pbrOverride?.darkness && pbrOverride.darkness !== 0) {
+    finalColor = color.clone()
+    if (pbrOverride.darkness > 0) {
+      finalColor.lerp(new THREE.Color(0, 0, 0), Math.min(pbrOverride.darkness, 1))
+    } else {
+      finalColor.lerp(new THREE.Color(1, 1, 1), Math.min(-pbrOverride.darkness, 1))
+    }
+  }
+
   return new THREE.MeshPhysicalMaterial({
-    color,
+    color: finalColor,
     map,                                   // user-supplied fabric image (if any)
     roughness,
     metalness: 0.0,
@@ -709,13 +731,13 @@ function replaceMeshMaterial(
   mesh.userData._fabricPhysicalMat = physMat
 }
 
-function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number = 0xaaaaaa, garmentType: GarmentType = 'jacket', repeatX = 6, repeatY = 6, pbrOverride?: PBROverride) {
+function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number = 0xffffff, garmentType: GarmentType = 'jacket', repeatX = 6, repeatY = 6, pbrOverride?: PBROverride) {
   if (!mesh.material) {
     console.warn(`⚠️ No material found on mesh: ${mesh.name}`)
     return
   }
 
-  const isTexture = color.startsWith('/') || color.startsWith('data:') || /\.(jpg|jpeg|png|webp)$/i.test(color)
+  const isTexture = color.startsWith('/') || color.startsWith('data:') || color.startsWith('https://') || color.startsWith('http://') || /\.(jpg|jpeg|png|webp)$/i.test(color)
   const isMaterialArray = Array.isArray(mesh.material)
   const rawMaterials: THREE.Material[] = isMaterialArray
     ? [...(mesh.material as THREE.Material[])]
@@ -734,8 +756,8 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number =
         replaceMeshMaterial(mesh, idx, isMaterialArray, physMat)
 
         // If PBR maps are still loading, patch them in once ready
-        const _pbrForGarment = getPBRForGarment(garmentType)
-        const _pbrPromiseForGarment = getPBRPromiseForGarment(garmentType)
+        const _pbrForGarment = getPBRForGarment(garmentType, pbrOverride?.materialType)
+        const _pbrPromiseForGarment = getPBRPromiseForGarment(garmentType, pbrOverride?.materialType)
         if (!_pbrForGarment && _pbrPromiseForGarment) {
           const profile = GARMENT_PROFILES[garmentType]
           _pbrPromiseForGarment.then(pbr => {
@@ -778,8 +800,8 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number =
         replaceMeshMaterial(mesh, idx, isMaterialArray, physMat)
 
         // If PBR maps are still loading, patch them in once ready
-        const _pbrForGarment2 = getPBRForGarment(garmentType)
-        const _pbrPromiseForGarment2 = getPBRPromiseForGarment(garmentType)
+        const _pbrForGarment2 = getPBRForGarment(garmentType, pbrOverride?.materialType)
+        const _pbrPromiseForGarment2 = getPBRPromiseForGarment(garmentType, pbrOverride?.materialType)
         if (!_pbrForGarment2 && _pbrPromiseForGarment2) {
           const profile = GARMENT_PROFILES[garmentType]
           _pbrPromiseForGarment2.then(pbr => {

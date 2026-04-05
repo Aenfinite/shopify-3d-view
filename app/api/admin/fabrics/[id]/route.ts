@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase/admin-client"
 
+export const dynamic = "force-dynamic"
+
 // PATCH /api/admin/fabrics/[id]  → update fabric
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

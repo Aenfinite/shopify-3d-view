@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase/admin-client"
 
+export const dynamic = "force-dynamic"
+
 // GET  /api/admin/fabrics           → all fabrics
 // GET  /api/admin/fabrics?product=x → fabrics for one product
 export async function GET(req: NextRequest) {

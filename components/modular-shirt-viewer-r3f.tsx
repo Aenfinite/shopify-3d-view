@@ -15,6 +15,7 @@ import {
   defaultShirtConfig,
 } from "@/lib/3d/shirt-configs"
 import { applyFabricCustomization, preloadFabricPBR, preloadShirtPBR } from "@/lib/3d/customization-utils"
+import type { PBROverride } from "@/lib/3d/customization-utils"
 
 // Kick off shirt PBR texture download as early as possible
 if (typeof window !== 'undefined') {
@@ -24,6 +25,8 @@ if (typeof window !== 'undefined') {
 
 // ─── Constants ───────────────────────────────────────────────
 const SHIRT_BASE_COLOR = 0xeeeeee
+// Matches TEXTURE_REPEAT_SCALE['shirt'] in garment-canvas.tsx — keeps customer page in sync with admin preview
+const SHIRT_TEXTURE_SCALE = 0.18
 
 // Material names that are NOT fabric (buttons, threads, cufflinks, eyelets)
 const NON_FABRIC_MATERIALS = [
@@ -51,6 +54,9 @@ function applyShirtFabric(
   contrastEnabled?: boolean,
   contrastCollarTexture?: string,
   contrastCuffTexture?: string,
+  fabricRepeatX = 4,
+  fabricRepeatY = 4,
+  fabricPbr?: PBROverride,
 ) {
   const defaultColor = `#${SHIRT_BASE_COLOR.toString(16).padStart(6, '0')}`
 
@@ -108,15 +114,15 @@ function applyShirtFabric(
             ? contrastCuffTexture
             : fabricColor
         const texToUse = isCollarContrast ? collarTex : cuffTex
-        applyFabricCustomization(child, texToUse ?? defaultColor, undefined, 'shirt')
+        applyFabricCustomization(child, texToUse ?? defaultColor, 0xffffff, 'shirt', fabricRepeatX * SHIRT_TEXTURE_SCALE, fabricRepeatY * SHIRT_TEXTURE_SCALE, fabricPbr)
       } else {
-        applyFabricCustomization(child, fabricColor ?? defaultColor, undefined, 'shirt')
+        applyFabricCustomization(child, fabricColor ?? defaultColor, 0xffffff, 'shirt', fabricRepeatX * SHIRT_TEXTURE_SCALE, fabricRepeatY * SHIRT_TEXTURE_SCALE, fabricPbr)
       }
       return
     }
 
     // Main fabric area — use the full PBR pipeline
-    applyFabricCustomization(child, fabricColor ?? defaultColor, undefined, 'shirt')
+    applyFabricCustomization(child, fabricColor ?? defaultColor, 0xffffff, 'shirt', fabricRepeatX * SHIRT_TEXTURE_SCALE, fabricRepeatY * SHIRT_TEXTURE_SCALE, fabricPbr)
   })
 }
 
@@ -125,6 +131,9 @@ function applyShirtFabric(
 export interface BasicShirtCustomization {
   fabricColor?: string
   fabricType?: string
+  fabricRepeatX?: number
+  fabricRepeatY?: number
+  fabricPbr?: PBROverride
   collarStyle?: string          // "kent-collar" | "button-down-collar" | "spread-collar"
   sleeveStyle?: string          // "half-sleeve" | "full-sleeve"
   cuffStyle?: string            // "rounded-cuff" | "french-cuff"
@@ -179,6 +188,7 @@ function ShirtModel({
   const [sleeveScene, setSleeveScene] = useState<THREE.Group | null>(null)
   const [pocketScene, setPocketScene] = useState<THREE.Group | null>(null)
   const [modelScale, setModelScale] = useState(1)
+  const [modelYOffset, setModelYOffset] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
 
   const loader = useMemo(() => {
@@ -238,6 +248,9 @@ function ShirtModel({
               customizations.contrastEnabled,
               customizations.contrastCollarTexture,
               customizations.contrastCuffTexture,
+              customizations.fabricRepeatX,
+              customizations.fabricRepeatY,
+              customizations.fabricPbr,
             )
             resolve(scene)
           },
@@ -252,17 +265,21 @@ function ShirtModel({
       loadPart(resolvedPaths.sleeve),
     ])
       .then(([front, collar, sleeve]) => {
-        // Compute scale from the front piece
+        // Compute scale from the front piece and center model at y=0
         const bbox = new THREE.Box3().setFromObject(front)
         const size = bbox.getSize(new THREE.Vector3())
-        const desiredHeight = 2.6
+        const center = bbox.getCenter(new THREE.Vector3())
+        const desiredHeight = 2.0
         const computedScale =
           size.y > 0.0001 ? desiredHeight / size.y : 1
+        // Offset so the front-piece centre sits at world y=0
+        const yOffset = -center.y * computedScale
 
         setFrontScene(front)
         setCollarScene(collar)
         setSleeveScene(sleeve)
         setModelScale(computedScale)
+        setModelYOffset(yOffset)
         setIsLoading(false)
         console.log("✅ Shirt main parts loaded", {
           front: resolvedPaths.front,
@@ -282,6 +299,9 @@ function ShirtModel({
     customizations.contrastEnabled,
     customizations.contrastCollarTexture,
     customizations.contrastCuffTexture,
+    customizations.fabricRepeatX,
+    customizations.fabricRepeatY,
+    customizations.fabricPbr,
     loader,
   ])
 
@@ -296,7 +316,7 @@ function ShirtModel({
       resolvedPaths.pocket,
       (gltf) => {
         const scene = gltf.scene.clone()
-        applyShirtFabric(scene, customizations.fabricColor)
+        applyShirtFabric(scene, customizations.fabricColor, undefined, undefined, undefined, customizations.fabricRepeatX, customizations.fabricRepeatY, customizations.fabricPbr)
         setPocketScene(scene)
         console.log("✅ Shirt chest pocket loaded")
       },
@@ -306,14 +326,14 @@ function ShirtModel({
         setPocketScene(null)
       }
     )
-  }, [resolvedPaths.pocket, customizations.fabricColor, loader])
+  }, [resolvedPaths.pocket, customizations.fabricColor, customizations.fabricRepeatX, customizations.fabricRepeatY, customizations.fabricPbr, loader])
 
   if (isLoading || !frontScene || !collarScene || !sleeveScene) {
     return <LoadingOverlay />
   }
 
   return (
-    <group position={[0, 0, 0]} scale={[modelScale, modelScale, modelScale]}>
+    <group position={[0, modelYOffset, 0]} scale={[modelScale, modelScale, modelScale]}>
       <primitive object={frontScene} position={[0, 0, 0]} />
       <primitive object={collarScene} position={[0, 0, 0]} />
       <primitive object={sleeveScene} position={[0, 0, 0]} />
@@ -381,7 +401,7 @@ function MonogramMesh({
 function OrbitCameraController({
   targetAzimuth = 0,
   targetY = 0,
-  targetDistance = 2.9,
+  targetDistance = 3.2,
   controlsRef,
 }: {
   targetAzimuth: number
@@ -391,33 +411,30 @@ function OrbitCameraController({
 }) {
   const { camera } = useThree()
   const isUserInteracting = React.useRef(false)
-  const userInteractionTimeout = React.useRef<NodeJS.Timeout | null>(null)
+  const prevAzimuth = React.useRef(targetAzimuth)
+  const prevY = React.useRef(targetY)
+  const prevDist = React.useRef(targetDistance)
 
+  // Re-enable animation only when a step navigation drives a real prop change
+  React.useEffect(() => {
+    const azimuthChanged = Math.abs(prevAzimuth.current - targetAzimuth) > 0.01
+    const yChanged = Math.abs(prevY.current - targetY) > 0.001
+    const distChanged = Math.abs(prevDist.current - targetDistance) > 0.001
+    if (azimuthChanged || yChanged || distChanged) {
+      isUserInteracting.current = false
+      prevAzimuth.current = targetAzimuth
+      prevY.current = targetY
+      prevDist.current = targetDistance
+    }
+  }, [targetAzimuth, targetY, targetDistance])
+
+  // Mark as user-interacting on drag start; leave position sticky on drag end
   React.useEffect(() => {
     if (!controlsRef.current) return
     const controls = controlsRef.current
-
-    const onStart = () => {
-      isUserInteracting.current = true
-      if (userInteractionTimeout.current)
-        clearTimeout(userInteractionTimeout.current)
-    }
-    const onEnd = () => {
-      if (userInteractionTimeout.current)
-        clearTimeout(userInteractionTimeout.current)
-      userInteractionTimeout.current = setTimeout(() => {
-        isUserInteracting.current = false
-      }, 500)
-    }
-
+    const onStart = () => { isUserInteracting.current = true }
     controls.addEventListener("start", onStart)
-    controls.addEventListener("end", onEnd)
-    return () => {
-      controls.removeEventListener("start", onStart)
-      controls.removeEventListener("end", onEnd)
-      if (userInteractionTimeout.current)
-        clearTimeout(userInteractionTimeout.current)
-    }
+    return () => { controls.removeEventListener("start", onStart) }
   }, [controlsRef])
 
   useFrame(() => {
@@ -465,7 +482,7 @@ export default function ModularShirtViewerR3F({
   className = "",
   cameraRotationY = 0,
   cameraTargetY = 0,
-  cameraZoom = 2.9,
+  cameraZoom = 3.2,
 }: ModularShirtViewerProps) {
   const controlsRef = React.useRef<any>(null)
 
@@ -473,7 +490,7 @@ export default function ModularShirtViewerR3F({
     <div className={`w-full h-full ${className}`}>
       <Canvas
         shadows
-        camera={{ position: [0, 0.4, 2.9], fov: 45 }}
+        camera={{ position: [0, 0, 3.2], fov: 45 }}
         gl={{
           antialias: true,
           alpha: true,
@@ -525,7 +542,7 @@ export default function ModularShirtViewerR3F({
           maxDistance={8}
           maxPolarAngle={Math.PI / 1.4}
           minPolarAngle={Math.PI / 8}
-          target={[0, -0.1, 0]}
+          target={[0, 0, 0]}
         />
 
         <Environment preset="studio" environmentIntensity={0.2} />

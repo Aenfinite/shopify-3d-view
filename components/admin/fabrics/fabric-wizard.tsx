@@ -22,20 +22,18 @@ import {
   RotateCcw,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { Canvas, useThree } from "@react-three/fiber"
-import { OrbitControls, Environment, Html } from "@react-three/drei"
+import { SAMPLE_PRODUCTS_WITH_CUSTOMIZATION } from "@/data/sample-products-with-customization"
+import { Canvas } from "@react-three/fiber"
+import { OrbitControls, Environment } from "@react-three/drei"
 import * as THREE from "three"
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js"
-import { applyFabricCustomization, preloadFabricPBR, preloadShirtPBR, type PBROverride } from "@/lib/3d/customization-utils"
-import type { GarmentType } from "@/lib/3d/customization-utils"
+import { applyFabricCustomization, preloadFabricPBR, preloadShirtPBR } from "@/lib/3d/customization-utils"
 import {
-  uploadFabricImage,
   getAllProducts,
   PBR_PRESETS,
   type FabricRow,
   type Product,
 } from "@/lib/supabase/service"
+import { GarmentModel, CameraUpdater, CAMERA_PRESETS } from "./garment-canvas"
 
 // Preload PBR textures as early as possible
 if (typeof window !== "undefined") {
@@ -46,286 +44,35 @@ if (typeof window !== "undefined") {
 // ─── Constants ────────────────────────────────────────────────
 
 const SWATCH_COLORS = [
-  "#FFFFFF", "#F5F5DC", "#FAF0E6", "#FFE4C4", "#D2B48C", "#C4A882",
-  "#8B7355", "#6B4226", "#3C1414", "#1A1A1A", "#000000",
-  "#1565C0", "#1E3A8A", "#0D47A1", "#283593", "#1A237E",
-  "#2E7D32", "#388E3C", "#1B5E20", "#4A6741",
-  "#B71C1C", "#C62828", "#8E24AA", "#6A1B9A",
-  "#F5E6D3", "#E8D5B7", "#D4C5A9", "#C0B090",
-  "#9E9E9E", "#757575", "#616161", "#424242",
+  "#FFFFFF", "#F5F5F5", "#E0E0E0", "#BDBDBD", "#9E9E9E", "#757575", "#616161", "#212121",
+  "#FFEBEE", "#FFCDD2", "#EF9A9A", "#E57373", "#EF5350", "#F44336", "#E53935", "#B71C1C",
+  "#FFF3E0", "#FFE0B2", "#FFCC80", "#FFB74D", "#FFA726", "#FF9800", "#FB8C00", "#E65100",
+  "#FFFDE7", "#FFF9C4", "#FFF59D", "#FFF176", "#FFEE58", "#FFEB3B", "#FDD835", "#F57F17",
+  "#F1F8E9", "#DCEDC8", "#C5E1A5", "#AED581", "#9CCC65", "#8BC34A", "#7CB342", "#33691E",
+  "#E8F5E9", "#C8E6C9", "#A5D6A7", "#81C784", "#66BB6A", "#4CAF50", "#43A047", "#1B5E20",
+  "#E3F2FD", "#BBDEFB", "#90CAF9", "#64B5F6", "#42A5F5", "#2196F3", "#1E88E5", "#0D47A1",
+  "#EDE7F6", "#D1C4E9", "#B39DDB", "#9575CD", "#7E57C2", "#673AB7", "#5E35B1", "#311B92",
+  "#FCE4EC", "#F8BBD0", "#F48FB1", "#F06292", "#EC407A", "#E91E63", "#D81B60", "#880E4F",
+  "#EFEBE9", "#D7CCC8", "#BCAAA4", "#A1887F", "#8D6E63", "#795548", "#6D4C41", "#3E2723",
 ]
 
-const FABRIC_TYPE_INFO: Record<string, { label: string; description: string }> = {
-  cotton: { label: "Cotton (Poplin)", description: "Smooth, breathable, classic weave" },
-  linen: { label: "Linen", description: "Textured, natural, relaxed feel" },
-  polyester: { label: "Polyester", description: "Smooth, shiny, wrinkle-resistant" },
+// Maps product-specific fabric type IDs to a PBR preset key
+const PBR_TYPE_MAP: Record<string, string> = {
+  cotton: "cotton",
+  linen: "linen",
+  polyester: "polyester",
+  "wool-blend": "polyester",
+  "premium-wool": "cotton",
+  "washable-wool": "linen",
 }
 
 const PRODUCT_ICONS: Record<string, string> = {
   shirt: "👔",
   jacket: "🧥",
   pants: "👖",
+  suit: "🤵",
+  blazer: "🧥",
 }
-
-// Default GLTF model paths per product type — loads the same models as the real website
-// Keep the count reasonable to avoid WebGL context loss on lower-end GPUs
-const DEFAULT_MODEL_PATHS: Record<string, string[]> = {
-  shirt: [
-    "/models/shirts/Front/boxplacket.gltf",
-    "/models/shirts/Collar/kentcollar.gltf",
-    "/models/shirts/Cuffs/roundedcuff.gltf",
-    "/models/shirts/Pocket/pocket.gltf",
-  ],
-  jacket: [
-    // Front body + buttons
-    "/models/jackets/Front/Bottom/2Button/Curved.gltf",
-    "/models/jackets/Front/Button/2Button/S4.gltf",
-    // Lapels
-    "/models/jackets/Lapel/Regular/Upper/2Button/CL2.gltf",
-    "/models/jackets/Lapel/Regular/Lower/2Button/CL2.gltf",
-    // Sleeves
-    "/models/jackets/Sleeve/Sleeve.gltf",
-    "/models/jackets/Sleeve/Working/4Button/S4.gltf",
-    // Vent (back)
-    "/models/jackets/Vent/NoVent.gltf",
-    // Pockets
-    "/models/jackets/Pocket/PK-1.gltf",
-    "/models/jackets/Pocket/ChestPocket.gltf",
-  ],
-  pants: [
-    "/models/pants/FrontStyle/NoPleats.gltf",
-    "/models/pants/BeltLoops/01.gltf",
-    "/models/pants/Backandbasebeltarea/Basemodel.gltf",
-    "/models/pants/Pockets/Slanted.gltf",
-    "/models/pants/BackPockets/Buttonedweltpocket.gltf",
-  ],
-}
-
-// Mesh/material names that are NOT fabric — skip fabric color on these.
-// Includes both singular and plural Italian forms from the GLTF models.
-const NON_FABRIC_NAMES = [
-  "bottoni", "bottone", "filobottoni", "filobottone",
-  "asola", "asole",
-  "gemelli", "ricamo",
-]
-
-// Camera presets per product type
-const CAMERA_PRESETS: Record<string, { position: [number, number, number]; target: [number, number, number]; fov: number }> = {
-  shirt:  { position: [0, 0.4, 2.9], target: [0, -0.1, 0], fov: 45 },
-  jacket: { position: [0, 0.8, 7.0], target: [0, 0.5, 0], fov: 45 },
-  pants:  { position: [0, 0.4, 2.9], target: [0, -0.1, 0], fov: 45 },
-}
-
-// Per-product texture repeat scale factors.
-// Jacket is the visual reference (1.0). Shirt and pants have a closer camera
-// (z=2.9 vs z=7.0) and tighter UV unwraps, so the same repeat count tiles
-// the pattern far too small. Scaling down makes them match the jacket visually.
-const TEXTURE_REPEAT_SCALE: Record<string, number> = {
-  jacket: 1.0,
-  shirt:  0.18,
-  pants:  0.22,
-}
-
-// ─── Real GLTF Model Preview ─────────────────────────────────
-
-/** Updates camera position/target when product type changes (since we don't use key= on Canvas) */
-function CameraUpdater({ productType }: { productType: string }) {
-  const { camera } = useThree()
-  useEffect(() => {
-    const preset = CAMERA_PRESETS[productType] || CAMERA_PRESETS.shirt
-    camera.position.set(...preset.position)
-    camera.lookAt(...preset.target)
-    camera.updateProjectionMatrix()
-  }, [productType, camera])
-  return null
-}
-
-/** Recursively dispose all geometries and materials in a scene tree */
-function disposeScene(obj: THREE.Object3D) {
-  obj.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
-      child.geometry?.dispose()
-      const mats = Array.isArray(child.material) ? child.material : [child.material]
-      mats.forEach((m) => {
-        if (m instanceof THREE.Material) {
-          Object.values(m).forEach((val) => {
-            if (val instanceof THREE.Texture) val.dispose()
-          })
-          m.dispose()
-        }
-      })
-    }
-  })
-}
-
-function GarmentModel({
-  productType,
-  fabricColor,
-  fabricImageUrl,
-  repeatX = 6,
-  repeatY = 6,
-  zoomMultiplier = 1,
-  pbrSettings,
-}: {
-  productType: string
-  fabricColor: string | null
-  fabricImageUrl: string | null
-  repeatX?: number
-  repeatY?: number
-  zoomMultiplier?: number
-  pbrSettings?: { roughness: number; normal_scale: number; bump_scale: number; sheen: number }
-}) {
-  const [loadedScenes, setLoadedScenes] = useState<THREE.Group[]>([])
-  const [modelScale, setModelScale] = useState(1)
-  const [isLoading, setIsLoading] = useState(true)
-
-  const garmentType: GarmentType = productType === "pants" ? "trousers" : (productType as GarmentType)
-
-  // Create GLTF loader with DRACO support (same pattern as working customer-facing viewers)
-  const loader = useMemo(() => {
-    const gltfLoader = new GLTFLoader()
-    const dracoLoader = new DRACOLoader()
-    dracoLoader.setDecoderPath("/draco/")
-    gltfLoader.setDRACOLoader(dracoLoader)
-    return gltfLoader
-  }, [])
-
-  // Load model parts when product type changes
-  useEffect(() => {
-    const paths = DEFAULT_MODEL_PATHS[productType] || DEFAULT_MODEL_PATHS.shirt
-
-    // Dispose old scenes before loading new ones to free GPU memory
-    setIsLoading(true)
-
-    let cancelled = false
-
-    const loadPromises = paths.map(
-      (path) =>
-        new Promise<THREE.Group>((resolve) => {
-          loader.load(
-            path,
-            (gltf) => resolve(gltf.scene.clone()),
-            undefined,
-            (err) => {
-              console.error("GLTF load error:", path, err)
-              resolve(new THREE.Group())
-            }
-          )
-        })
-    )
-
-    Promise.all(loadPromises).then((loaded) => {
-      if (cancelled) {
-        loaded.forEach(disposeScene)
-        return
-      }
-
-      // Compute scale from bounding box height (same approach as working shirt/pants viewers)
-      const tempGroup = new THREE.Group()
-      loaded.forEach((s) => tempGroup.add(s.clone()))
-      const bbox = new THREE.Box3().setFromObject(tempGroup)
-      const size = bbox.getSize(new THREE.Vector3())
-      const desiredHeight = 2.6
-      const computedScale = size.y > 0.001 ? desiredHeight / size.y : 1
-
-      // Clean up temp clones used only for measurement
-      tempGroup.children.forEach((c) => disposeScene(c))
-
-      setModelScale(computedScale)
-      setLoadedScenes((prev) => {
-        prev.forEach(disposeScene)
-        return loaded
-      })
-      setIsLoading(false)
-    })
-
-    return () => { cancelled = true }
-  }, [productType, loader])
-
-  // Dispose on unmount
-  useEffect(() => {
-    return () => {
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      setLoadedScenes((prev) => {
-        prev.forEach(disposeScene)
-        return []
-      })
-    }
-  }, [])
-
-  // Apply fabric color/texture to all fabric meshes
-  useEffect(() => {
-    if (loadedScenes.length === 0) return
-
-    // Derive PBROverride from wizard slider values so roughness/sheen/normal/bump
-    // actually affect the 3D preview instead of always using hardcoded defaults.
-    const pbrOverride: PBROverride | undefined = pbrSettings
-      ? {
-          roughness:   pbrSettings.roughness,
-          normalScale: pbrSettings.normal_scale,
-          bumpScale:   pbrSettings.bump_scale,
-          sheen:       pbrSettings.sheen,
-        }
-      : undefined
-
-    loadedScenes.forEach((scene) => {
-      scene.traverse((child) => {
-        if (!(child instanceof THREE.Mesh) || !child.material) return
-
-        const meshName = (child.name || "").toLowerCase()
-        const mats = Array.isArray(child.material)
-          ? (child.material as THREE.Material[])
-          : [child.material as THREE.Material]
-        const matNames = mats.map((m) => m.name.toLowerCase())
-
-        const isNonFabric = NON_FABRIC_NAMES.some(
-          (s) => meshName.includes(s) || matNames.some((n) => n.includes(s))
-        )
-        if (isNonFabric) return
-
-        if (fabricImageUrl) {
-          // Route ALL image URLs (data:, https:, /...) through applyFabricCustomization
-          // so the cotton poplin PBR normal/bump maps are always applied.
-          // White base color (0xffffff) ensures printed patterns show true colours.
-          // Apply per-product repeat scale so the pattern appears the same visual
-          // size on shirt/pants as it does on the jacket (which is the reference).
-          const scale = TEXTURE_REPEAT_SCALE[productType] ?? 1.0
-          applyFabricCustomization(child, fabricImageUrl, 0xffffff, garmentType, repeatX * scale, repeatY * scale, pbrOverride)
-        } else {
-          const color = fabricColor || "#eeeeee"
-          const scale = TEXTURE_REPEAT_SCALE[productType] ?? 1.0
-          applyFabricCustomization(child, color, undefined, garmentType, repeatX * scale, repeatY * scale, pbrOverride)
-        }
-      })
-    })
-  }, [loadedScenes, fabricColor, fabricImageUrl, garmentType, repeatX, repeatY, pbrSettings])
-
-  if (isLoading) {
-    return (
-      <Html center>
-        <div className="flex flex-col items-center gap-3 bg-white/90 backdrop-blur-sm p-6 rounded-xl shadow-lg">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm font-medium text-gray-700">Loading model...</p>
-        </div>
-      </Html>
-    )
-  }
-
-  if (loadedScenes.length === 0) return null
-
-  // Render each scene as an individual <primitive> inside a scaled <group>
-  // This matches the exact pattern used by the working customer-facing viewers
-  const finalScale = modelScale * zoomMultiplier
-  return (
-    <group position={[0, 0, 0]} scale={[finalScale, finalScale, finalScale]}>
-      {loadedScenes.map((scene, i) => (
-        <primitive key={`part-${i}`} object={scene} position={[0, 0, 0]} />
-      ))}
-    </group>
-  )
-}
-
-// ─── Main Wizard Component ────────────────────────────────────
 
 interface FabricWizardProps {
   editingFabric?: FabricRow | null
@@ -333,16 +80,16 @@ interface FabricWizardProps {
   onSaved: () => void
 }
 
-export function FabricWizard({ editingFabric, onClose, onSaved }: FabricWizardProps) {
-  const isEditing = !!editingFabric
+export default function FabricWizard({ editingFabric, onClose, onSaved }: FabricWizardProps) {
   const { toast } = useToast()
+  const isEditing = !!editingFabric
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Products
   const [products, setProducts] = useState<Product[]>([])
 
   // Step tracking
-  const [currentStep, setCurrentStep] = useState(isEditing ? 3 : 0)
+  const [currentStep, setCurrentStep] = useState(isEditing ? 4 : 0)
 
   // Form state
   const [productId, setProductId] = useState(editingFabric?.product_id || "")
@@ -372,7 +119,7 @@ export function FabricWizard({ editingFabric, onClose, onSaved }: FabricWizardPr
 
   // Update PBR when fabric type changes (only for new fabrics)
   useEffect(() => {
-    if (!isEditing) {
+    if (!isEditing && fabricType) {
       setPbrSettings(PBR_PRESETS[fabricType] || PBR_PRESETS.cotton)
     }
   }, [fabricType, isEditing])
@@ -381,13 +128,35 @@ export function FabricWizard({ editingFabric, onClose, onSaved }: FabricWizardPr
   const selectedProduct = products.find((p) => p.id === productId)
   const productType = selectedProduct?.type || "shirt"
 
+  // Pull the real fabric-type options for the selected product from sample data
+  const productFabricTypes = useMemo(() => {
+    const opts = SAMPLE_PRODUCTS_WITH_CUSTOMIZATION[productId as keyof typeof SAMPLE_PRODUCTS_WITH_CUSTOMIZATION]
+    if (!opts) return [
+      { id: "cotton",    name: "Cotton",    value: "cotton",    price: 0, thumbnail: undefined as string | undefined },
+      { id: "linen",     name: "Linen",     value: "linen",     price: 0, thumbnail: undefined as string | undefined },
+      { id: "polyester", name: "Polyester", value: "polyester", price: 0, thumbnail: undefined as string | undefined },
+    ]
+    const step = opts.find((o: any) => o.id === "fabric-type")
+    return (step?.values || []) as { id: string; name: string; value: string; price: number; thumbnail?: string }[]
+  }, [productId])
+
+  // Existing color swatches for the selected fabric type category (from sample data)
+  const existingColorsForType = useMemo(() => {
+    const opts = SAMPLE_PRODUCTS_WITH_CUSTOMIZATION[productId as keyof typeof SAMPLE_PRODUCTS_WITH_CUSTOMIZATION]
+    if (!opts || !fabricType) return [] as { id: string; name: string; thumbnail?: string; color?: string }[]
+    const step = opts.find((o: any) => o.id === "fabric-color")
+    if (!step) return [] as { id: string; name: string; thumbnail?: string; color?: string }[]
+    return (step.values as any[]).filter((v: any) => v.fabricType === fabricType) as { id: string; name: string; thumbnail?: string; color?: string }[]
+  }, [productId, fabricType])
+
   const fabricColorForPreview = inputMode === "upload" ? null : colorHex
   const fabricImageForPreview = inputMode === "upload" ? (previewFile || imageUrl) : null
 
   // Step definitions
   const steps = [
     { label: "Product", description: "Select product" },
-    { label: "Fabric Type", description: "Choose material" },
+    { label: "Material Type", description: "Choose material" },
+    { label: "Fabric Style", description: "Pick style" },
     { label: "Input", description: "Color or texture" },
     { label: "Details", description: "Name, price & save" },
   ]
@@ -396,10 +165,11 @@ export function FabricWizard({ editingFabric, onClose, onSaved }: FabricWizardPr
     switch (currentStep) {
       case 0: return !!productId
       case 1: return !!fabricType
-      case 2:
+      case 2: return !!fabricType
+      case 3:
         if (inputMode === "upload") return !!(imageUrl || previewFile)
         return !!colorHex
-      case 3: return !!name.trim()
+      case 4: return !!name.trim()
       default: return false
     }
   }
@@ -420,21 +190,28 @@ export function FabricWizard({ editingFabric, onClose, onSaved }: FabricWizardPr
     const file = e.target.files?.[0]
     if (!file || !productId) return
 
+    // Show local preview immediately (data URL) so the 3D preview updates instantly
     const reader = new FileReader()
     reader.onload = (ev) => setPreviewFile(ev.target?.result as string)
     reader.readAsDataURL(file)
 
     setUploading(true)
     try {
-      const url = await uploadFabricImage(file, productId)
-      if (url) {
-        setImageUrl(url)
-        toast({ title: "Uploaded", description: "Fabric image uploaded." })
-      } else {
-        toast({ title: "Upload failed", description: "Could not upload image.", variant: "destructive" })
+      const form = new FormData()
+      form.append("file", file)
+      form.append("productId", productId)
+
+      const res = await fetch("/api/admin/fabrics/upload", { method: "POST", body: form })
+      if (!res.ok) {
+        const { error } = await res.json()
+        throw new Error(error || "Upload failed")
       }
-    } catch {
-      toast({ title: "Error", description: "Upload failed.", variant: "destructive" })
+      const { url } = await res.json()
+      setImageUrl(url)
+      toast({ title: "Uploaded", description: "Fabric image uploaded successfully." })
+    } catch (err: any) {
+      console.error("Upload error:", err)
+      toast({ title: "Upload failed", description: err?.message || "Could not upload image.", variant: "destructive" })
     } finally {
       setUploading(false)
     }
@@ -549,32 +326,122 @@ export function FabricWizard({ editingFabric, onClose, onSaved }: FabricWizardPr
     )
   }
 
-  const renderFabricTypeStep = () => (
+  const renderFabricTypeStep = () => {
+    const MATERIAL_TYPES: Array<{
+      id: "cotton" | "linen" | "polyester"
+      name: string
+      subtitle: string
+      description: string
+      icon: string
+      sampleBg: string
+      badge: string
+    }> = [
+      {
+        id: "cotton",
+        name: "Cotton",
+        subtitle: "Poplin / Oxford / Twill",
+        description: "Fine, smooth weave with a soft hand-feel. Breathable and crisp. Ideal for shirts and lightweight tailoring.",
+        icon: "🪡",
+        sampleBg: "from-white to-gray-100",
+        badge: "bg-blue-100 text-blue-800",
+      },
+      {
+        id: "linen",
+        name: "Linen",
+        subtitle: "Natural / Washed / Blended",
+        description: "Visible grain with a coarser, textured hand. Natural material variation gives each piece character.",
+        icon: "🌾",
+        sampleBg: "from-amber-50 to-yellow-100",
+        badge: "bg-amber-100 text-amber-800",
+      },
+      {
+        id: "polyester",
+        name: "Polyester",
+        subtitle: "Synthetic / Blend / Microfiber",
+        description: "Smooth, uniform surface with low roughness and subtle sheen. Wrinkle-resistant construction.",
+        icon: "✨",
+        sampleBg: "from-blue-50 to-indigo-100",
+        badge: "bg-purple-100 text-purple-800",
+      },
+    ]
+
+    return (
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold">Material Type</h3>
+          <p className="text-sm text-muted-foreground">
+            Choose the fabric material — sets the 3D surface texture and PBR defaults.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-3">
+          {MATERIAL_TYPES.map((mt) => (
+            <Card
+              key={mt.id}
+              className={`cursor-pointer transition-all hover:shadow-md ${
+                fabricType === mt.id
+                  ? "ring-2 ring-primary border-primary bg-primary/5"
+                  : "hover:border-gray-400"
+              }`}
+              onClick={() => setFabricType(mt.id)}
+            >
+              <CardContent className="p-4 flex items-start gap-4">
+                <div className={`w-14 h-14 rounded-lg bg-gradient-to-br ${mt.sampleBg} flex items-center justify-center text-2xl flex-shrink-0 border`}>
+                  {mt.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="font-semibold">{mt.name}</p>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${mt.badge}`}>{mt.subtitle}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{mt.description}</p>
+                </div>
+                {fabricType === mt.id && (
+                  <Check className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  const renderFabricStyleStep = () => (
     <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-semibold">Fabric Type</h3>
-        <p className="text-sm text-muted-foreground">Choose the material category</p>
+        <h3 className="text-lg font-semibold">Fabric Style</h3>
+        <p className="text-sm text-muted-foreground">
+          Pick the specific fabric style for <span className="font-medium">{selectedProduct?.name || "this product"}</span>
+        </p>
       </div>
       <div className="grid grid-cols-1 gap-3">
-        {Object.entries(FABRIC_TYPE_INFO).map(([type, info]) => (
+        {productFabricTypes.map((ft) => (
           <Card
-            key={type}
+            key={ft.id}
             className={`cursor-pointer transition-all hover:shadow-md ${
-              fabricType === type
+              fabricType === ft.id
                 ? "ring-2 ring-primary border-primary bg-primary/5"
                 : "hover:border-gray-400"
             }`}
-            onClick={() => setFabricType(type as "cotton" | "linen" | "polyester")}
+            onClick={() => setFabricType(ft.id as "cotton" | "linen" | "polyester")}
           >
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-xl">
-                {type === "cotton" ? "🧵" : type === "linen" ? "🌿" : "✨"}
+            <CardContent className="p-3 flex items-center gap-3">
+              {ft.thumbnail ? (
+                <img
+                  src={ft.thumbnail}
+                  alt={ft.name}
+                  className="w-14 h-14 rounded-lg object-cover border flex-shrink-0"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-lg bg-gray-100 border flex-shrink-0" />
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm">{ft.name}</p>
+                {ft.price > 0 && (
+                  <p className="text-xs text-muted-foreground">+${ft.price}</p>
+                )}
               </div>
-              <div className="flex-1">
-                <p className="font-medium">{info.label}</p>
-                <p className="text-sm text-muted-foreground">{info.description}</p>
-              </div>
-              {fabricType === type && (
+              {fabricType === ft.id && (
                 <Check className="h-5 w-5 text-primary flex-shrink-0" />
               )}
             </CardContent>
@@ -658,21 +525,26 @@ export function FabricWizard({ editingFabric, onClose, onSaved }: FabricWizardPr
         )}
 
         {inputMode === "upload" && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Switch checked={isPrinted} onCheckedChange={setIsPrinted} id="printed" />
               <Label htmlFor="printed">Printed fabric (pattern/design)</Label>
             </div>
+
+            {/* Upload dropzone */}
             <div
               className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition-colors"
               onClick={() => fileInputRef.current?.click()}
             >
               {previewFile || imageUrl ? (
-                <img
-                  src={previewFile || imageUrl!}
-                  alt="Fabric"
-                  className="max-h-24 mx-auto rounded object-contain"
-                />
+                <div className="space-y-2">
+                  <img
+                    src={previewFile || imageUrl!}
+                    alt="Fabric"
+                    className="max-h-24 mx-auto rounded object-contain"
+                  />
+                  <p className="text-xs text-green-600 font-medium">✓ Uploaded — click to replace</p>
+                </div>
               ) : (
                 <>
                   <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
@@ -689,7 +561,52 @@ export function FabricWizard({ editingFabric, onClose, onSaved }: FabricWizardPr
               onChange={handleFileUpload}
               className="hidden"
             />
-            {uploading && <p className="text-sm text-blue-600">Uploading...</p>}
+            {uploading && (
+              <p className="text-sm text-blue-600 flex items-center gap-1.5">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…
+              </p>
+            )}
+
+            {/* Siblings preview — shows existing swatches for this category + new one */}
+            {(existingColorsForType.length > 0 || previewFile || imageUrl) && (
+              <div className="space-y-2 p-3 bg-gray-50 rounded-lg border">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  How it looks in the category
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {existingColorsForType.map((c) => (
+                    <div key={c.id} className="flex flex-col items-center gap-1">
+                      {c.thumbnail ? (
+                        <img
+                          src={c.thumbnail}
+                          alt={c.name}
+                          className="w-12 h-12 rounded border-2 border-gray-200 object-cover"
+                        />
+                      ) : (
+                        <div
+                          className="w-12 h-12 rounded border-2 border-gray-200"
+                          style={{ backgroundColor: c.color || "#ccc" }}
+                        />
+                      )}
+                      <span className="text-[10px] text-muted-foreground text-center leading-tight max-w-[52px] truncate">{c.name}</span>
+                    </div>
+                  ))}
+                  {(previewFile || imageUrl) && (
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="relative">
+                        <img
+                          src={previewFile || imageUrl!}
+                          alt="New"
+                          className="w-12 h-12 rounded border-2 border-primary object-cover ring-2 ring-primary/30"
+                        />
+                        <span className="absolute -top-1.5 -right-1.5 bg-primary text-white text-[9px] font-bold px-1 rounded-full leading-tight">NEW</span>
+                      </div>
+                      <span className="text-[10px] text-primary font-medium text-center leading-tight max-w-[52px] truncate">{name || "New"}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -793,7 +710,7 @@ export function FabricWizard({ editingFabric, onClose, onSaved }: FabricWizardPr
     </div>
   )
 
-  const stepRenderers = [renderProductStep, renderFabricTypeStep, renderInputStep, renderDetailsStep]
+  const stepRenderers = [renderProductStep, renderFabricTypeStep, renderFabricStyleStep, renderInputStep, renderDetailsStep]
 
   // ─── Layout ─────────────────────────────────────────────────
 
@@ -926,7 +843,7 @@ export function FabricWizard({ editingFabric, onClose, onSaved }: FabricWizardPr
                   repeatX={pbrSettings.repeat_x}
                   repeatY={pbrSettings.repeat_y}
                   zoomMultiplier={previewZoom}
-                  pbrSettings={pbrSettings}
+                  pbrSettings={{ ...pbrSettings, fabricMaterialType: fabricType }}
                 />
 
                 <OrbitControls

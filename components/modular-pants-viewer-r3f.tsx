@@ -9,6 +9,10 @@ import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js"
 import { applyFabricCustomization } from "@/lib/3d/customization-utils"
 import { pantsConfigs, pantsFrontPocketConfigs, pantsBackPocketConfigs, pantsCuffConfigs, pantsWaistbandConfigs } from "@/lib/3d/pants-configs"
 
+// Same scale factor as garment-canvas.tsx TEXTURE_REPEAT_SCALE['pants'].
+// Keeps the customer page in sync with the admin 3D preview.
+const PANTS_TEXTURE_SCALE = 0.22
+
 // Neutral fallback base color when no fabric is selected.
 // Keep this aligned with jacket defaults to avoid cross-garment color mismatch.
 const PANTS_BASE_COLOR = 0xaaaaaa
@@ -26,15 +30,16 @@ function isFabricMesh(child: THREE.Mesh): boolean {
 
 // Helper: Apply fabric styling to a loaded GLTF scene
 // Material values matched to jacket viewer for consistent appearance
-function applyPantsFabric(scene: THREE.Group, fabricColor?: string) {
+function applyPantsFabric(scene: THREE.Group, fabricColor?: string, fabricPbr?: { roughness?: number; normalScale?: number; bumpScale?: number; sheen?: number }, repeatX = 4, repeatY = 4) {
   scene.traverse((child) => {
     if (child instanceof THREE.Mesh && child.material) {
       const materials = Array.isArray(child.material) ? child.material : [child.material]
 
       if (isFabricMesh(child)) {
         if (fabricColor) {
-          // Use the same fabric pipeline as jacket to preserve swatch fidelity.
-          applyFabricCustomization(child, fabricColor, undefined, 'trousers')
+          // Use white base color so the texture renders in true colours (not multiplied by grey).
+          // Apply the same PANTS_TEXTURE_SCALE (0.22) as the admin preview so both look identical.
+          applyFabricCustomization(child, fabricColor, 0xffffff, 'trousers', repeatX * PANTS_TEXTURE_SCALE, repeatY * PANTS_TEXTURE_SCALE, fabricPbr)
         } else {
           // Fallback neutral cloth look before a fabric is selected.
           materials.forEach((material) => {
@@ -62,6 +67,9 @@ function applyPantsFabric(scene: THREE.Group, fabricColor?: string) {
 
 export interface BasicPantsCustomization {
   fabricColor?: string
+  fabricPbr?: { roughness?: number; normalScale?: number; bumpScale?: number; sheen?: number }
+  fabricRepeatX?: number
+  fabricRepeatY?: number
   fabricType?: string
   frontStyle?: string
   frontPocket?: string
@@ -118,7 +126,7 @@ function PantsModel({
     return gltfLoader
   }, [])
 
-  // Load main pants components
+  // Load main pants components (no fabric applied here — fabric effect below re-runs on its own)
   useEffect(() => {
     setIsLoading(true)
 
@@ -132,25 +140,13 @@ function PantsModel({
 
     Promise.all([
       new Promise<THREE.Group>((resolve, reject) => {
-        loader.load(stylePath, (gltf) => {
-          const scene = gltf.scene.clone()
-          applyPantsFabric(scene, customizations.fabricColor)
-          resolve(scene)
-        }, undefined, reject)
+        loader.load(stylePath, (gltf) => resolve(gltf.scene.clone()), undefined, reject)
       }),
       new Promise<THREE.Group>((resolve, reject) => {
-        loader.load(beltLoopsPath, (gltf) => {
-          const scene = gltf.scene.clone()
-          applyPantsFabric(scene, customizations.fabricColor)
-          resolve(scene)
-        }, undefined, reject)
+        loader.load(beltLoopsPath, (gltf) => resolve(gltf.scene.clone()), undefined, reject)
       }),
       new Promise<THREE.Group>((resolve, reject) => {
-        loader.load(waistbandPath, (gltf) => {
-          const scene = gltf.scene.clone()
-          applyPantsFabric(scene, customizations.fabricColor)
-          resolve(scene)
-        }, undefined, reject)
+        loader.load(waistbandPath, (gltf) => resolve(gltf.scene.clone()), undefined, reject)
       })
     ])
       .then(([style, loops, waist]) => {
@@ -173,7 +169,7 @@ function PantsModel({
         console.error("❌ Error loading pants models:", error)
         setIsLoading(false)
       })
-  }, [customizations.fabricColor, customizations.frontStyle, loader])
+  }, [customizations.frontStyle, loader])
 
   // Load front pocket
   useEffect(() => {
@@ -189,9 +185,7 @@ function PantsModel({
     loader.load(
       pocketPath,
       (gltf) => {
-        const scene = gltf.scene.clone()
-        applyPantsFabric(scene, customizations.fabricColor)
-        setFrontPocket(scene)
+        setFrontPocket(gltf.scene.clone())
         console.log(`✅ Front pocket loaded: ${frontPocketStyle}`)
       },
       undefined,
@@ -200,7 +194,7 @@ function PantsModel({
         setFrontPocket(null)
       }
     )
-  }, [customizations.frontPocket, customizations.fabricColor, loader])
+  }, [customizations.frontPocket, loader])
 
   // Load back pocket(s)
   useEffect(() => {
@@ -218,11 +212,7 @@ function PantsModel({
         new Promise<THREE.Group>((resolve, reject) => {
           loader.load(
             pocketPath,
-            (gltf) => {
-              const scene = gltf.scene.clone()
-              applyPantsFabric(scene, customizations.fabricColor)
-              resolve(scene)
-            },
+            (gltf) => resolve(gltf.scene.clone()),
             undefined,
             reject
           )
@@ -237,7 +227,7 @@ function PantsModel({
         console.error(`❌ Error loading back pockets ${backPocketStyle}:`, error)
         setBackPockets([])
       })
-  }, [customizations.backPocket, customizations.fabricColor, loader])
+  }, [customizations.backPocket, loader])
 
   // Load bottom cuff
   useEffect(() => {
@@ -259,9 +249,7 @@ function PantsModel({
     loader.load(
       cuffPath,
       (gltf) => {
-        const scene = gltf.scene.clone()
-        applyPantsFabric(scene, customizations.fabricColor)
-        setBottomCuff(scene)
+        setBottomCuff(gltf.scene.clone())
         console.log(`✅ Bottom cuff loaded: ${cuffStyle}`)
       },
       undefined,
@@ -270,7 +258,7 @@ function PantsModel({
         setBottomCuff(null)
       }
     )
-  }, [customizations.bottomCuffs, customizations.fabricColor, loader])
+  }, [customizations.bottomCuffs, loader])
 
   // Load waistband extension
   useEffect(() => {
@@ -294,11 +282,7 @@ function PantsModel({
         new Promise<THREE.Group>((resolve, reject) => {
           loader.load(
             extensionPath,
-            (gltf) => {
-              const scene = gltf.scene.clone()
-              applyPantsFabric(scene, customizations.fabricColor)
-              resolve(scene)
-            },
+            (gltf) => resolve(gltf.scene.clone()),
             undefined,
             reject
           )
@@ -313,7 +297,20 @@ function PantsModel({
         console.error(`❌ Error loading waistband extensions ${extensionStyle}:`, error)
         setWaistbandExtensions([])
       })
-  }, [customizations.waistbandExtension, customizations.fabricColor, loader])
+  }, [customizations.waistbandExtension, loader])
+
+  // ── Separate fabric-apply effect ───────────────────────────────────────────
+  // Runs whenever any loaded scene changes OR the fabric color changes.
+  // This mirrors the working garment-canvas.tsx approach and ensures Supabase
+  // image URLs (cross-origin textures) are applied AFTER the scene is mounted.
+  useEffect(() => {
+    const parts = [
+      pantsStyle, beltLoops, waistband, frontPocket,
+      ...backPockets, bottomCuff, ...waistbandExtensions,
+    ].filter((s): s is THREE.Group => s !== null)
+    if (parts.length === 0) return
+    parts.forEach((scene) => applyPantsFabric(scene, customizations.fabricColor, customizations.fabricPbr, customizations.fabricRepeatX, customizations.fabricRepeatY))
+  }, [pantsStyle, beltLoops, waistband, frontPocket, backPockets, bottomCuff, waistbandExtensions, customizations.fabricColor, customizations.fabricPbr, customizations.fabricRepeatX, customizations.fabricRepeatY])
 
   if (isLoading || !pantsStyle || !beltLoops || !waistband) {
     return <LoadingOverlay />
@@ -348,41 +345,27 @@ function OrbitCameraController({
 }) {
   const { camera } = useThree()
   const isUserInteracting = React.useRef(false)
-  const userInteractionTimeout = React.useRef<NodeJS.Timeout | null>(null)
-  
-  // Detect user interaction with controls
+  const prevAzimuth = React.useRef(targetAzimuth)
+  const prevY = React.useRef(targetY)
+
+  // Re-enable animation only when a step navigation drives a real prop change
+  React.useEffect(() => {
+    const azimuthChanged = Math.abs(prevAzimuth.current - targetAzimuth) > 0.01
+    const yChanged = Math.abs(prevY.current - targetY) > 0.001
+    if (azimuthChanged || yChanged) {
+      isUserInteracting.current = false
+      prevAzimuth.current = targetAzimuth
+      prevY.current = targetY
+    }
+  }, [targetAzimuth, targetY])
+
+  // Mark as user-interacting on drag start; leave position sticky on drag end
   React.useEffect(() => {
     if (!controlsRef.current) return
-    
     const controls = controlsRef.current
-    
-    const onStart = () => {
-      isUserInteracting.current = true
-      if (userInteractionTimeout.current) {
-        clearTimeout(userInteractionTimeout.current)
-      }
-    }
-    
-    const onEnd = () => {
-      // Keep user interaction flag for a short time after they stop
-      if (userInteractionTimeout.current) {
-        clearTimeout(userInteractionTimeout.current)
-      }
-      userInteractionTimeout.current = setTimeout(() => {
-        isUserInteracting.current = false
-      }, 500)
-    }
-    
+    const onStart = () => { isUserInteracting.current = true }
     controls.addEventListener('start', onStart)
-    controls.addEventListener('end', onEnd)
-    
-    return () => {
-      controls.removeEventListener('start', onStart)
-      controls.removeEventListener('end', onEnd)
-      if (userInteractionTimeout.current) {
-        clearTimeout(userInteractionTimeout.current)
-      }
-    }
+    return () => { controls.removeEventListener('start', onStart) }
   }, [controlsRef])
   
   useFrame(() => {

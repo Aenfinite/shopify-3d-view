@@ -26,10 +26,11 @@ import { Edit, MoreHorizontal, Search, Trash, Plus, Eye } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import {
   getAllProducts,
+  updateFabric,
   type FabricRow,
   type Product,
 } from "@/lib/supabase/service"
-import { FabricWizard } from "./fabric-wizard"
+import FabricWizard from "./fabric-wizard"
 import { FabricPreviewDialog } from "./fabric-preview-dialog"
 
 type ViewMode = "list" | "wizard"
@@ -296,6 +297,16 @@ export function FabricManager() {
           onOpenChange={(open: boolean) => !open && setPreviewFabric(null)}
           fabric={previewFabric}
           products={products}
+          onSave={async (newPbr) => {
+            const updated = await updateFabric(previewFabric.id, { pbr_settings: newPbr })
+            if (updated) {
+              setFabrics((prev) => prev.map((f) => f.id === updated.id ? updated : f))
+              setPreviewFabric(updated)
+              toast({ title: "PBR settings saved", description: `${previewFabric.name} updated.` })
+            } else {
+              toast({ title: "Save failed", description: "Could not update PBR settings.", variant: "destructive" })
+            }
+          }}
         />
       )}
     </div>

@@ -54,9 +54,9 @@ export interface FabricRow {
 // Default PBR presets per fabric type
 export const PBR_PRESETS: Record<string, FabricRow["pbr_settings"]> = {
   cotton: {
-    normal_scale: 0.20,
+    normal_scale: 0.45,
     roughness: 0.60,
-    bump_scale: 0.15,
+    bump_scale: 0.20,
     sheen: 0.15,
     repeat_x: 4,
     repeat_y: 4,

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, Suspense } from "react"
+import { useState, Suspense } from "react"
 import {
   Dialog,
   DialogContent,
@@ -12,9 +12,9 @@ import { Slider } from "@/components/ui/slider"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Canvas } from "@react-three/fiber"
-import { OrbitControls, Environment, useGLTF, Center } from "@react-three/drei"
-import * as THREE from "three"
+import { OrbitControls, Environment } from "@react-three/drei"
 import type { FabricRow, Product } from "@/lib/supabase/service"
+import { GarmentModel, CameraUpdater, CAMERA_PRESETS } from "./garment-canvas"
 
 interface FabricPreviewDialogProps {
   open: boolean
@@ -22,63 +22,6 @@ interface FabricPreviewDialogProps {
   fabric: FabricRow
   products: Product[]
   onSave?: (settings: FabricRow["pbr_settings"]) => void
-}
-
-function PreviewModel({
-  productType,
-  fabricColor,
-  fabricImageUrl,
-  pbrSettings,
-}: {
-  productType: string
-  fabricColor: string | null
-  fabricImageUrl: string | null
-  pbrSettings: FabricRow["pbr_settings"]
-}) {
-  // Use a simple sphere/torus as universal preview geometry
-  const material = useMemo(() => {
-    const mat = new THREE.MeshPhysicalMaterial({
-      roughness: pbrSettings.roughness,
-      metalness: 0,
-      sheenColor: new THREE.Color(0xffffff),
-      sheen: pbrSettings.sheen,
-      clearcoat: 0,
-    })
-
-    if (fabricImageUrl) {
-      const loader = new THREE.TextureLoader()
-      const tex = loader.load(fabricImageUrl)
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping
-      tex.repeat.set(pbrSettings.repeat_x, pbrSettings.repeat_y)
-      tex.colorSpace = THREE.SRGBColorSpace
-      mat.map = tex
-    } else if (fabricColor) {
-      mat.color = new THREE.Color(fabricColor)
-    }
-
-    // Adjust brightness via darkness param
-    if (pbrSettings.darkness !== 0) {
-      const hsl = { h: 0, s: 0, l: 0 }
-      mat.color.getHSL(hsl)
-      hsl.l = Math.max(0, Math.min(1, hsl.l - pbrSettings.darkness))
-      mat.color.setHSL(hsl.h, hsl.s, hsl.l)
-    }
-
-    return mat
-  }, [fabricColor, fabricImageUrl, pbrSettings])
-
-  return (
-    <group>
-      {/* Sphere preview to show fabric appearance */}
-      <mesh material={material} castShadow receiveShadow>
-        <sphereGeometry args={[1.5, 64, 64]} />
-      </mesh>
-      {/* Flat plane behind for reference */}
-      <mesh position={[0, 0, -2]} material={material}>
-        <planeGeometry args={[3, 3]} />
-      </mesh>
-    </group>
-  )
 }
 
 export function FabricPreviewDialog({
@@ -108,26 +51,32 @@ export function FabricPreviewDialog({
         </DialogHeader>
 
         <div className="grid grid-cols-[1fr_280px] gap-4">
-          {/* 3D Canvas */}
+          {/* 3D Canvas — real garment model */}
           <div className="h-[500px] bg-gray-100 rounded-lg overflow-hidden">
-            <Canvas camera={{ position: [0, 0, 4], fov: 45 }}>
+            <Canvas
+              camera={{
+                position: (CAMERA_PRESETS[productType] ?? CAMERA_PRESETS.shirt).position,
+                fov: (CAMERA_PRESETS[productType] ?? CAMERA_PRESETS.shirt).fov,
+              }}
+            >
               <Suspense fallback={null}>
+                <CameraUpdater productType={productType} />
                 <ambientLight intensity={0.5} />
                 <directionalLight position={[3, 8, 4]} intensity={0.8} />
                 <directionalLight position={[-3, 5, 2]} intensity={0.45} />
                 <Environment preset="studio" environmentIntensity={0.1} />
-                <Center>
-                  <PreviewModel
-                    productType={productType}
-                    fabricColor={fabric.color_hex}
-                    fabricImageUrl={fabric.image_url}
-                    pbrSettings={localPbr}
-                  />
-                </Center>
+                <GarmentModel
+                  productType={productType}
+                  fabricColor={fabric.color_hex}
+                  fabricImageUrl={fabric.image_url}
+                  repeatX={localPbr.repeat_x}
+                  repeatY={localPbr.repeat_y}
+                  pbrSettings={{ ...localPbr, fabricMaterialType: fabric.fabric_type }}
+                />
                 <OrbitControls
                   enablePan={false}
-                  minDistance={2}
-                  maxDistance={8}
+                  minDistance={1}
+                  maxDistance={20}
                   autoRotate
                   autoRotateSpeed={1}
                 />

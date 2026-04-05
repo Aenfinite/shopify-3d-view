@@ -4,6 +4,9 @@ import { Object3D } from "three"
 export interface BasicJacketCustomization {
   frontStyle?: "2button" | "3button" | "6d2"
   fabricColor?: string
+  fabricPbr?: { roughness?: number; normalScale?: number; bumpScale?: number; sheen?: number }
+  fabricRepeatX?: number
+  fabricRepeatY?: number
   buttonColor?: string
   threadColor?: string
   lapelColor?: string

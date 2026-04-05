@@ -12,7 +12,7 @@ create table if not exists fabrics (
   id uuid primary key default uuid_generate_v4(),
   product_id text not null,               -- matches hardcoded product ids (shirt-001, jacket-001, etc.)
   name text not null,
-  fabric_type text not null check (fabric_type in ('cotton', 'linen', 'polyester')),
+  fabric_type text not null check (fabric_type in ('cotton', 'linen', 'polyester', 'wool-blend')),
   input_mode text not null check (input_mode in ('swatch', 'hex', 'upload')) default 'swatch',
   color_hex text,
   image_url text,
