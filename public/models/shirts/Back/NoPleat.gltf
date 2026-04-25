@@ -20,12 +20,13 @@
 	],
 	"materials":[
 		{
-			"name":"default.003"
+			"doubleSided":true,
+			"name":"Tessuto"
 		}
 	],
 	"meshes":[
 		{
-			"name":"Tessuto.003",
+			"name":"Mesh_0",
 			"primitives":[
 				{
 					"attributes":{
@@ -43,68 +44,68 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":111578,
+			"count":7496,
 			"max":[
-				0.18575789034366608,
-				0.4792782664299011,
-				0.13065189123153687
+				0.2128797471523285,
+				0.3581485450267792,
+				0.01294371485710144
 			],
 			"min":[
-				-0.18353769183158875,
-				-0.4930604100227356,
-				-0.0391242578625679
+				-0.20922613143920898,
+				-0.38352587819099426,
+				-0.15336237847805023
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":111578,
+			"count":7496,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":111578,
+			"count":7496,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
-			"componentType":5125,
-			"count":603000,
+			"componentType":5123,
+			"count":43803,
 			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":1338936,
+			"byteLength":89952,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":1338936,
-			"byteOffset":1338936,
+			"byteLength":89952,
+			"byteOffset":89952,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":892624,
-			"byteOffset":2677872,
+			"byteLength":59968,
+			"byteOffset":179904,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":2412000,
-			"byteOffset":3570496,
+			"byteLength":87606,
+			"byteOffset":239872,
 			"target":34963
 		}
 	],
 	"buffers":[
 		{
-			"byteLength":5982496,
-			"uri":"NoPleats.bin"
+			"byteLength":327480,
+			"uri":"NoPleat.bin"
 		}
 	]
 }
