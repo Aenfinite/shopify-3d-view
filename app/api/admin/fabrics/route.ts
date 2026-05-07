@@ -6,14 +6,23 @@ export const dynamic = "force-dynamic"
 // GET  /api/admin/fabrics           → all fabrics
 // GET  /api/admin/fabrics?product=x → fabrics for one product
 export async function GET(req: NextRequest) {
-  const productId = req.nextUrl.searchParams.get("product")
-  let query = supabaseAdmin.from("fabrics").select("*").order("sort_order").order("created_at")
-  if (productId && productId !== "all") {
-    query = query.eq("product_id", productId) as typeof query
+  try {
+    const productId = req.nextUrl.searchParams.get("product")
+    let query = supabaseAdmin.from("fabrics").select("*").order("sort_order").order("created_at")
+    if (productId && productId !== "all") {
+      query = query.eq("product_id", productId) as typeof query
+    }
+    const { data, error } = await query
+    if (error) {
+      console.error("[api/admin/fabrics] Supabase error:", error)
+      return NextResponse.json({ error: error.message, details: error }, { status: 500 })
+    }
+    return NextResponse.json(data)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error("[api/admin/fabrics] Unhandled exception:", err)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
-  const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
 }
 
 // POST /api/admin/fabrics  → create new fabric

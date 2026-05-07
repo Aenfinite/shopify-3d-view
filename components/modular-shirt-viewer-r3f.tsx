@@ -16,6 +16,7 @@ import {
 } from "@/lib/3d/shirt-configs"
 import { applyFabricCustomization, preloadFabricPBR, preloadShirtPBR } from "@/lib/3d/customization-utils"
 import type { PBROverride } from "@/lib/3d/customization-utils"
+import { computeCmBasedRepeats, hasCmScaling } from "@/lib/3d/garment-dimensions"
 
 // Kick off shirt PBR texture download as early as possible
 if (typeof window !== 'undefined') {
@@ -57,8 +58,32 @@ function applyShirtFabric(
   fabricRepeatX = 4,
   fabricRepeatY = 4,
   fabricPbr?: PBROverride,
+  fabricRepeatWidthCm?: number,
+  fabricRepeatHeightCm?: number,
 ) {
   const defaultColor = `#${SHIRT_BASE_COLOR.toString(16).padStart(6, '0')}`
+
+  // ALWAYS use cm-based scaling. Legacy multiplier is deprecated — it produced
+  // unpredictable results because it ignored real fabric dimensions.
+  // If the fabric record lacks cm values (old fabrics), fall back to standard
+  // shirting defaults: 60in × 23.5in (152.4 × 59.7 cm). This renders any fabric
+  // at the correct production scale even without admin-entered dimensions.
+  const DEFAULT_FABRIC_W_CM = 152.4  // 60 inches — standard shirting roll width
+  const DEFAULT_FABRIC_H_CM = 59.7   // ~23.5 inches — typical repeat height
+  const effW = (fabricRepeatWidthCm && fabricRepeatWidthCm > 0) ? fabricRepeatWidthCm : DEFAULT_FABRIC_W_CM
+  const effH = (fabricRepeatHeightCm && fabricRepeatHeightCm > 0) ? fabricRepeatHeightCm : DEFAULT_FABRIC_H_CM
+  // fineTune is an enlargement factor: 2 = pattern appears 2× larger (fewer repeats).
+  // Pass 1/fineTune to computeCmBasedRepeats which uses a multiplier internally.
+  const userFineTune = Math.max(0.1, fabricPbr?.fineTune ?? 5)
+  const r = computeCmBasedRepeats('shirt', effW, effH, 1 / userFineTune)
+  const rX = r.repeatsX
+  const rY = r.repeatsY
+  const usingDefaults = !hasCmScaling(fabricRepeatWidthCm, fabricRepeatHeightCm)
+  console.log(
+    `👔 [applyShirtFabric] ${usingDefaults ? 'CM-DEFAULT 🟡' : 'CM-MODE ✅'}  ` +
+    `fabricW=${effW.toFixed(1)}cm fabricH=${effH.toFixed(1)}cm scale=${userFineTune}× → rX=${rX.toFixed(3)} rY=${rY.toFixed(3)}` +
+    (usingDefaults ? ` (fabric record has no cm values — using 60in defaults)` : '')
+  )
 
   scene.traverse((child) => {
     if (!(child instanceof THREE.Mesh) || !child.material) return
@@ -114,15 +139,15 @@ function applyShirtFabric(
             ? contrastCuffTexture
             : fabricColor
         const texToUse = isCollarContrast ? collarTex : cuffTex
-        applyFabricCustomization(child, texToUse ?? defaultColor, 0xffffff, 'shirt', fabricRepeatX * SHIRT_TEXTURE_SCALE, fabricRepeatY * SHIRT_TEXTURE_SCALE, fabricPbr)
+        applyFabricCustomization(child, texToUse ?? defaultColor, 0xffffff, 'shirt', rX, rY, fabricPbr)
       } else {
-        applyFabricCustomization(child, fabricColor ?? defaultColor, 0xffffff, 'shirt', fabricRepeatX * SHIRT_TEXTURE_SCALE, fabricRepeatY * SHIRT_TEXTURE_SCALE, fabricPbr)
+        applyFabricCustomization(child, fabricColor ?? defaultColor, 0xffffff, 'shirt', rX, rY, fabricPbr)
       }
       return
     }
 
     // Main fabric area — use the full PBR pipeline
-    applyFabricCustomization(child, fabricColor ?? defaultColor, 0xffffff, 'shirt', fabricRepeatX * SHIRT_TEXTURE_SCALE, fabricRepeatY * SHIRT_TEXTURE_SCALE, fabricPbr)
+    applyFabricCustomization(child, fabricColor ?? defaultColor, 0xffffff, 'shirt', rX, rY, fabricPbr)
   })
 }
 
@@ -133,6 +158,10 @@ export interface BasicShirtCustomization {
   fabricType?: string
   fabricRepeatX?: number
   fabricRepeatY?: number
+  /** Real cm repeat width of the fabric print tile (production-accurate scaling). */
+  fabricRepeatWidthCm?: number
+  /** Real cm repeat height of the fabric print tile. */
+  fabricRepeatHeightCm?: number
   fabricPbr?: PBROverride
   collarStyle?: string          // "kent-collar" | "button-down-collar" | "spread-collar"
   sleeveStyle?: string          // "half-sleeve" | "full-sleeve"
@@ -251,6 +280,8 @@ function ShirtModel({
               customizations.fabricRepeatX,
               customizations.fabricRepeatY,
               customizations.fabricPbr,
+              customizations.fabricRepeatWidthCm,
+              customizations.fabricRepeatHeightCm,
             )
             resolve(scene)
           },
@@ -301,6 +332,8 @@ function ShirtModel({
     customizations.contrastCuffTexture,
     customizations.fabricRepeatX,
     customizations.fabricRepeatY,
+    customizations.fabricRepeatWidthCm,
+    customizations.fabricRepeatHeightCm,
     customizations.fabricPbr,
     loader,
   ])
@@ -316,7 +349,7 @@ function ShirtModel({
       resolvedPaths.pocket,
       (gltf) => {
         const scene = gltf.scene.clone()
-        applyShirtFabric(scene, customizations.fabricColor, undefined, undefined, undefined, customizations.fabricRepeatX, customizations.fabricRepeatY, customizations.fabricPbr)
+        applyShirtFabric(scene, customizations.fabricColor, undefined, undefined, undefined, customizations.fabricRepeatX, customizations.fabricRepeatY, customizations.fabricPbr, customizations.fabricRepeatWidthCm, customizations.fabricRepeatHeightCm)
         setPocketScene(scene)
         console.log("✅ Shirt chest pocket loaded")
       },
@@ -326,7 +359,7 @@ function ShirtModel({
         setPocketScene(null)
       }
     )
-  }, [resolvedPaths.pocket, customizations.fabricColor, customizations.fabricRepeatX, customizations.fabricRepeatY, customizations.fabricPbr, loader])
+  }, [resolvedPaths.pocket, customizations.fabricColor, customizations.fabricRepeatX, customizations.fabricRepeatY, customizations.fabricRepeatWidthCm, customizations.fabricRepeatHeightCm, customizations.fabricPbr, loader])
 
   if (isLoading || !frontScene || !collarScene || !sleeveScene) {
     return <LoadingOverlay />

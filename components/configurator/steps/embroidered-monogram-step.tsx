@@ -21,18 +21,18 @@ interface EmbroideredMonogramStepProps {
 const FONT_OPTIONS = [
   {
     id: "england",
-    name: "Edwardian Script ITC",
+    name: "Cambria",
     preview: "ABC",
-    style: "font-serif italic font-bold",
-    previewStyle: "font-family: 'EdwardianScriptITC', 'Brush Script MT', 'Lucida Handwriting', cursive; font-style: italic;",
-    description: "Elegant script font",
+    style: "font-serif",
+    previewStyle: "font-family: 'Cambria', Georgia, serif;",
+    description: "Classic elegant font",
   },
   {
     id: "arial",
-    name: "Arial",
+    name: "Calibri",
     preview: "ABC",
     style: "font-sans font-semibold",
-    previewStyle: "font-family: Arial, sans-serif; font-weight: 600;",
+    previewStyle: "font-family: 'Calibri', 'Gill Sans', sans-serif; font-weight: 600;",
     description: "Clean modern font",
   },
 ]
@@ -244,7 +244,7 @@ export function EmbroideredMonogramStep({
                     <div className="flex items-center gap-4">
                       <div 
                         className="text-3xl"
-                        style={font.id === 'england' ? { fontFamily: 'EdwardianScriptITC, "Brush Script MT", "Lucida Handwriting", cursive', fontStyle: 'italic' } : { fontFamily: 'Arial, sans-serif', fontWeight: '600' }}
+                        style={font.id === 'england' ? { fontFamily: "'Cambria', Georgia, serif" } : { fontFamily: "'Calibri', 'Gill Sans', sans-serif", fontWeight: '600' }}
                       >
                         {font.preview}
                       </div>

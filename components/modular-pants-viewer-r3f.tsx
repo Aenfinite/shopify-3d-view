@@ -8,6 +8,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js"
 import { applyFabricCustomization } from "@/lib/3d/customization-utils"
 import { pantsConfigs, pantsFrontPocketConfigs, pantsBackPocketConfigs, pantsCuffConfigs, pantsWaistbandConfigs } from "@/lib/3d/pants-configs"
+import { computeCmBasedRepeats, hasCmScaling } from "@/lib/3d/garment-dimensions"
 
 // Same scale factor as garment-canvas.tsx TEXTURE_REPEAT_SCALE['pants'].
 // Keeps the customer page in sync with the admin 3D preview.
@@ -28,38 +29,86 @@ function isFabricMesh(child: THREE.Mesh): boolean {
   return !NON_FABRIC_MATERIALS.some(skip => materialName.includes(skip) || meshName.includes(skip))
 }
 
+// Strip plastic-looking properties from any GLTF-imported material so back-area
+// meshes (Basemodel.gltf) don't look shiny. Safe on MeshStandard / MeshPhysical.
+function tameMaterialShine(material: THREE.Material) {
+  const m = material as THREE.MeshStandardMaterial & Partial<THREE.MeshPhysicalMaterial>
+  if (typeof (m as any).metalness === 'number') m.metalness = 0.0
+  if (typeof (m as any).roughness === 'number') m.roughness = Math.max(m.roughness ?? 0, 0.9)
+  if (typeof (m as any).envMapIntensity === 'number') m.envMapIntensity = 0.15
+  // Kill MeshPhysicalMaterial plastic effects if present
+  if (typeof m.clearcoat === 'number') m.clearcoat = 0
+  if (typeof m.clearcoatRoughness === 'number') m.clearcoatRoughness = 1
+  if (typeof m.sheen === 'number' && m.sheen > 0.3) m.sheen = 0.18
+  if (typeof m.specularIntensity === 'number') m.specularIntensity = Math.min(m.specularIntensity, 0.3)
+  if (typeof m.reflectivity === 'number') m.reflectivity = Math.min(m.reflectivity, 0.1)
+  m.needsUpdate = true
+}
+
+// Force DoubleSide rendering so pants geometry is visible from inside/all angles.
+// Many GLTFs export pants as single-sided thin shells which disappear when viewed
+// from the inside or extreme angles. DoubleSide fixes that.
+function forceDoubleSide(mesh: THREE.Mesh) {
+  const apply = (m: THREE.Material) => {
+    m.side = THREE.DoubleSide
+    m.shadowSide = THREE.DoubleSide
+    m.needsUpdate = true
+  }
+  if (Array.isArray(mesh.material)) mesh.material.forEach(apply)
+  else if (mesh.material) apply(mesh.material)
+}
+
 // Helper: Apply fabric styling to a loaded GLTF scene
 // Material values matched to jacket viewer for consistent appearance
-function applyPantsFabric(scene: THREE.Group, fabricColor?: string, fabricPbr?: { roughness?: number; normalScale?: number; bumpScale?: number; sheen?: number }, repeatX = 4, repeatY = 4) {
+function applyPantsFabric(scene: THREE.Group, fabricColor?: string, fabricPbr?: { roughness?: number; normalScale?: number; bumpScale?: number; sheen?: number }, repeatX = 4, repeatY = 4, repeatWidthCm?: number, repeatHeightCm?: number) {
+  // cm-based scaling when both values are provided; otherwise legacy multiplier.
+  const useCm = hasCmScaling(repeatWidthCm, repeatHeightCm)
+  let rX: number, rY: number
+  if (useCm) {
+    const fineTune = Math.max(0.25, Math.min(4, repeatX / 4))
+    const r = computeCmBasedRepeats('pants', repeatWidthCm!, repeatHeightCm!, fineTune)
+    rX = r.repeatsX
+    rY = r.repeatsY
+  } else {
+    rX = repeatX * PANTS_TEXTURE_SCALE
+    rY = repeatY * PANTS_TEXTURE_SCALE
+  }
+
   scene.traverse((child) => {
     if (child instanceof THREE.Mesh && child.material) {
       const materials = Array.isArray(child.material) ? child.material : [child.material]
 
       if (isFabricMesh(child)) {
         if (fabricColor) {
+          // Pre-tame the source material BEFORE the physical material is built from it,
+          // so any plastic specular/clearcoat baked into the GLTF is wiped out first.
+          materials.forEach((material) => tameMaterialShine(material))
           // Use white base color so the texture renders in true colours (not multiplied by grey).
-          // Apply the same PANTS_TEXTURE_SCALE (0.22) as the admin preview so both look identical.
-          applyFabricCustomization(child, fabricColor, 0xffffff, 'trousers', repeatX * PANTS_TEXTURE_SCALE, repeatY * PANTS_TEXTURE_SCALE, fabricPbr)
+          applyFabricCustomization(child, fabricColor, 0xffffff, 'trousers', rX, rY, fabricPbr)
         } else {
           // Fallback neutral cloth look before a fabric is selected.
           materials.forEach((material) => {
-            if (!(material instanceof THREE.MeshStandardMaterial)) return
-            material.color.setHex(PANTS_BASE_COLOR)
-            material.roughness = 0.92
-            material.metalness = 0.0
-            material.envMapIntensity = 0.15
-            material.flatShading = false
-            material.needsUpdate = true
+            tameMaterialShine(material)
+            if (material instanceof THREE.MeshStandardMaterial) {
+              material.color.setHex(PANTS_BASE_COLOR)
+              material.flatShading = false
+              material.needsUpdate = true
+            }
           })
         }
+        // Always force DoubleSide on fabric meshes so they render from inside too.
+        forceDoubleSide(child)
       } else {
         // Button / thread — keep original material, just ensure quality
         materials.forEach((material) => {
           if (!(material instanceof THREE.MeshStandardMaterial)) return
           material.roughness = Math.max(material.roughness, 0.5)
+          material.metalness = Math.min(material.metalness ?? 0, 0.3)
           material.envMapIntensity = 0.1
           material.needsUpdate = true
         })
+        // Buttons/thread also DoubleSide for safety on thin geometry.
+        forceDoubleSide(child)
       }
     }
   })
@@ -70,6 +119,10 @@ export interface BasicPantsCustomization {
   fabricPbr?: { roughness?: number; normalScale?: number; bumpScale?: number; sheen?: number }
   fabricRepeatX?: number
   fabricRepeatY?: number
+  /** Real cm repeat width of the fabric print tile (production-accurate scaling). */
+  fabricRepeatWidthCm?: number
+  /** Real cm repeat height of the fabric print tile. */
+  fabricRepeatHeightCm?: number
   fabricType?: string
   frontStyle?: string
   frontPocket?: string
@@ -309,8 +362,8 @@ function PantsModel({
       ...backPockets, bottomCuff, ...waistbandExtensions,
     ].filter((s): s is THREE.Group => s !== null)
     if (parts.length === 0) return
-    parts.forEach((scene) => applyPantsFabric(scene, customizations.fabricColor, customizations.fabricPbr, customizations.fabricRepeatX, customizations.fabricRepeatY))
-  }, [pantsStyle, beltLoops, waistband, frontPocket, backPockets, bottomCuff, waistbandExtensions, customizations.fabricColor, customizations.fabricPbr, customizations.fabricRepeatX, customizations.fabricRepeatY])
+    parts.forEach((scene) => applyPantsFabric(scene, customizations.fabricColor, customizations.fabricPbr, customizations.fabricRepeatX, customizations.fabricRepeatY, customizations.fabricRepeatWidthCm, customizations.fabricRepeatHeightCm))
+  }, [pantsStyle, beltLoops, waistband, frontPocket, backPockets, bottomCuff, waistbandExtensions, customizations.fabricColor, customizations.fabricPbr, customizations.fabricRepeatX, customizations.fabricRepeatY, customizations.fabricRepeatWidthCm, customizations.fabricRepeatHeightCm])
 
   if (isLoading || !pantsStyle || !beltLoops || !waistband) {
     return <LoadingOverlay />
@@ -428,26 +481,29 @@ export default function ModularPantsViewerR3F({
         <fog attach="fog" args={["#f5f5f5", 15, 40]} />
         
         {/* Brighter lighting for fully-matte fabric */}
-        <ambientLight intensity={0.9} />
+        <ambientLight intensity={1.0} />
 
-        {/* Main key light */}
+        {/* Main key light — front-top-right */}
         <directionalLight
           position={[5, 8, 5]}
-          intensity={1.2}
+          intensity={1.0}
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
           shadow-bias={-0.0001}
         />
 
-        {/* Fill light from the side */}
-        <directionalLight position={[-5, 3, -3]} intensity={0.6} />
+        {/* Front fill light — softens shadows on the front */}
+        <directionalLight position={[-5, 3, 3]} intensity={0.5} />
 
-        {/* Rim light from behind */}
-        <directionalLight position={[0, 3, -5]} intensity={0.3} />
+        {/* Back-fill: two soft, wide-angled diffuse lights instead of one
+            harsh rim light. This evenly illuminates the back without
+            creating specular highlights that read as plastic shine. */}
+        <directionalLight position={[-4, 4, -4]} intensity={0.35} />
+        <directionalLight position={[4, 4, -4]} intensity={0.35} />
 
-        {/* Bottom fill light */}
-        <hemisphereLight args={['#ffffff', '#666666', 0.35]} />
+        {/* Bottom + sky hemisphere for soft global wrap */}
+        <hemisphereLight args={['#ffffff', '#888888', 0.45]} />
 
         <Suspense fallback={<LoadingOverlay />}>
           <PantsModel customizations={customizations} />
@@ -469,8 +525,11 @@ export default function ModularPantsViewerR3F({
           target={[0, -0.1, 0]}
         />
 
-        {/* Environment for professional look — low intensity to avoid shiny reflections */}
-        <Environment preset="studio" environmentIntensity={0.2} />
+        {/* Environment for soft global illumination — kept very low so HDRI
+            reflections don't create specular highlights on the back fabric.
+            "apartment" preset is more uniform than "studio" (no harsh studio
+            softboxes baked into the HDRI). */}
+        <Environment preset="apartment" environmentIntensity={0.08} />
       </Canvas>
     </div>
   )

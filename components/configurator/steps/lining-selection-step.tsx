@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -16,16 +16,23 @@ import {
   ChevronRight
 } from "lucide-react"
 
+import { getLiningFabrics, FabricRow } from "@/lib/supabase/service"
+
 interface LiningSelectionStepProps {
   selectedLiningType: "standard" | "custom" | "unlined"
   selectedCustomType?: "custom-coloured" | "quilted"
   selectedLiningFabric?: string
-  onUpdate: (updates: { 
+  onUpdate: (updates: {
     liningType?: string
     customType?: string
     liningFabric?: string
     liningColor?: string
     liningMeshType?: string
+    liningPbr?: { roughness?: number; normalScale?: number; bumpScale?: number; sheen?: number }
+    liningRepeatX?: number
+    liningRepeatY?: number
+    liningRepeatWidthCm?: number
+    liningRepeatHeightCm?: number
   }) => void
 }
 
@@ -64,9 +71,7 @@ const LINING_FABRICS = [
 ]
 
 // Quilted Lining fabrics (images 249-256)
-const QUILTED_FABRICS = [
-  
-]
+const QUILTED_FABRICS: Array<{ id: string; name: string; image: string }> = []
 
 export function LiningSelectionStep({
   selectedLiningType,
@@ -78,6 +83,32 @@ export function LiningSelectionStep({
   const [customType, setCustomType] = useState<"custom-coloured" | "quilted" | undefined>(selectedCustomType as "custom-coloured" | "quilted" | undefined)
   const [showFabricPopup, setShowFabricPopup] = useState(false)
   const [selectedFabric, setSelectedFabric] = useState<string | undefined>(selectedLiningFabric)
+  const [supabaseFabrics, setSupabaseFabrics] = useState<FabricRow[]>([])
+  const [loadingSupabase, setLoadingSupabase] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoadingSupabase(true)
+    getLiningFabrics().then(rows => {
+      if (!cancelled) setSupabaseFabrics(rows || [])
+    }).finally(() => {
+      if (!cancelled) setLoadingSupabase(false)
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  const mergedFabrics = [
+    ...LINING_FABRICS,
+    ...supabaseFabrics.map(row => ({
+      id: row.id,
+      name: row.name || "Unnamed",
+      image: row.thumbnail_url || row.image_url || "",
+      source: "supabase" as const,
+      pbr: (row.pbr_settings as any) || undefined,
+      repeat_width_cm: (row.pbr_settings as any)?.repeat_width_cm,
+      repeat_height_cm: (row.pbr_settings as any)?.repeat_height_cm,
+    })),
+  ]
 
   const handleLiningTypeChange = (value: "standard" | "custom" | "unlined") => {
     setLiningType(value)
@@ -144,37 +175,42 @@ export function LiningSelectionStep({
     setShowFabricPopup(false)
   }
   
-  const handleLiningFabricSelect = (fabricId: string, fabricImage: string) => {
-    setSelectedFabric(fabricId)
+  const handleLiningFabricSelect = (fabric: typeof mergedFabrics[number]) => {
+    setSelectedFabric(fabric.id)
     setShowFabricPopup(false)
-    
-    console.log(`🎨 Fabric selected in popup:`, { 
-      fabricId, 
-      fabricImage,
-      customType,
-      liningMeshType: customType
-    })
-    
-    // Update with complete lining configuration
-    onUpdate({ 
-      liningFabric: fabricId,
-      liningColor: fabricImage, // Texture path
-      liningMeshType: customType, // "custom-coloured" (half) or "quilted" (full)
-      customType: customType,
-      liningType: "custom"
-    })
-    
-    console.log(`✅ Lining configuration complete:`, { 
-      liningFabric: fabricId,
-      liningColor: fabricImage,
+
+    const pbr = (fabric as any).pbr || {}
+
+    onUpdate({
+      liningFabric: fabric.id,
+      liningColor: fabric.image,
       liningMeshType: customType,
-      displayName: customType === "custom-coloured" ? "Half Lined" : "Full Lined"
+      customType: customType,
+      liningType: "custom",
+      liningPbr: {
+        roughness: pbr.roughness ?? 0.45,
+        normalScale: pbr.normalScale ?? 0.2,
+        bumpScale: pbr.bumpScale ?? 0.1,
+        sheen: pbr.sheen ?? 0.15,
+      },
+      liningRepeatWidthCm: (fabric as any).repeat_width_cm ?? undefined,
+      liningRepeatHeightCm: (fabric as any).repeat_height_cm ?? undefined,
+    })
+
+    console.log(`✅ Lining configuration complete:`, {
+      liningFabric: fabric.id,
+      liningColor: fabric.image,
+      liningMeshType: customType,
+      liningPbr: pbr,
+      repeatCm: {
+        w: (fabric as any).repeat_width_cm,
+        h: (fabric as any).repeat_height_cm,
+      },
     })
   }
 
   const getFabricsForType = () => {
-    // Return all lining fabrics for both half-lined and full-lined
-    return LINING_FABRICS
+    return mergedFabrics
   }
 
   const getCustomTypeLabel = () => {
@@ -191,8 +227,7 @@ export function LiningSelectionStep({
   }
 
   const getSelectedFabricName = () => {
-    const allFabrics = [...LINING_FABRICS, ...QUILTED_FABRICS]
-    const fabric = allFabrics.find(f => f.id === selectedFabric)
+    const fabric = mergedFabrics.find(f => f.id === selectedFabric)
     return fabric?.name || "Select fabric"
   }
 
@@ -362,7 +397,7 @@ export function LiningSelectionStep({
             {getFabricsForType().map((fabric) => (
               <button
                 key={fabric.id}
-                onClick={() => handleLiningFabricSelect(fabric.id, fabric.image)}
+                onClick={() => handleLiningFabricSelect(fabric)}
                 className={`
                   relative group overflow-hidden rounded-lg border-2 transition-all
                   ${selectedFabric === fabric.id 

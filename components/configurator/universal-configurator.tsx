@@ -157,6 +157,11 @@ export function UniversalConfigurator({
     liningFabric: "",
     liningColor: "",
     liningMeshType: "standard" as "standard" | "custom-coloured" | "unlined" | "quilted" | undefined,
+    liningPbr: undefined as { roughness?: number; normalScale?: number; bumpScale?: number; sheen?: number } | undefined,
+    liningRepeatX: undefined as number | undefined,
+    liningRepeatY: undefined as number | undefined,
+    liningRepeatWidthCm: undefined as number | undefined,
+    liningRepeatHeightCm: undefined as number | undefined,
   })
   const [jacketLiningData, setJacketLiningData] = useState({
     liningType: "standard" as "standard" | "custom" | "unlined",
@@ -824,9 +829,13 @@ export function UniversalConfigurator({
               sheen:       pbrRaw.sheen,
               darkness:    pbrRaw.darkness,
               materialType: (value as any).fabricType,
+              fineTune:    pbrRaw.fine_tune ?? 5,
             }
             customizations.fabricRepeatX = pbrRaw.repeat_x
             customizations.fabricRepeatY = pbrRaw.repeat_y
+            // Production-accurate cm-based tiling (falls back to multiplier when 0/unset)
+            customizations.fabricRepeatWidthCm = pbrRaw.repeat_width_cm
+            customizations.fabricRepeatHeightCm = pbrRaw.repeat_height_cm
           }
         }
         // Handle other colors but NOT for button color changes, monogram thread color, or contrast colors
@@ -1196,6 +1205,13 @@ export function UniversalConfigurator({
     } else if (liningSelectionData.liningColor || liningSelectionData.liningMeshType) {
       customizations.liningColor = liningSelectionData.liningColor
       customizations.liningMeshType = liningSelectionData.liningMeshType || liningSelectionData.customType
+      if (liningSelectionData.liningPbr) {
+        customizations.liningPbr = liningSelectionData.liningPbr
+      }
+      if (liningSelectionData.liningRepeatX !== undefined) customizations.liningRepeatX = liningSelectionData.liningRepeatX
+      if (liningSelectionData.liningRepeatY !== undefined) customizations.liningRepeatY = liningSelectionData.liningRepeatY
+      if (liningSelectionData.liningRepeatWidthCm !== undefined) customizations.liningRepeatWidthCm = liningSelectionData.liningRepeatWidthCm
+      if (liningSelectionData.liningRepeatHeightCm !== undefined) customizations.liningRepeatHeightCm = liningSelectionData.liningRepeatHeightCm
     } else {
       // Default to standard if nothing is set
       customizations.liningMeshType = 'standard'
@@ -2317,9 +2333,12 @@ export function UniversalConfigurator({
           flex-1 relative h-screen bg-gradient-to-br from-gray-100 to-gray-200 transition-all duration-300
           €{isSidebarOpen ? 'lg:ml-0' : ''}
         `}>
-          {/* Top Controls - hint text moved here and buttons removed */}
-          <div className="absolute top-3 sm:top-4 lg:top-6 left-1/2 transform -translate-x-1/2 z-10 px-2 sm:px-4">
-            <div className="bg-white/95 backdrop-blur-sm px-3 sm:px-4 lg:px-6 py-2 sm:py-3 rounded-full text-xs sm:text-sm text-gray-600 shadow-lg border border-gray-300 text-center max-w-sm sm:max-w-md">
+          {/* Left side hint text — vertical, does not overlap 3D model */}
+          <div className="absolute left-2 top-1/2 -translate-y-1/2 z-10">
+            <div
+              className="bg-white/90 backdrop-blur-sm px-2 py-3 rounded-full text-xs text-gray-500 shadow border border-gray-200 select-none"
+              style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+            >
               <span className="hidden sm:inline">Drag to rotate • Scroll to zoom • Double-click to reset view</span>
               <span className="sm:hidden">Tap &amp; drag • Pinch to zoom</span>
             </div>
@@ -2358,10 +2377,10 @@ export function UniversalConfigurator({
                     style={{
                       color: THREAD_COLORS.find(c => c.id === monogramData.threadColor)?.color || "#1e3a8a",
                       fontFamily: monogramData.monogramFont === 'england'
-                        ? "'EdwardianScriptITC', 'Brush Script MT', 'Lucida Handwriting', cursive"
-                        : "Arial, sans-serif",
-                      fontWeight: monogramData.monogramFont === 'england' ? 'bold' : '600',
-                      fontStyle: monogramData.monogramFont === 'england' ? 'italic' : 'normal',
+                        ? "'Cambria', Georgia, serif"
+                        : "'Calibri', 'Gill Sans', sans-serif",
+                      fontWeight: monogramData.monogramFont === 'england' ? 'normal' : '600',
+                      fontStyle: 'normal',
                       fontSize: monogramData.text.length <= 2 ? '2.5rem' : monogramData.text.length > 10 ? '1.2rem' : '1.8rem',
                       left: '50%',
                       top: '52%',

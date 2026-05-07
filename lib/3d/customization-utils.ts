@@ -1,6 +1,7 @@
 import * as THREE from "three"
 import type { BasicJacketCustomization } from "@/types/configurator"
 import { getMeshCategory, ColorCategories } from "./modular-jacket-loader"
+import { computeCmBasedRepeats, hasCmScaling } from "./garment-dimensions"
 
 /**
  * Adjusts the brightness of a color
@@ -33,8 +34,38 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
   if (!customizations) return
   console.log("🎨 Applying customizations:", customizations)
   const _fabricPbr = (customizations as any).fabricPbr as PBROverride | undefined
-  const _fabricRx: number = (customizations as any).fabricRepeatX ?? 6
-  const _fabricRy: number = (customizations as any).fabricRepeatY ?? 6
+  const _fabricRxRaw: number = (customizations as any).fabricRepeatX ?? 6
+  const _fabricRyRaw: number = (customizations as any).fabricRepeatY ?? 6
+  const _fabricRepeatWidthCm: number | undefined = (customizations as any).fabricRepeatWidthCm
+  const _fabricRepeatHeightCm: number | undefined = (customizations as any).fabricRepeatHeightCm
+
+  // When cm values are provided, use production-accurate tiling:
+  //   repeats_x = garment_width_cm / fabric_repeat_width_cm
+  // The legacy repeat_x/repeat_y slider (default 4) then becomes a ±% fine-tune.
+  let _fabricRx = _fabricRxRaw
+  let _fabricRy = _fabricRyRaw
+  if (hasCmScaling(_fabricRepeatWidthCm, _fabricRepeatHeightCm)) {
+    const fineTune = Math.max(0.25, Math.min(4, _fabricRxRaw / 4))
+    const r = computeCmBasedRepeats('jacket', _fabricRepeatWidthCm!, _fabricRepeatHeightCm!, fineTune)
+    _fabricRx = r.repeatsX
+    _fabricRy = r.repeatsY
+  }
+
+  // ─── Lining material (independent layer) ───────────────────────────────────
+  const _liningPbr = (customizations as any).liningPbr as PBROverride | undefined
+  const _liningRxRaw: number = (customizations as any).liningRepeatX ?? 4
+  const _liningRyRaw: number = (customizations as any).liningRepeatY ?? 4
+  const _liningRepeatWidthCm: number | undefined = (customizations as any).liningRepeatWidthCm
+  const _liningRepeatHeightCm: number | undefined = (customizations as any).liningRepeatHeightCm
+
+  let _liningRx = _liningRxRaw
+  let _liningRy = _liningRyRaw
+  if (hasCmScaling(_liningRepeatWidthCm, _liningRepeatHeightCm)) {
+    const fineTune = Math.max(0.25, Math.min(4, _liningRxRaw / 4))
+    const r = computeCmBasedRepeats('jacket', _liningRepeatWidthCm!, _liningRepeatHeightCm!, fineTune)
+    _liningRx = r.repeatsX
+    _liningRy = r.repeatsY
+  }
 
   object.traverse((child: THREE.Object3D) => {
     if (!(child instanceof THREE.Mesh)) return
@@ -122,7 +153,7 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
         }
         
         if (customizations.liningColor) {
-          applyMaterialColor(child, customizations.liningColor)
+          applyMaterialColor(child, customizations.liningColor, 0xffffff, 'jacket', _liningRx, _liningRy, _liningPbr)
           return
         } else if (customizations.liningMeshType === 'standard' || !customizations.liningMeshType) {
           // Standard lining - restore original GLTF texture
@@ -284,7 +315,7 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
             if (treatAsFullLined) {
               if (customizations.liningColor) {
                 console.log(`📸 Applying texture to FULL lining mesh:`, customizations.liningColor)
-                applyMaterialColor(child, customizations.liningColor)
+                applyMaterialColor(child, customizations.liningColor, 0xffffff, 'jacket', _liningRx, _liningRy, _liningPbr)
               }
               child.visible = true
               console.log(`✅ Showing FULL lining mesh: ${child.name}`)
@@ -300,7 +331,7 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
             if (treatAsHalfLined) {
               if (customizations.liningColor) {
                 console.log(`📸 Applying texture to half lining mesh:`, customizations.liningColor)
-                applyMaterialColor(child, customizations.liningColor)
+                applyMaterialColor(child, customizations.liningColor, 0xffffff, 'jacket', _liningRx, _liningRy, _liningPbr)
               }
               child.visible = true
               console.log(`✅ Showing HALF lining mesh: ${child.name}`)
@@ -315,7 +346,7 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
             if (treatAsHalfLined || treatAsFullLined) {
               if (customizations.liningColor) {
                 console.log(`📸 Applying texture to LiningStraight1-4:`, customizations.liningColor)
-                applyMaterialColor(child, customizations.liningColor)
+                applyMaterialColor(child, customizations.liningColor, 0xffffff, 'jacket', _liningRx, _liningRy, _liningPbr)
               }
               child.visible = true
               console.log(`✅ Applied lining texture to: ${child.name} (${treatAsHalfLined ? 'half' : 'full'} lined)`)
@@ -329,7 +360,7 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
             // Other lining meshes - apply normally if half or full lined
             console.log(`🎯 Found other lining mesh: ${child.name}`)
             if (treatAsHalfLined || treatAsFullLined) {
-              applyMaterialColor(child, customizations.liningColor)
+              applyMaterialColor(child, customizations.liningColor, 0xffffff, 'jacket', _liningRx, _liningRy, _liningPbr)
               child.visible = true
               console.log(`✅ Applied lining color/texture to: ${child.name}`)
             } else {
@@ -629,6 +660,8 @@ export interface PBROverride {
   darkness?: number
   /** Fabric material type — 'cotton' | 'linen' | 'polyester'. Routes correct PBR texture maps. */
   materialType?: string
+  /** Visual scale factor: >1 = larger pattern (fewer repeats). Default 2. */
+  fineTune?: number
 }
 
 /**
@@ -683,6 +716,9 @@ function createFabricPhysicalMaterial(
     map,                                   // user-supplied fabric image (if any)
     roughness,
     metalness: 0.0,
+    // Shirt fabric must render on both sides — collar opening, hem, and sleeve cuffs
+    // expose the inside faces. Jacket/trousers use a separate lining mesh so FrontSide is fine.
+    side: garmentType === 'shirt' ? THREE.DoubleSide : THREE.FrontSide,
     envMapIntensity: profile.envMapIntensity,
     // Normal map: garment-specific PBR set (linen for jacket/trousers, Fabric019 for shirt)
     normalMap: (profile.useNormalMap && pbr?.normalMap) ? pbr.normalMap : undefined,

@@ -42,9 +42,33 @@ export interface FabricRow {
     roughness: number
     bump_scale: number
     sheen: number
+    /**
+     * Legacy multiplier-based tiling (1–16). Kept for backward compatibility
+     * and as a ±20% fine-tune when cm-based tiling is active.
+     */
     repeat_x: number
     repeat_y: number
     darkness: number
+    /**
+     * Real-cm repeat width of the fabric print tile. When > 0 the 3D viewer
+     * uses cm-based tiling: repeats_x = garment_width_cm / repeat_width_cm.
+     * 0 or undefined falls back to the legacy multiplier system.
+     */
+    repeat_width_cm?: number
+    /** Real-cm repeat height of the fabric print tile. */
+    repeat_height_cm?: number
+    /**
+     * Visual scale factor: higher = larger pattern on garment.
+     * 1 = true production scale, 5 = default (5× larger). Saved per fabric.
+     */
+    fine_tune?: number
+    /**
+     * Material category. 'outer' = outer shell fabric (default, backward compat).
+     * 'lining' = interior lining fabric, shown only in the customer lining picker
+     * and applied to lining meshes (interior surfaces) with lining-specific PBR.
+     * Stored inside pbr_settings JSONB to avoid a DB schema migration.
+     */
+    fabric_category?: "outer" | "lining"
   }
   sort_order: number
   created_at: string
@@ -82,6 +106,51 @@ export const PBR_PRESETS: Record<string, FabricRow["pbr_settings"]> = {
   },
 }
 
+// ─── Lining PBR Presets ─────────────────────────────────────
+// Lining fabrics look different from outer fabrics:
+//   - lower roughness (silky / satin-like)
+//   - slight sheen (catches light on curves)
+//   - almost no normal map (smooth, not textured weave)
+//   - minimal bump (flat silk feel)
+// V1: one shared preset. Can split per sub-type (silk/cupro/polyester) later.
+export const LINING_PBR_PRESETS: Record<string, FabricRow["pbr_settings"]> = {
+  silk: {
+    normal_scale: 0.05,
+    roughness:    0.30,
+    bump_scale:   0.02,
+    sheen:        0.25,
+    repeat_x:     4,
+    repeat_y:     4,
+    darkness:     0,
+    fabric_category: "lining",
+  },
+  cupro: {
+    normal_scale: 0.04,
+    roughness:    0.35,
+    bump_scale:   0.02,
+    sheen:        0.20,
+    repeat_x:     4,
+    repeat_y:     4,
+    darkness:     0,
+    fabric_category: "lining",
+  },
+  polyester: {
+    normal_scale: 0.06,
+    roughness:    0.38,
+    bump_scale:   0.03,
+    sheen:        0.18,
+    repeat_x:     4,
+    repeat_y:     4,
+    darkness:     0,
+    fabric_category: "lining",
+  },
+}
+
+/** Read the fabric category, defaulting to 'outer' for legacy rows. */
+export function getFabricCategory(fabric: Pick<FabricRow, "pbr_settings">): "outer" | "lining" {
+  return fabric.pbr_settings?.fabric_category === "lining" ? "lining" : "outer"
+}
+
 // ─── Fabrics CRUD ───────────────────────────────────────────
 export async function getFabricsByProduct(productId: string): Promise<FabricRow[]> {
   const { data, error } = await supabase
@@ -103,6 +172,27 @@ export async function getFabricsByType(fabricType: string): Promise<FabricRow[]>
 
   if (error || !data) return []
   return data as FabricRow[]
+}
+
+/**
+ * Fetch all fabrics and filter by category in-memory.
+ * Category lives inside pbr_settings JSONB so we can't query via Supabase
+ * `.eq()` directly; this helper does the filter client-side.
+ */
+export async function getFabricsByCategory(
+  category: "outer" | "lining",
+  productId?: string,
+): Promise<FabricRow[]> {
+  let query = supabase.from("fabrics").select("*").order("sort_order")
+  if (productId) query = query.eq("product_id", productId)
+  const { data, error } = await query
+  if (error || !data) return []
+  return (data as FabricRow[]).filter((f) => getFabricCategory(f) === category)
+}
+
+/** Convenience: all lining fabrics, optionally filtered by product. */
+export async function getLiningFabrics(productId?: string): Promise<FabricRow[]> {
+  return getFabricsByCategory("lining", productId)
 }
 
 export async function getFabricById(id: string): Promise<FabricRow | null> {

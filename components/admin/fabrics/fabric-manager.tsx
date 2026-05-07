@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast"
 import {
   getAllProducts,
   updateFabric,
+  getFabricCategory,
   type FabricRow,
   type Product,
 } from "@/lib/supabase/service"
@@ -39,6 +40,7 @@ export function FabricManager() {
   const [fabrics, setFabrics] = useState<FabricRow[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [selectedProduct, setSelectedProduct] = useState<string>("all")
+  const [selectedCategory, setSelectedCategory] = useState<"all" | "outer" | "lining">("all")
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -82,11 +84,17 @@ export function FabricManager() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProduct])
 
-  const filteredFabrics = fabrics.filter(
-    (f) =>
+  const filteredFabrics = fabrics.filter((f) => {
+    const matchesQuery =
       f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       f.fabric_type.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+    if (!matchesQuery) return false
+    if (selectedCategory === "all") return true
+    return getFabricCategory(f) === selectedCategory
+  })
+
+  const outerCount = fabrics.filter((f) => getFabricCategory(f) === "outer").length
+  const liningCount = fabrics.filter((f) => getFabricCategory(f) === "lining").length
 
   const handleDelete = async () => {
     if (!fabricToDelete) return
@@ -156,6 +164,37 @@ export function FabricManager() {
 
   return (
     <div className="space-y-4">
+      {/* Category tabs */}
+      <div className="inline-flex rounded-lg border bg-gray-50 p-1">
+        <button
+          type="button"
+          onClick={() => setSelectedCategory("all")}
+          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+            selectedCategory === "all" ? "bg-white shadow font-medium" : "text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          All <span className="text-xs text-gray-400">({fabrics.length})</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedCategory("outer")}
+          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+            selectedCategory === "outer" ? "bg-white shadow font-medium" : "text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          🧥 Outer Fabrics <span className="text-xs text-gray-400">({outerCount})</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedCategory("lining")}
+          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+            selectedCategory === "lining" ? "bg-white shadow font-medium" : "text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          🧵 Linings <span className="text-xs text-gray-400">({liningCount})</span>
+        </button>
+      </div>
+
       {/* Filters Row */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">

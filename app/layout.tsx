@@ -1,5 +1,5 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -9,12 +9,16 @@ import { Toaster } from "@/components/ui/toaster"
 
 const inter = Inter({ subsets: ["latin"] })
 
+export const viewport: Viewport = {
+  themeColor: '#1a237e',
+  colorScheme: 'light',
+}
+
 export const metadata: Metadata = {
   title: "3D Jacket Configurator - Shopify MTM",
   description: "Customize your jacket in real-time 3D with instant model loading and PWA caching",
   generator: 'v0.dev',
   manifest: '/manifest.json',
-  themeColor: '#a2a2a2ff',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -30,7 +34,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta name="theme-color" content="#1a237e" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="3D Jacket Configurator" />

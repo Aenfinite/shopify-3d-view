@@ -69,14 +69,14 @@ const CUSTOM_LINING_COLORS = [
 const MONOGRAM_FONTS = [
   {
     id: "england",
-    name: "England Hand DB",
-    preview: "𝒜ℬ𝒞",
-    style: "font-serif italic",
-    description: "Elegant script font",
+    name: "Cambria",
+    preview: "ABC",
+    style: "font-serif",
+    description: "Classic elegant font",
   },
   {
     id: "arial",
-    name: "Arial",
+    name: "Calibri",
     preview: "ABC",
     style: "font-sans",
     description: "Clean modern font",

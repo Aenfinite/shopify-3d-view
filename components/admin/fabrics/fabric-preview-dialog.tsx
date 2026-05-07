@@ -71,6 +71,8 @@ export function FabricPreviewDialog({
                   fabricImageUrl={fabric.image_url}
                   repeatX={localPbr.repeat_x}
                   repeatY={localPbr.repeat_y}
+                  repeatWidthCm={localPbr.repeat_width_cm}
+                  repeatHeightCm={localPbr.repeat_height_cm}
                   pbrSettings={{ ...localPbr, fabricMaterialType: fabric.fabric_type }}
                 />
                 <OrbitControls

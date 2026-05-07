@@ -7,11 +7,24 @@ export interface BasicJacketCustomization {
   fabricPbr?: { roughness?: number; normalScale?: number; bumpScale?: number; sheen?: number }
   fabricRepeatX?: number
   fabricRepeatY?: number
+  /** Real cm repeat width of the fabric print tile (production-accurate scaling). */
+  fabricRepeatWidthCm?: number
+  /** Real cm repeat height of the fabric print tile. */
+  fabricRepeatHeightCm?: number
   buttonColor?: string
   threadColor?: string
   lapelColor?: string
   liningColor?: string
   liningMeshType?: string // "unlined", "custom-coloured" (half), or "quilted" (full)
+  /** Lining PBR material overrides (independent from outer fabric). */
+  liningPbr?: { roughness?: number; normalScale?: number; bumpScale?: number; sheen?: number }
+  /** Legacy multiplier/fine-tune for lining texture tiling (default 4). */
+  liningRepeatX?: number
+  liningRepeatY?: number
+  /** Real-cm repeat width of the lining print tile (production-accurate scaling). */
+  liningRepeatWidthCm?: number
+  /** Real-cm repeat height of the lining print tile. */
+  liningRepeatHeightCm?: number
   frontPocket?: string // e.g., "flap-pocket" or "patch-pocket"
   chestPocket?: string // e.g., "piping-pocket" or "patch-pocket-chest"
   sleeveButtons?: string // e.g., "4-buttons-with-holes" or "4-buttons-no-holes"

@@ -20,6 +20,8 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
+  Lock,
+  Unlock,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { SAMPLE_PRODUCTS_WITH_CUSTOMIZATION } from "@/data/sample-products-with-customization"
@@ -30,10 +32,19 @@ import { applyFabricCustomization, preloadFabricPBR, preloadShirtPBR } from "@/l
 import {
   getAllProducts,
   PBR_PRESETS,
+  LINING_PBR_PRESETS,
+  getFabricCategory,
   type FabricRow,
   type Product,
 } from "@/lib/supabase/service"
 import { GarmentModel, CameraUpdater, CAMERA_PRESETS } from "./garment-canvas"
+import {
+  getGarmentDimensionsCm,
+  getDefaultGarmentDimensionsCm,
+  saveGarmentDimensionsOverride,
+  resetGarmentDimensions,
+  type GarmentKey,
+} from "@/lib/3d/garment-dimensions"
 
 // Preload PBR textures as early as possible
 if (typeof window !== "undefined") {
@@ -102,27 +113,60 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
   const [colorHex, setColorHex] = useState(editingFabric?.color_hex || "#FFFFFF")
   const [imageUrl, setImageUrl] = useState<string | null>(editingFabric?.image_url || null)
   const [previewFile, setPreviewFile] = useState<string | null>(null)
+  const [uploadedImagePixels, setUploadedImagePixels] = useState<{ w: number; h: number } | null>(null)
+  const [fabricSizeUnit, setFabricSizeUnit] = useState<"cm" | "in">("in")
+  const [fabricDpi, setFabricDpi] = useState<number | null>(null)
   const [name, setName] = useState(editingFabric?.name || "")
   const [price, setPrice] = useState(editingFabric?.price ? Number(editingFabric.price) : 0)
   const [isPrinted, setIsPrinted] = useState(editingFabric?.is_printed || false)
-  const [pbrSettings, setPbrSettings] = useState(
-    editingFabric?.pbr_settings || PBR_PRESETS.cotton
+  // Material category: 'outer' = shell/outer fabric (default), 'lining' = interior lining.
+  // Drives which PBR preset set is used and which category filter the fabric shows up under.
+  const [materialCategory, setMaterialCategory] = useState<"outer" | "lining">(
+    editingFabric ? getFabricCategory(editingFabric) : "outer",
   )
+  const [pbrSettings, setPbrSettings] = useState(() => {
+    // Merge existing settings with defaults to ensure new cm fields exist
+    const initialCategory = editingFabric ? getFabricCategory(editingFabric) : "outer"
+    const base = initialCategory === "lining" ? LINING_PBR_PRESETS.silk : PBR_PRESETS.cotton
+    const existing = editingFabric?.pbr_settings
+    return existing
+      ? {
+          ...base,
+          ...existing,
+          repeat_width_cm: existing.repeat_width_cm ?? 0,
+          repeat_height_cm: existing.repeat_height_cm ?? 0,
+          fine_tune: existing.fine_tune ?? 5,
+          fabric_category: existing.fabric_category ?? initialCategory,
+        }
+      : { ...base, repeat_width_cm: 0, repeat_height_cm: 0, fine_tune: 5, fabric_category: initialCategory }
+  })
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [previewZoom, setPreviewZoom] = useState(1.0)
+  const [arLocked, setArLocked] = useState(true)
 
   // Load products
   useEffect(() => {
     getAllProducts().then(setProducts)
   }, [])
 
-  // Update PBR when fabric type changes (only for new fabrics)
+  // Update PBR when fabric type or material category changes (only for new fabrics)
   useEffect(() => {
     if (!isEditing && fabricType) {
-      setPbrSettings(PBR_PRESETS[fabricType] || PBR_PRESETS.cotton)
+      const preset =
+        materialCategory === "lining"
+          ? LINING_PBR_PRESETS[fabricType] || LINING_PBR_PRESETS.silk
+          : PBR_PRESETS[fabricType] || PBR_PRESETS.cotton
+      setPbrSettings((prev) => ({
+        ...preset,
+        // Keep any cm values the admin already entered
+        repeat_width_cm: prev.repeat_width_cm ?? 0,
+        repeat_height_cm: prev.repeat_height_cm ?? 0,
+        fine_tune: prev.fine_tune ?? 5,
+        fabric_category: materialCategory,
+      }))
     }
-  }, [fabricType, isEditing])
+  }, [fabricType, isEditing, materialCategory])
 
   // Derived values
   const selectedProduct = products.find((p) => p.id === productId)
@@ -192,7 +236,14 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
 
     // Show local preview immediately (data URL) so the 3D preview updates instantly
     const reader = new FileReader()
-    reader.onload = (ev) => setPreviewFile(ev.target?.result as string)
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string
+      setPreviewFile(dataUrl)
+      // Read pixel dimensions so we can auto-derive height from aspect ratio
+      const img = new Image()
+      img.onload = () => setUploadedImagePixels({ w: img.naturalWidth, h: img.naturalHeight })
+      img.src = dataUrl
+    }
     reader.readAsDataURL(file)
 
     setUploading(true)
@@ -285,6 +336,49 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
 
     return (
       <div className="space-y-4">
+        {/* Material Category — outer vs lining */}
+        <div className="rounded-lg border-2 border-dashed border-gray-200 p-3 bg-gray-50/50">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+            Material Category
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setMaterialCategory("outer")}
+              className={`rounded-md border-2 p-3 text-left transition-all ${
+                materialCategory === "outer"
+                  ? "border-primary bg-primary/5 ring-1 ring-primary"
+                  : "border-gray-200 bg-white hover:border-gray-400"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🧥</span>
+                <div>
+                  <p className="font-medium text-sm">Outer Fabric</p>
+                  <p className="text-[11px] text-muted-foreground leading-tight">Shell / visible surface</p>
+                </div>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMaterialCategory("lining")}
+              className={`rounded-md border-2 p-3 text-left transition-all ${
+                materialCategory === "lining"
+                  ? "border-primary bg-primary/5 ring-1 ring-primary"
+                  : "border-gray-200 bg-white hover:border-gray-400"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🧵</span>
+                <div>
+                  <p className="font-medium text-sm">Lining</p>
+                  <p className="text-[11px] text-muted-foreground leading-tight">Interior surface, silky finish</p>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+
         <div>
           <h3 className="text-lg font-semibold">Select Product</h3>
           <p className="text-sm text-muted-foreground">Which product is this fabric for?</p>
@@ -451,7 +545,12 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
     </div>
   )
 
-  const renderInputStep = () => (
+  const renderInputStep = () => {
+    const _gDims = getGarmentDimensionsCm((productType || "shirt").toLowerCase() as GarmentKey)
+    const _wCm = pbrSettings.repeat_width_cm ?? 0
+    const _hCm = pbrSettings.repeat_height_cm ?? 0
+    const _cmActive = _wCm > 0 && _hCm > 0
+    return (
     <div className="space-y-4">
       <div>
         <h3 className="text-lg font-semibold">Fabric Input</h3>
@@ -567,6 +666,153 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
               </p>
             )}
 
+            {/* ── Printed Fabric Physical Size ── shown after image is uploaded */}
+            {(previewFile || imageUrl) && (
+              <div className="space-y-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-semibold text-blue-900">Printed Fabric Physical Size</p>
+                    <p className="text-[11px] text-blue-700 leading-tight mt-0.5">
+                      Enter the real print dimensions of this file (e.g. the filename says "60in" → enter 60).
+                      The 3D shirt will show exactly how this fabric looks cut and sewn.
+                    </p>
+                  </div>
+                  {/* Unit toggle */}
+                  <div className="flex rounded border border-blue-300 overflow-hidden flex-shrink-0 text-[11px] font-medium">
+                    <button type="button" onClick={() => setFabricSizeUnit("in")}
+                      className={`px-2 py-1 ${fabricSizeUnit === "in" ? "bg-blue-600 text-white" : "bg-white text-blue-700 hover:bg-blue-50"}`}>
+                      in
+                    </button>
+                    <button type="button" onClick={() => setFabricSizeUnit("cm")}
+                      className={`px-2 py-1 ${fabricSizeUnit === "cm" ? "bg-blue-600 text-white" : "bg-white text-blue-700 hover:bg-blue-50"}`}>
+                      cm
+                    </button>
+                  </div>
+                </div>
+
+                {/* DPI calculator — only shown when we know the pixel dims */}
+                {uploadedImagePixels && (
+                  <div className="bg-white border border-blue-200 rounded p-2 space-y-1.5">
+                    <p className="text-[10px] font-semibold text-blue-800">
+                      Quick-fill from DPI
+                      <span className="font-normal text-blue-600 ml-1">
+                        — image is {uploadedImagePixels.w} × {uploadedImagePixels.h} px
+                      </span>
+                    </p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {[72, 96, 150, 300].map((dpi) => {
+                        const wIn = uploadedImagePixels.w / dpi
+                        const hIn = uploadedImagePixels.h / dpi
+                        return (
+                          <button
+                            key={dpi}
+                            type="button"
+                            onClick={() => {
+                              setFabricDpi(dpi)
+                              setFabricSizeUnit("in")
+                              const wCm = wIn * 2.54
+                              const hCm = hIn * 2.54
+                              setPbrSettings((prev) => ({
+                                ...prev,
+                                repeat_width_cm: wCm,
+                                repeat_height_cm: hCm,
+                              }))
+                            }}
+                            className={`text-[10px] px-2 py-1 rounded border transition-colors ${
+                              fabricDpi === dpi
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-white text-blue-700 border-blue-300 hover:bg-blue-50"
+                            }`}
+                          >
+                            {dpi} dpi → {wIn.toFixed(1)}″×{hIn.toFixed(1)}″
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <p className="text-[10px] text-blue-500">
+                      Pick the DPI your designer used, or type the size manually below.
+                    </p>
+                  </div>
+                )}
+
+                {/* Manual width / height inputs */}
+                <div className="flex items-end gap-2">
+                  <div className="flex-1 space-y-1">
+                    <Label className="text-xs">Width ({fabricSizeUnit})</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={fabricSizeUnit === "in" ? 0.5 : 1}
+                      value={fabricSizeUnit === "in" ? ((_wCm / 2.54) || "") : (_wCm || "")}
+                      placeholder={fabricSizeUnit === "in" ? "e.g. 60" : "e.g. 152"}
+                      onChange={(e) => {
+                        const raw = parseFloat(e.target.value) || 0
+                        const newWCm = fabricSizeUnit === "in" ? raw * 2.54 : raw
+                        let newHCm = _hCm
+                        if (arLocked && newWCm > 0 && _wCm > 0) {
+                          newHCm = newWCm * (_hCm / _wCm)
+                        } else if (arLocked && uploadedImagePixels) {
+                          newHCm = newWCm * (uploadedImagePixels.h / uploadedImagePixels.w)
+                        }
+                        setFabricDpi(null)
+                        setPbrSettings((prev) => ({
+                          ...prev,
+                          repeat_width_cm: newWCm,
+                          repeat_height_cm: newHCm,
+                        }))
+                      }}
+                    />
+                  </div>
+                  {/* AR lock toggle */}
+                  <button
+                    type="button"
+                    title={arLocked ? "Unlock aspect ratio" : "Lock aspect ratio"}
+                    onClick={() => setArLocked((v) => !v)}
+                    className={`mb-0.5 p-2 rounded border transition-colors ${
+                      arLocked
+                        ? "border-blue-400 bg-blue-50 text-blue-600"
+                        : "border-gray-300 bg-white text-gray-400 hover:text-gray-600"
+                    }`}
+                  >
+                    {arLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                  </button>
+                  <div className="flex-1 space-y-1">
+                    <Label className="text-xs">Height ({fabricSizeUnit})</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={fabricSizeUnit === "in" ? 0.5 : 1}
+                      disabled={arLocked}
+                      value={fabricSizeUnit === "in" ? ((_hCm / 2.54) || "") : (_hCm || "")}
+                      placeholder={fabricSizeUnit === "in" ? "e.g. 23.5" : "e.g. 60"}
+                      className={arLocked ? "bg-gray-50 cursor-not-allowed" : ""}
+                      onChange={(e) => {
+                        const raw = parseFloat(e.target.value) || 0
+                        const newHCm = fabricSizeUnit === "in" ? raw * 2.54 : raw
+                        setFabricDpi(null)
+                        setPbrSettings((prev) => ({ ...prev, repeat_height_cm: newHCm }))
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {_cmActive ? (
+                  <p className="text-[11px] text-green-700 bg-green-50 border border-green-200 rounded p-1.5">
+                    ✓ {(_wCm / 2.54).toFixed(1)}″ × {(_hCm / 2.54).toFixed(1)}″ ({_wCm.toFixed(1)} × {_hCm.toFixed(1)} cm)
+                    {" — "}{productType} ({_gDims.width}×{_gDims.height} cm) shows{" "}
+                    <strong>{(_gDims.width / _wCm).toFixed(2)}×</strong>
+                    {" h / "}
+                    <strong>{(_gDims.height / _hCm).toFixed(2)}×</strong>
+                    {" v repeats"}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded p-1.5">
+                    ⚠ Enter the fabric dimensions above (or pick a DPI) — the 3D preview will be wrong until you do.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Siblings preview — shows existing swatches for this category + new one */}
             {(existingColorsForType.length > 0 || previewFile || imageUrl) && (
               <div className="space-y-2 p-3 bg-gray-50 rounded-lg border">
@@ -612,6 +858,7 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
       </div>
     </div>
   )
+  }
 
   const renderDetailsStep = () => (
     <div className="space-y-4">
@@ -643,6 +890,24 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
           />
         </div>
       </div>
+
+      {/* Real-CM Scaling — production-accurate pattern size */}
+      <CmScalingSection
+        productType={productType}
+        repeatWidthCm={pbrSettings.repeat_width_cm ?? 0}
+        repeatHeightCm={pbrSettings.repeat_height_cm ?? 0}
+        fineTune={pbrSettings.fine_tune ?? 5}
+        arLocked={arLocked}
+        onChangeRepeat={(w, h) => {
+          setPbrSettings((prev) => ({
+            ...prev,
+            repeat_width_cm: w,
+            repeat_height_cm: h,
+          }))
+        }}
+        onChangeFineTune={(v) => setPbrSettings((prev) => ({ ...prev, fine_tune: v }))}
+        onToggleLock={() => setArLocked((v) => !v)}
+      />
 
       {/* PBR Settings */}
       <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
@@ -682,7 +947,10 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Repeat X ({pbrSettings.repeat_x})</Label>
+            <Label className="text-xs">
+              Fine-tune X ({pbrSettings.repeat_x})
+              <span className="text-[10px] text-gray-500"> — legacy/±</span>
+            </Label>
             <Slider
               min={1} max={16} step={1}
               value={[pbrSettings.repeat_x]}
@@ -690,7 +958,10 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Repeat Y ({pbrSettings.repeat_y})</Label>
+            <Label className="text-xs">
+              Fine-tune Y ({pbrSettings.repeat_y})
+              <span className="text-[10px] text-gray-500"> — legacy/±</span>
+            </Label>
             <Slider
               min={1} max={16} step={1}
               value={[pbrSettings.repeat_y]}
@@ -842,6 +1113,9 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
                   fabricImageUrl={fabricImageForPreview}
                   repeatX={pbrSettings.repeat_x}
                   repeatY={pbrSettings.repeat_y}
+                  repeatWidthCm={pbrSettings.repeat_width_cm}
+                  repeatHeightCm={pbrSettings.repeat_height_cm}
+                  fineTune={pbrSettings.fine_tune ?? 5}
                   zoomMultiplier={previewZoom}
                   pbrSettings={{ ...pbrSettings, fabricMaterialType: fabricType }}
                 />
@@ -901,6 +1175,227 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ─── CmScalingSection ────────────────────────────────────────────────
+// Admin UI for production-accurate cm-based fabric scaling.
+// Two inputs for fabric repeat size (cm) + collapsible editor for
+// overriding the current garment's own width/height (persisted in
+// localStorage via lib/3d/garment-dimensions.ts).
+
+function CmScalingSection({
+  productType,
+  repeatWidthCm,
+  repeatHeightCm,
+  fineTune,
+  arLocked,
+  onChangeRepeat,
+  onChangeFineTune,
+  onToggleLock,
+}: {
+  productType: string
+  repeatWidthCm: number
+  repeatHeightCm: number
+  fineTune: number
+  arLocked: boolean
+  onChangeRepeat: (w: number, h: number) => void
+  onChangeFineTune: (v: number) => void
+  onToggleLock: () => void
+}) {
+  const productKey = (productType || "shirt").toLowerCase() as GarmentKey
+  const [garmentW, setGarmentW] = useState(() => getGarmentDimensionsCm(productKey).width)
+  const [garmentH, setGarmentH] = useState(() => getGarmentDimensionsCm(productKey).height)
+  const [showGarmentEditor, setShowGarmentEditor] = useState(false)
+
+  // Reload current garment dims whenever the product type changes
+  useEffect(() => {
+    const d = getGarmentDimensionsCm(productKey)
+    setGarmentW(d.width)
+    setGarmentH(d.height)
+  }, [productKey])
+
+  const cmActive = repeatWidthCm > 0 && repeatHeightCm > 0
+  const safeScale = Math.max(0.1, fineTune)
+  const repeatsX = cmActive ? (garmentW / (repeatWidthCm * safeScale)).toFixed(2) : "—"
+  const repeatsY = cmActive ? (garmentH / (repeatHeightCm * safeScale)).toFixed(2) : "—"
+
+  const handleSaveGarment = () => {
+    if (garmentW > 0 && garmentH > 0) {
+      saveGarmentDimensionsOverride(productKey, { width: garmentW, height: garmentH })
+    }
+  }
+
+  const handleResetGarment = () => {
+    resetGarmentDimensions(productKey)
+    const d = getDefaultGarmentDimensionsCm(productKey)
+    setGarmentW(d.width)
+    setGarmentH(d.height)
+  }
+
+  return (
+    <div className="space-y-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+      <div>
+        <h4 className="font-semibold text-sm text-blue-900">Real-CM Scaling (production-accurate)</h4>
+        <p className="text-[11px] text-blue-700 leading-tight mt-0.5">
+          Enter the fabric&apos;s real repeat size in cm. The 3D viewer will tile the
+          pattern so 1 cm in the design = 1 cm on the garment.
+        </p>
+      </div>
+
+      <div className="flex items-end gap-2">
+        <div className="flex-1 space-y-1">
+          <Label className="text-xs">Repeat Width (cm)</Label>
+          <Input
+            type="number"
+            min={0}
+            step={0.1}
+            value={repeatWidthCm || ""}
+            placeholder="e.g. 8"
+            onChange={(e) => {
+              const newW = parseFloat(e.target.value) || 0
+              let newH = repeatHeightCm
+              if (arLocked && newW > 0 && repeatWidthCm > 0) {
+                newH = newW * (repeatHeightCm / repeatWidthCm)
+              }
+              onChangeRepeat(newW, newH)
+            }}
+          />
+        </div>
+        {/* AR lock toggle */}
+        <button
+          type="button"
+          title={arLocked ? "Unlock aspect ratio" : "Lock aspect ratio"}
+          onClick={() => onToggleLock()}
+          className={`mb-0.5 p-2 rounded border transition-colors ${
+            arLocked
+              ? "border-blue-400 bg-blue-50 text-blue-600"
+              : "border-gray-300 bg-white text-gray-400 hover:text-gray-600"
+          }`}
+        >
+          {arLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+        </button>
+        <div className="flex-1 space-y-1">
+          <Label className="text-xs">Repeat Height (cm)</Label>
+          <Input
+            type="number"
+            min={0}
+            step={0.1}
+            disabled={arLocked}
+            value={repeatHeightCm || ""}
+            placeholder="e.g. 8"
+            className={arLocked ? "bg-gray-50 cursor-not-allowed" : ""}
+            onChange={(e) => onChangeRepeat(repeatWidthCm, parseFloat(e.target.value) || 0)}
+          />
+        </div>
+      </div>
+
+      {/* Visual Scale slider */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs font-medium text-blue-900">
+            Visual Scale — {safeScale.toFixed(2)}×
+            <span className="text-[10px] font-normal text-blue-600 ml-1">
+              (1× = true size · 2× = 2× larger on garment)
+            </span>
+          </Label>
+          <button
+            type="button"
+            onClick={() => onChangeFineTune(5)}
+            className="text-[10px] text-blue-600 hover:underline"
+          >
+            Reset to 5×
+          </button>
+        </div>
+        <Slider
+          min={0.25}
+          max={8}
+          step={0.25}
+          value={[safeScale]}
+          onValueChange={([v]) => onChangeFineTune(v)}
+        />
+        <div className="flex justify-between text-[10px] text-blue-500">
+          <span>0.25× (tiny)</span>
+          <span>1× (real)</span>
+          <span>2× (default)</span>
+          <span>8× (huge)</span>
+        </div>
+      </div>
+
+      <div className="text-xs text-blue-800 bg-white/60 rounded p-2 border border-blue-100">
+        <div className="flex items-center justify-between">
+          <span className="font-medium capitalize">{productKey} dimensions:</span>
+          <button
+            type="button"
+            onClick={() => setShowGarmentEditor((v) => !v)}
+            className="text-[11px] text-blue-600 hover:underline"
+          >
+            {showGarmentEditor ? "Hide" : "Edit"}
+          </button>
+        </div>
+        <div className="mt-0.5">
+          {garmentW} cm × {garmentH} cm
+          {cmActive && (
+            <span className="ml-2 text-gray-600">
+              → will tile <strong>{repeatsX}</strong> × <strong>{repeatsY}</strong> times at {safeScale}× scale
+            </span>
+          )}
+        </div>
+
+        {showGarmentEditor && (
+          <div className="mt-3 space-y-2 pt-2 border-t border-blue-200">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-[11px]">Garment Width (cm)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.1}
+                  value={garmentW}
+                  onChange={(e) => setGarmentW(parseFloat(e.target.value) || 0)}
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px]">Garment Height (cm)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.1}
+                  value={garmentH}
+                  onChange={(e) => setGarmentH(parseFloat(e.target.value) || 0)}
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" size="sm" onClick={handleSaveGarment} className="flex-1 h-7 text-xs">
+                Save for {productKey}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleResetGarment}
+                className="h-7 text-xs"
+              >
+                Reset
+              </Button>
+            </div>
+            <p className="text-[10px] text-gray-500 leading-tight">
+              Saved locally on this browser. Applies to all fabrics on {productKey}s.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {!cmActive && (
+        <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+          ⚠ Both cm values must be &gt; 0 to enable cm-based scaling. Fabric will use the
+          legacy multiplier sliders below until set.
+        </p>
+      )}
     </div>
   )
 }

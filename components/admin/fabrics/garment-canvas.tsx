@@ -12,6 +12,7 @@ import {
   type PBROverride,
   type GarmentType,
 } from "@/lib/3d/customization-utils"
+import { computeCmBasedRepeats, hasCmScaling } from "@/lib/3d/garment-dimensions"
 
 // ─── Constants ────────────────────────────────────────────────
 
@@ -106,6 +107,12 @@ interface GarmentModelProps {
   fabricImageUrl: string | null
   repeatX?: number
   repeatY?: number
+  /** Real repeat width of the fabric print in cm. When > 0 activates cm-based tiling. */
+  repeatWidthCm?: number
+  /** Real repeat height of the fabric print in cm. */
+  repeatHeightCm?: number
+  /** Visual scale factor: >1 = larger pattern. Default 2. */
+  fineTune?: number
   zoomMultiplier?: number
   pbrSettings?: {
     roughness: number
@@ -123,6 +130,9 @@ export function GarmentModel({
   fabricImageUrl,
   repeatX = 6,
   repeatY = 6,
+  repeatWidthCm,
+  repeatHeightCm,
+  fineTune = 5,
   zoomMultiplier = 1,
   pbrSettings,
 }: GarmentModelProps) {
@@ -214,8 +224,33 @@ export function GarmentModel({
         }
       : undefined
 
-    // Apply the per-product scale so patterns appear at the correct visual size.
-    const scale = TEXTURE_REPEAT_SCALE[productType] ?? 1.0
+    // ALWAYS use cm-based tiling. Legacy multiplier is deprecated.
+    // If cm values are missing/zero, fall back to standard-fabric defaults so
+    // the preview still renders at production-accurate scale.
+    //   shirts   → 60in × 23.5in (152.4 × 59.7 cm) — standard shirting roll
+    //   trousers → 60in × 60cm   (152.4 × 60.0 cm)
+    //   jacket   → 60in × 60cm   (152.4 × 60.0 cm)
+    const FABRIC_DEFAULTS: Record<string, { w: number; h: number }> = {
+      shirt:    { w: 152.4, h: 59.7 },
+      trousers: { w: 152.4, h: 60.0 },
+      pants:    { w: 152.4, h: 60.0 },
+      jacket:   { w: 152.4, h: 60.0 },
+    }
+    const def = FABRIC_DEFAULTS[productType] ?? FABRIC_DEFAULTS.shirt
+    const effW = (repeatWidthCm && repeatWidthCm > 0) ? repeatWidthCm : def.w
+    const effH = (repeatHeightCm && repeatHeightCm > 0) ? repeatHeightCm : def.h
+    const userScale = Math.max(0.1, fineTune)
+    const { repeatsX, repeatsY } = computeCmBasedRepeats(
+      productType, effW, effH, 1 / userScale,
+    )
+    const finalRepeatX = repeatsX
+    const finalRepeatY = repeatsY
+    const usingDefaults = !hasCmScaling(repeatWidthCm, repeatHeightCm)
+    console.log(
+      `🎨 [GarmentModel ${productType}] ${usingDefaults ? 'CM-DEFAULT 🟡' : 'CM-MODE ✅'}  ` +
+      `fabricW=${effW.toFixed(1)}cm fabricH=${effH.toFixed(1)}cm scale=${userScale}× → rX=${finalRepeatX.toFixed(3)} rY=${finalRepeatY.toFixed(3)}` +
+      (usingDefaults ? ` (no cm values entered — using defaults)` : '')
+    )
 
     loadedScenes.forEach((scene) => {
       scene.traverse((child) => {
@@ -235,17 +270,17 @@ export function GarmentModel({
         if (fabricImageUrl) {
           applyFabricCustomization(
             child, fabricImageUrl, 0xffffff, garmentType,
-            repeatX * scale, repeatY * scale, pbrOverride
+            finalRepeatX, finalRepeatY, pbrOverride
           )
         } else {
           applyFabricCustomization(
             child, fabricColor || "#eeeeee", undefined, garmentType,
-            repeatX * scale, repeatY * scale, pbrOverride
+            finalRepeatX, finalRepeatY, pbrOverride
           )
         }
       })
     })
-  }, [loadedScenes, fabricColor, fabricImageUrl, garmentType, repeatX, repeatY, pbrSettings, productType])
+  }, [loadedScenes, fabricColor, fabricImageUrl, garmentType, repeatX, repeatY, repeatWidthCm, repeatHeightCm, fineTune, pbrSettings, productType])
 
   if (isLoading) {
     return (

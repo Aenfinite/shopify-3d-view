@@ -1,6 +1,6 @@
 {
 	"asset":{
-		"generator":"Khronos glTF Blender I/O v4.5.47",
+		"generator":"Khronos glTF Blender I/O v5.0.21",
 		"version":"2.0"
 	},
 	"scene":0,
@@ -28,15 +28,15 @@
 			"mesh":2,
 			"name":"Filobottone",
 			"rotation":[
-				0.6939392685890198,
+				0.6939393281936646,
 				0.06070652976632118,
-				-0.05891451612114906,
-				0.7150469422340393
+				-0.05891452357172966,
+				0.7150468826293945
 			],
 			"scale":[
-				0.9680973887443542,
 				0.968097448348999,
-				0.968097448348999
+				0.968097448348999,
+				0.9680975079536438
 			],
 			"translation":[
 				0.022982142865657806,
@@ -48,15 +48,15 @@
 			"mesh":3,
 			"name":"Bottone",
 			"rotation":[
-				0.6939392685890198,
+				0.6939393281936646,
 				0.06070652976632118,
-				-0.05891451612114906,
-				0.7150469422340393
+				-0.05891452357172966,
+				0.7150468826293945
 			],
 			"scale":[
-				0.9680973887443542,
 				0.968097448348999,
-				0.968097448348999
+				0.968097448348999,
+				0.9680975079536438
 			],
 			"translation":[
 				0.022982142865657806,
@@ -141,29 +141,29 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":193774,
+			"count":195629,
 			"max":[
-				0.18293237686157227,
+				0.18314634263515472,
 				0.5338016152381897,
-				0.12560415267944336
+				0.12581880390644073
 			],
 			"min":[
-				-0.1825752705335617,
+				-0.182479590177536,
 				-0.49544280767440796,
-				-0.13662107288837433
+				-0.13608966767787933
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":193774,
+			"count":195629,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":193774,
+			"count":195629,
 			"type":"VEC2"
 		},
 		{
@@ -278,104 +278,104 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":2325288,
+			"byteLength":2347548,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":2325288,
-			"byteOffset":2325288,
+			"byteLength":2347548,
+			"byteOffset":2347548,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":1550192,
-			"byteOffset":4650576,
+			"byteLength":1565032,
+			"byteOffset":4695096,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":4190328,
-			"byteOffset":6200768,
+			"byteOffset":6260128,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":14532,
-			"byteOffset":10391096,
+			"byteOffset":10450456,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":14532,
-			"byteOffset":10405628,
+			"byteOffset":10464988,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":9688,
-			"byteOffset":10420160,
+			"byteOffset":10479520,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":12384,
-			"byteOffset":10429848,
+			"byteOffset":10489208,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":12408,
-			"byteOffset":10442232,
+			"byteOffset":10501592,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":12408,
-			"byteOffset":10454640,
+			"byteOffset":10514000,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":8272,
-			"byteOffset":10467048,
+			"byteOffset":10526408,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":4176,
-			"byteOffset":10475320,
+			"byteOffset":10534680,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":7896,
-			"byteOffset":10479496,
+			"byteOffset":10538856,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":7896,
-			"byteOffset":10487392,
+			"byteOffset":10546752,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":5264,
-			"byteOffset":10495288,
+			"byteOffset":10554648,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":5280,
-			"byteOffset":10500552,
+			"byteOffset":10559912,
 			"target":34963
 		}
 	],
 	"buffers":[
 		{
-			"byteLength":10505832,
+			"byteLength":10565192,
 			"uri":"Basemodel.bin"
 		}
 	]

@@ -85,7 +85,13 @@ self.addEventListener('fetch', (event) => {
   
   // Handle other requests normally
   else {
-    event.respondWith(fetch(event.request))
+    event.respondWith(
+      fetch(event.request).catch((error) => {
+        console.log('⚠️ Fetch failed for:', event.request.url, error)
+        // Return a simple offline response for non-critical resources
+        return new Response('Offline', { status: 503, statusText: 'Service Unavailable' })
+      })
+    )
   }
 })
 
