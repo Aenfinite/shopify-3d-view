@@ -25,7 +25,7 @@ export interface GarmentDimensionsCm {
   height: number
 }
 
-export type GarmentKey = "shirt" | "pants" | "jacket" | "trousers"
+export type GarmentKey = "shirt" | "pants" | "jacket" | "trousers" | "lining"
 
 // ─── Hardcoded UV-calibration defaults ───────────────────────────────────
 // These values represent how many real-world cm the UV coordinate range
@@ -46,11 +46,17 @@ export type GarmentKey = "shirt" | "pants" | "jacket" | "trousers"
 //   outseam length (waist→hem)  = 92.5 cm
 //
 // Jacket — TBD (not urgent). Placeholder kept.
+// Lining — UV calibration: the lining mesh UV [0,1] covers the full interior
+// surface (front + back panels combined), so the effective mapped width is
+// significantly wider than a single outer-fabric panel.  150 × 180 cm gives
+// ~2 repeats for a standard 75 cm lining fabric, matching visual expectations.
+// Admin can override per-device via the garment-dimension editor in the wizard.
 const DEFAULT_DIMENSIONS_CM: Record<GarmentKey, GarmentDimensionsCm> = {
   shirt:    { width: 53.34, height: 73.39 },
   pants:    { width: 47.5,  height: 92.5  },
   trousers: { width: 47.5,  height: 92.5  },
   jacket:   { width: 56.0,  height: 76.0  },
+  lining:   { width: 150.0, height: 180.0 },
 }
 
 const LS_KEY = "garment-dimensions-cm-overrides-v1"
@@ -122,6 +128,7 @@ function normalizeKey(productType: string): GarmentKey {
   const p = (productType || "").toLowerCase()
   if (p === "pants" || p === "pant" || p === "trousers" || p === "trouser") return "pants"
   if (p === "jacket" || p === "blazer" || p === "coat") return "jacket"
+  if (p === "lining") return "lining"
   return "shirt"
 }
 

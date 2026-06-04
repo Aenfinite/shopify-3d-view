@@ -57,8 +57,8 @@ export const pantsBackPocketConfigs: Record<string, string[]> = {
 
 // Bottom cuff configurations
 export const pantsCuffConfigs: Record<string, string | null> = {
-  'turn-ups': null, // No cuff (normal)
-  'straight-hem': "/models/pants/BottomCuffs/22020.gltf" // With cuff
+  'turn-ups': "/models/pants/BottomCuffs/22020.gltf", // Folded turn-up cuff
+  'straight-hem': null // Plain hem — no extra geometry
 }
 
 // Waist band extension configurations

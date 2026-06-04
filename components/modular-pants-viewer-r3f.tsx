@@ -65,8 +65,8 @@ function applyPantsFabric(scene: THREE.Group, fabricColor?: string, fabricPbr?: 
   const useCm = hasCmScaling(repeatWidthCm, repeatHeightCm)
   let rX: number, rY: number
   if (useCm) {
-    const fineTune = Math.max(0.25, Math.min(4, repeatX / 4))
-    const r = computeCmBasedRepeats('pants', repeatWidthCm!, repeatHeightCm!, fineTune)
+    const userFineTune = Math.max(0.1, (fabricPbr as any)?.fineTune ?? 5)
+    const r = computeCmBasedRepeats('pants', repeatWidthCm!, repeatHeightCm!, 1 / userFineTune)
     rX = r.repeatsX
     rY = r.repeatsY
   } else {

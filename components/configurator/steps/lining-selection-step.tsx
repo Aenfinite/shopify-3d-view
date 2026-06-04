@@ -179,20 +179,12 @@ export function LiningSelectionStep({
     setSelectedFabric(fabric.id)
     setShowFabricPopup(false)
 
-    const pbr = (fabric as any).pbr || {}
-
     onUpdate({
       liningFabric: fabric.id,
       liningColor: fabric.image,
       liningMeshType: customType,
       customType: customType,
       liningType: "custom",
-      liningPbr: {
-        roughness: pbr.roughness ?? 0.45,
-        normalScale: pbr.normalScale ?? 0.2,
-        bumpScale: pbr.bumpScale ?? 0.1,
-        sheen: pbr.sheen ?? 0.15,
-      },
       liningRepeatWidthCm: (fabric as any).repeat_width_cm ?? undefined,
       liningRepeatHeightCm: (fabric as any).repeat_height_cm ?? undefined,
     })
@@ -201,7 +193,6 @@ export function LiningSelectionStep({
       liningFabric: fabric.id,
       liningColor: fabric.image,
       liningMeshType: customType,
-      liningPbr: pbr,
       repeatCm: {
         w: (fabric as any).repeat_width_cm,
         h: (fabric as any).repeat_height_cm,

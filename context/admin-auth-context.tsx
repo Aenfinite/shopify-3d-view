@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { supabase } from "@/lib/supabase/client"
 import type { User } from "@supabase/supabase-js"
+import { can as roleCan, normalizeRole, type AdminRole, type Permission } from "@/lib/admin/roles"
 
 interface AdminUser {
   id: string
@@ -18,6 +19,8 @@ interface AdminAuthContextType {
   signOut: () => Promise<void>
   isAuthenticated: boolean
   loading: boolean
+  role: AdminRole
+  can: (permission: Permission) => boolean
 }
 
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined)
@@ -119,6 +122,8 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     setSupabaseUser(null)
   }
 
+  const role = normalizeRole(user?.role)
+
   const value: AdminAuthContextType = {
     user,
     supabaseUser,
@@ -126,6 +131,8 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     signOut,
     isAuthenticated: !!user,
     loading,
+    role,
+    can: (permission: Permission) => roleCan(role, permission),
   }
 
   return <AdminAuthContext.Provider value={value}>{children}</AdminAuthContext.Provider>

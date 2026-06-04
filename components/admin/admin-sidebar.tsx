@@ -9,22 +9,32 @@ import {
   Palette,
   Settings,
   LogOut,
+  Rocket,
+  ClipboardList,
+  Boxes,
+  Barcode,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useAdminAuth } from "@/context/admin-auth-context"
+import type { Permission } from "@/lib/admin/roles"
 
 export function AdminSidebar() {
   const pathname = usePathname()
-  const { signOut } = useAdminAuth()
+  const { signOut, can } = useAdminAuth()
   const [collapsed, setCollapsed] = useState(false)
 
-  const navigation = [
+  // `perm` gates a link by role; items without one are visible to everyone.
+  const navigation: Array<{ name: string; href: string; icon: typeof LayoutDashboard; perm?: Permission }> = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { name: "Products", href: "/admin/products", icon: Shirt },
-    { name: "Fabrics", href: "/admin/fabrics", icon: Palette },
-    { name: "Settings", href: "/admin/settings", icon: Settings },
-  ]
+    { name: "Products", href: "/admin/products", icon: Shirt, perm: "fabrics:manage" },
+    { name: "Fabrics", href: "/admin/fabrics", icon: Palette, perm: "fabrics:manage" },
+    { name: "Kickstarter", href: "/admin/kickstarter", icon: Rocket, perm: "imports:run" },
+    { name: "Packages", href: "/admin/packages", icon: Boxes, perm: "packages:manage" },
+    { name: "Orders", href: "/admin/orders", icon: ClipboardList },
+    { name: "Article Codes", href: "/admin/article-codes", icon: Barcode, perm: "articleCodes:manage" },
+    { name: "Settings", href: "/admin/settings", icon: Settings, perm: "settings:manage" },
+  ].filter((item) => !item.perm || can(item.perm))
 
   return (
     <div

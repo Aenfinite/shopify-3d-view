@@ -45,8 +45,9 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
   let _fabricRx = _fabricRxRaw
   let _fabricRy = _fabricRyRaw
   if (hasCmScaling(_fabricRepeatWidthCm, _fabricRepeatHeightCm)) {
-    const fineTune = Math.max(0.25, Math.min(4, _fabricRxRaw / 4))
-    const r = computeCmBasedRepeats('jacket', _fabricRepeatWidthCm!, _fabricRepeatHeightCm!, fineTune)
+    // Match shirt formula: scale = 1/(fineTune??5) so all garments look identical
+    const userFineTune = Math.max(0.1, (_fabricPbr as any)?.fineTune ?? 5)
+    const r = computeCmBasedRepeats('jacket', _fabricRepeatWidthCm!, _fabricRepeatHeightCm!, 1 / userFineTune)
     _fabricRx = r.repeatsX
     _fabricRy = r.repeatsY
   }
@@ -61,8 +62,8 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
   let _liningRx = _liningRxRaw
   let _liningRy = _liningRyRaw
   if (hasCmScaling(_liningRepeatWidthCm, _liningRepeatHeightCm)) {
-    const fineTune = Math.max(0.25, Math.min(4, _liningRxRaw / 4))
-    const r = computeCmBasedRepeats('jacket', _liningRepeatWidthCm!, _liningRepeatHeightCm!, fineTune)
+    // Lining PBR is always stripped (matte), so default fineTune=5 matches shirt
+    const r = computeCmBasedRepeats('lining', _liningRepeatWidthCm!, _liningRepeatHeightCm!, 1 / 5)
     _liningRx = r.repeatsX
     _liningRy = r.repeatsY
   }
@@ -153,17 +154,17 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
         }
         
         if (customizations.liningColor) {
-          applyMaterialColor(child, customizations.liningColor, 0xffffff, 'jacket', _liningRx, _liningRy, _liningPbr)
+          applyMaterialColor(child, customizations.liningColor, 0xffffff, 'lining', _liningRx, _liningRy, _liningPbr)
           return
         } else if (customizations.liningMeshType === 'standard' || !customizations.liningMeshType) {
-          // Standard lining - restore original GLTF texture
+          // Standard lining - restore original GLTF texture but force matte PBR values
           if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial && child.userData._originalLiningMaterial) {
             const orig = child.userData._originalLiningMaterial
             child.material.color.copy(orig.color)
             child.material.map = orig.map
-            child.material.roughness = orig.roughness
-            child.material.metalness = orig.metalness
-            child.material.envMapIntensity = orig.envMapIntensity
+            child.material.roughness = 1.0
+            child.material.metalness = 0.0
+            child.material.envMapIntensity = 0.0
             child.material.flatShading = orig.flatShading
             child.material.needsUpdate = true
             console.log(`🔄 Restored original GLTF material for: ${child.name}`)
@@ -283,9 +284,9 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
               const orig = child.userData._originalLiningMaterial
               child.material.color.copy(orig.color)
               child.material.map = orig.map
-              child.material.roughness = orig.roughness
-              child.material.metalness = orig.metalness
-              child.material.envMapIntensity = orig.envMapIntensity
+              child.material.roughness = 1.0
+              child.material.metalness = 0.0
+              child.material.envMapIntensity = 0.0
               child.material.flatShading = orig.flatShading
               child.material.needsUpdate = true
               console.log(`🔄 Restored original GLTF material for standard lining: ${child.name}`)
@@ -315,7 +316,7 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
             if (treatAsFullLined) {
               if (customizations.liningColor) {
                 console.log(`📸 Applying texture to FULL lining mesh:`, customizations.liningColor)
-                applyMaterialColor(child, customizations.liningColor, 0xffffff, 'jacket', _liningRx, _liningRy, _liningPbr)
+                applyMaterialColor(child, customizations.liningColor, 0xffffff, 'lining', _liningRx, _liningRy, _liningPbr)
               }
               child.visible = true
               console.log(`✅ Showing FULL lining mesh: ${child.name}`)
@@ -331,7 +332,7 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
             if (treatAsHalfLined) {
               if (customizations.liningColor) {
                 console.log(`📸 Applying texture to half lining mesh:`, customizations.liningColor)
-                applyMaterialColor(child, customizations.liningColor, 0xffffff, 'jacket', _liningRx, _liningRy, _liningPbr)
+                applyMaterialColor(child, customizations.liningColor, 0xffffff, 'lining', _liningRx, _liningRy, _liningPbr)
               }
               child.visible = true
               console.log(`✅ Showing HALF lining mesh: ${child.name}`)
@@ -346,7 +347,7 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
             if (treatAsHalfLined || treatAsFullLined) {
               if (customizations.liningColor) {
                 console.log(`📸 Applying texture to LiningStraight1-4:`, customizations.liningColor)
-                applyMaterialColor(child, customizations.liningColor, 0xffffff, 'jacket', _liningRx, _liningRy, _liningPbr)
+                applyMaterialColor(child, customizations.liningColor, 0xffffff, 'lining', _liningRx, _liningRy, _liningPbr)
               }
               child.visible = true
               console.log(`✅ Applied lining texture to: ${child.name} (${treatAsHalfLined ? 'half' : 'full'} lined)`)
@@ -360,7 +361,7 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
             // Other lining meshes - apply normally if half or full lined
             console.log(`🎯 Found other lining mesh: ${child.name}`)
             if (treatAsHalfLined || treatAsFullLined) {
-              applyMaterialColor(child, customizations.liningColor, 0xffffff, 'jacket', _liningRx, _liningRy, _liningPbr)
+              applyMaterialColor(child, customizations.liningColor, 0xffffff, 'lining', _liningRx, _liningRy, _liningPbr)
               child.visible = true
               console.log(`✅ Applied lining color/texture to: ${child.name}`)
             } else {
@@ -602,7 +603,7 @@ if (typeof window !== 'undefined') {
 //   trousers → same linen maps but slightly stronger relief — dress trouser weight
 //   shirt   → no directional weave, near-zero reflections — soft cotton/poplin feel
 
-export type GarmentType = 'jacket' | 'trousers' | 'shirt'
+export type GarmentType = 'jacket' | 'trousers' | 'shirt' | 'lining'
 
 interface GarmentProfile {
   useNormalMap: boolean    // include linen normal map (adds directional weave relief)
@@ -615,6 +616,17 @@ interface GarmentProfile {
 }
 
 const GARMENT_PROFILES: Record<GarmentType, GarmentProfile> = {
+  lining: {
+    // Jacket inner lining — completely diffuse, zero specular/env reflection.
+    // Roughness and sheen are locked at max; pbrOverride cannot override them.
+    useNormalMap: false,
+    normalScale: 0.0,
+    useRoughnessMap: false,
+    roughness: 1.0,
+    sheen: 0.0,
+    sheenRoughness: 1.0,
+    envMapIntensity: 0.0,
+  },
   jacket: {
     useNormalMap: true,
     normalScale: 0.35,
@@ -693,11 +705,12 @@ function createFabricPhysicalMaterial(
   const pbr = getPBRForGarment(garmentType, pbrOverride?.materialType) // may be null on very first render; maps applied in callback once ready
   const profile = GARMENT_PROFILES[garmentType]
 
-  // pbrOverride values come from admin wizard sliders — use them when provided
-  const roughness    = pbrOverride?.roughness    ?? profile.roughness
+  // pbrOverride values come from admin wizard sliders — use them when provided.
+  // For lining, roughness and sheen are locked to the profile (no override allowed).
+  const roughness    = garmentType === 'lining' ? profile.roughness : (pbrOverride?.roughness    ?? profile.roughness)
   const normalScale  = pbrOverride?.normalScale  ?? profile.normalScale
   const bumpScale    = pbrOverride?.bumpScale    ?? (garmentType === 'shirt' ? 0.20 : 0)
-  const sheen        = pbrOverride?.sheen        ?? profile.sheen
+  const sheen        = garmentType === 'lining' ? profile.sheen      : (pbrOverride?.sheen        ?? profile.sheen)
 
   // Apply darkness: positive darkens (lerp toward black), negative lightens (lerp toward white).
   // darkness = 0 leaves the color unchanged.
@@ -719,25 +732,25 @@ function createFabricPhysicalMaterial(
     // Shirt fabric must render on both sides — collar opening, hem, and sleeve cuffs
     // expose the inside faces. Jacket/trousers use a separate lining mesh so FrontSide is fine.
     side: garmentType === 'shirt' ? THREE.DoubleSide : THREE.FrontSide,
-    envMapIntensity: profile.envMapIntensity,
+    envMapIntensity: garmentType === 'lining' ? 0.0 : profile.envMapIntensity,
     // Normal map: garment-specific PBR set (linen for jacket/trousers, Fabric019 for shirt)
     normalMap: (profile.useNormalMap && pbr?.normalMap) ? pbr.normalMap : undefined,
     normalScale: new THREE.Vector2(normalScale, normalScale),
     // Roughness map: garment-specific PBR set
     roughnessMap: (profile.useRoughnessMap && pbr?.roughnessMap) ? pbr.roughnessMap : undefined,
-    // Height map as bumpMap (shirt: scanned map preferred; others: no bump unless override says so)
-    bumpMap: garmentType === 'shirt' ? (pbr?.bumpMap ?? getShirtSurfaceNoise()) : (bumpScale > 0 ? (pbr?.bumpMap ?? undefined) : undefined),
-    bumpScale,
-    // Specular: shirt cotton is non-reflective (0.25 vs MeshPhysical default of 1.0)
-    specularIntensity: garmentType === 'shirt' ? 0.25 : 1.0,
+    // Height map as bumpMap (shirt: scanned map preferred; others: no bump unless override says so; lining: never)
+    bumpMap: garmentType === 'lining' ? undefined : (garmentType === 'shirt' ? (pbr?.bumpMap ?? getShirtSurfaceNoise()) : (bumpScale > 0 ? (pbr?.bumpMap ?? undefined) : undefined)),
+    bumpScale: garmentType === 'lining' ? 0 : bumpScale,
+    // Specular: shirt cotton is non-reflective; lining is fully diffuse (zero specular)
+    specularIntensity: garmentType === 'shirt' ? 0.25 : garmentType === 'lining' ? 0.0 : 1.0,
     // Sheen: cross-fibre retro-reflection
     sheen,
     sheenRoughness: profile.sheenRoughness,
     sheenColor: color.clone(),
     flatShading: false,
-    // AO: prefer scanned AO map for shirt; fall back to GLTF-baked AO for jacket/trousers
-    aoMap: (garmentType === 'shirt' && pbr?.aoMap) ? pbr.aoMap : source.aoMap,
-    aoMapIntensity: (garmentType === 'shirt' && pbr?.aoMap) ? 1.0 : (source.aoMapIntensity ?? 1),
+    // AO: prefer scanned AO map for shirt; fall back to GLTF-baked AO for jacket/trousers; lining: none
+    aoMap: garmentType === 'lining' ? null : ((garmentType === 'shirt' && pbr?.aoMap) ? pbr.aoMap : source.aoMap),
+    aoMapIntensity: garmentType === 'lining' ? 0 : ((garmentType === 'shirt' && pbr?.aoMap) ? 1.0 : (source.aoMapIntensity ?? 1)),
     emissive: source.emissive ? source.emissive.clone() : new THREE.Color(0),
     emissiveMap: source.emissiveMap,
   })
@@ -783,6 +796,43 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number =
     if (!(material instanceof THREE.MeshStandardMaterial)) return
 
     try {
+      // ── Lining: plain MeshStandardMaterial — zero specular, no PBR maps ─────
+      if (garmentType === 'lining') {
+        const matteMat = new THREE.MeshStandardMaterial({
+          color: new THREE.Color(baseColor),
+          roughness: 1.0,
+          metalness: 0.0,
+          envMapIntensity: 0.0,
+          side: THREE.FrontSide,
+        })
+        replaceMeshMaterial(mesh, idx, isMaterialArray, matteMat as unknown as THREE.MeshPhysicalMaterial)
+        if (isTexture) {
+          const textureLoader = new THREE.TextureLoader()
+          textureLoader.load(
+            color,
+            (texture) => {
+              texture.wrapS = THREE.RepeatWrapping
+              texture.wrapT = THREE.RepeatWrapping
+              texture.repeat.set(repeatX, repeatY)
+              texture.colorSpace = THREE.SRGBColorSpace
+              matteMat.map = texture
+              matteMat.needsUpdate = true
+              console.log(`✅ Applied matte lining texture to ${mesh.name}`)
+            },
+            undefined,
+            (error) => {
+              console.error(`❌ Error loading lining texture ${color}:`, error)
+              matteMat.color.setHex(0x808080)
+              matteMat.needsUpdate = true
+            }
+          )
+        } else {
+          matteMat.color.set(color)
+          matteMat.needsUpdate = true
+        }
+        return
+      }
+
       if (isTexture) {
         // ── Texture / fabric-image path ───────────────────────────────────────
         console.log(`🖼️ Loading fabric texture: ${color} for ${mesh.name}`)

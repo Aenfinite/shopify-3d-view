@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { CheckCircle, XCircle, Database, Loader2 } from "lucide-react"
 import { getSystemStatus } from "@/lib/supabase/service"
 import { useAdminAuth } from "@/context/admin-auth-context"
+import { TeamManager } from "@/components/admin/settings/team-manager"
 
 export default function SettingsPage() {
   const { user } = useAdminAuth()
@@ -89,6 +90,9 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Team & Roles (admin only) */}
+        <TeamManager />
 
         {/* Data Architecture */}
         <Card className="lg:col-span-2">

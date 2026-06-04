@@ -1205,9 +1205,7 @@ export function UniversalConfigurator({
     } else if (liningSelectionData.liningColor || liningSelectionData.liningMeshType) {
       customizations.liningColor = liningSelectionData.liningColor
       customizations.liningMeshType = liningSelectionData.liningMeshType || liningSelectionData.customType
-      if (liningSelectionData.liningPbr) {
-        customizations.liningPbr = liningSelectionData.liningPbr
-      }
+      customizations.liningPbr = undefined
       if (liningSelectionData.liningRepeatX !== undefined) customizations.liningRepeatX = liningSelectionData.liningRepeatX
       if (liningSelectionData.liningRepeatY !== undefined) customizations.liningRepeatY = liningSelectionData.liningRepeatY
       if (liningSelectionData.liningRepeatWidthCm !== undefined) customizations.liningRepeatWidthCm = liningSelectionData.liningRepeatWidthCm
@@ -2347,7 +2345,7 @@ export function UniversalConfigurator({
           {/* 3D Model Viewer - FULL HEIGHT with better styling */}
           <div className="absolute inset-0 w-full h-full rounded-lg lg:rounded-none overflow-hidden">
             <ModelViewer
-              key={`model-${configuratorState["jacket-front-style"]?.valueId || 'default'}-${configuratorState["front-pocket"]?.valueId || 'no-pocket'}-${configuratorState["chest-pocket"]?.valueId || 'no-chest'}-${configuratorState["jacket-sleeve-buttons"]?.valueId || 'default-sleeve'}-${configuratorState["jacket-vent-style"]?.valueId || 'default-vent'}-${configuratorState["collar-style"]?.valueId || 'default-collar'}-${configuratorState["sleeve-style"]?.valueId || 'default-sleeve-shirt'}-${configuratorState["cuff-style"]?.valueId || 'default-cuff'}-${configuratorState["shirt-chest-pocket"]?.valueId || 'no-shirt-pocket'}-${configuratorState["front-placket"]?.valueId || 'default-placket'}-${configuratorState["collar-cuff-contrast"]?.valueId || 'no-contrast'}`}
+              key={`model-${configuratorState["jacket-front-style"]?.valueId || 'default'}-${configuratorState["front-pocket"]?.valueId || 'no-pocket'}-${configuratorState["chest-pocket"]?.valueId || 'no-chest'}-${configuratorState["jacket-sleeve-buttons"]?.valueId || 'default-sleeve'}-${configuratorState["jacket-vent-style"]?.valueId || 'default-vent'}-${configuratorState["collar-style"]?.valueId || 'default-collar'}-${configuratorState["sleeve-style"]?.valueId || 'default-sleeve-shirt'}-${configuratorState["cuff-style"]?.valueId || 'default-cuff'}-${configuratorState["shirt-chest-pocket"]?.valueId || 'no-shirt-pocket'}-${configuratorState["front-placket"]?.valueId || 'default-placket'}-${configuratorState["collar-cuff-contrast"]?.valueId || 'no-contrast'}-${configuratorState["front-style"]?.valueId || 'flat-front'}-${configuratorState["back-pocket"]?.valueId || 'no-back-pocket'}-${configuratorState["bottom-cuffs"]?.valueId || 'straight-hem'}-${configuratorState["waist-band-extension"]?.valueId || 'no-extension'}`}
               modelUrl={getModelUrl()}
               useGLTF={productType === "jacket" || productType === "pants"}
               gltfModelPath={productType === "jacket" ? "/models/jackets/basic-jacket.gltf" : productType === "pants" ? "/models/pants/Style/Flat/Normal.gltf" : undefined}

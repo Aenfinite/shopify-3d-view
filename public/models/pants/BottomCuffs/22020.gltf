@@ -1,6 +1,6 @@
 {
 	"asset":{
-		"generator":"Khronos glTF Blender I/O v5.0.21",
+		"generator":"Khronos glTF Blender I/O v4.5.47",
 		"version":"2.0"
 	},
 	"scene":0,
@@ -15,27 +15,33 @@
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"Tessuto.002",
+			"name":"Normal Straigh Cuff",
+			"rotation":[
+				0.70710688829422,
+				0,
+				0,
+				0.7071066498756409
+			],
 			"scale":[
-				1.0263394117355347,
-				1.0263394117355347,
-				1.0263394117355347
+				0.0697256550192833,
+				0.0697256475687027,
+				0.0697256475687027
 			],
 			"translation":[
-				-0.0004442195640876889,
-				-0.4842323362827301,
-				-0.04015824571251869
+				-0.017997095361351967,
+				0.687478244304657,
+				-0.04884054511785507
 			]
 		}
 	],
 	"materials":[
 		{
-			"name":"default.008"
+			"name":"default"
 		}
 	],
 	"meshes":[
 		{
-			"name":"Tessuto.001",
+			"name":"body_Circle.014",
 			"primitives":[
 				{
 					"attributes":{
@@ -53,67 +59,67 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":4347,
+			"count":1448,
 			"max":[
-				0.14192375540733337,
-				0.01436266303062439,
-				0.09487935900688171
+				2.376965045928955,
+				1.5946100950241089,
+				16.976116180419922
 			],
 			"min":[
-				-0.13836313784122467,
-				-0.009211212396621704,
-				-0.06311888992786407
+				-1.860242247581482,
+				-0.812340497970581,
+				16.166048049926758
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":4347,
+			"count":1448,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":4347,
+			"count":1448,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5123,
-			"count":9696,
+			"count":7728,
 			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":52164,
+			"byteLength":17376,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":52164,
-			"byteOffset":52164,
+			"byteLength":17376,
+			"byteOffset":17376,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":34776,
-			"byteOffset":104328,
+			"byteLength":11584,
+			"byteOffset":34752,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":19392,
-			"byteOffset":139104,
+			"byteLength":15456,
+			"byteOffset":46336,
 			"target":34963
 		}
 	],
 	"buffers":[
 		{
-			"byteLength":158496,
+			"byteLength":61792,
 			"uri":"22020.bin"
 		}
 	]

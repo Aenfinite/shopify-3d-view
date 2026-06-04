@@ -16,6 +16,19 @@ import { computeCmBasedRepeats, hasCmScaling } from "@/lib/3d/garment-dimensions
 
 // ─── Constants ────────────────────────────────────────────────
 
+export const LINING_JACKET_BASE_PATHS = [
+  "/models/jackets/Front/Bottom/2Button/Curved.gltf",
+  "/models/jackets/Lapel/Regular/Upper/2Button/CL2.gltf",
+  "/models/jackets/Lapel/Regular/Lower/2Button/CL2.gltf",
+  "/models/jackets/Sleeve/Sleeve.gltf",
+  "/models/jackets/Vent/NoVent.gltf",
+]
+
+export const LINING_MODEL_PATHS: Record<"full" | "half", string[]> = {
+  full: ["/models/jackets/lining/Curved1.gltf"],
+  half: ["/models/jackets/lining/Halfed-lining.gltf"],
+}
+
 export const DEFAULT_MODEL_PATHS: Record<string, string[]> = {
   shirt: [
     "/models/shirts/Front/boxplacket.gltf",
@@ -122,6 +135,8 @@ interface GarmentModelProps {
     darkness: number
     fabricMaterialType?: string
   }
+  /** When set, renders jacket base (neutral gray) + the chosen lining model with the fabric applied to lining meshes only. */
+  liningMode?: "full" | "half" | null
 }
 
 export function GarmentModel({
@@ -135,6 +150,7 @@ export function GarmentModel({
   fineTune = 5,
   zoomMultiplier = 1,
   pbrSettings,
+  liningMode = null,
 }: GarmentModelProps) {
   const [loadedScenes, setLoadedScenes] = useState<THREE.Group[]>([])
   const [modelScale, setModelScale] = useState(1)
@@ -151,9 +167,11 @@ export function GarmentModel({
     return gltfLoader
   }, [])
 
-  // Load model parts whenever productType changes
+  // Load model parts whenever productType / liningMode changes
   useEffect(() => {
-    const paths = DEFAULT_MODEL_PATHS[productType] ?? DEFAULT_MODEL_PATHS.shirt
+    const paths = liningMode
+      ? [...LINING_JACKET_BASE_PATHS, ...LINING_MODEL_PATHS[liningMode]]
+      : (DEFAULT_MODEL_PATHS[productType] ?? DEFAULT_MODEL_PATHS.shirt)
     setIsLoading(true)
     let cancelled = false
 
@@ -197,7 +215,7 @@ export function GarmentModel({
     return () => {
       cancelled = true
     }
-  }, [productType, loader])
+  }, [productType, liningMode, loader])
 
   // Dispose on unmount
   useEffect(() => {
@@ -240,8 +258,10 @@ export function GarmentModel({
     const effW = (repeatWidthCm && repeatWidthCm > 0) ? repeatWidthCm : def.w
     const effH = (repeatHeightCm && repeatHeightCm > 0) ? repeatHeightCm : def.h
     const userScale = Math.max(0.1, fineTune)
+    // When showing the lining preview use the lining UV calibration, not the jacket outer
+    const cmProductType = liningMode ? "lining" : productType
     const { repeatsX, repeatsY } = computeCmBasedRepeats(
-      productType, effW, effH, 1 / userScale,
+      cmProductType, effW, effH, 1 / userScale,
     )
     const finalRepeatX = repeatsX
     const finalRepeatY = repeatsY
@@ -267,7 +287,18 @@ export function GarmentModel({
         )
         if (isNonFabric) return
 
-        if (fabricImageUrl) {
+        if (liningMode) {
+          const isLiningMesh = meshName.includes("lining")
+          if (isLiningMesh) {
+            if (fabricImageUrl) {
+              applyFabricCustomization(child, fabricImageUrl, 0xffffff, "lining", finalRepeatX, finalRepeatY, undefined)
+            } else {
+              applyFabricCustomization(child, fabricColor || "#eeeeee", undefined, "lining", finalRepeatX, finalRepeatY, undefined)
+            }
+          } else {
+            applyFabricCustomization(child, "#b8b4af", undefined, "jacket", 1, 1, undefined)
+          }
+        } else if (fabricImageUrl) {
           applyFabricCustomization(
             child, fabricImageUrl, 0xffffff, garmentType,
             finalRepeatX, finalRepeatY, pbrOverride
@@ -280,7 +311,7 @@ export function GarmentModel({
         }
       })
     })
-  }, [loadedScenes, fabricColor, fabricImageUrl, garmentType, repeatX, repeatY, repeatWidthCm, repeatHeightCm, fineTune, pbrSettings, productType])
+  }, [loadedScenes, fabricColor, fabricImageUrl, garmentType, repeatX, repeatY, repeatWidthCm, repeatHeightCm, fineTune, pbrSettings, productType, liningMode])
 
   if (isLoading) {
     return (

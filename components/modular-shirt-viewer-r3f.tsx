@@ -262,6 +262,9 @@ function ShirtModel({
   ])
 
   // ─── Load main shirt parts (front, collar, sleeve) ───
+  // Fabric props are intentionally NOT in this effect's dependencies.
+  // Changing fabric must never trigger a GLTF reload — see fabric-apply
+  // effect below which re-applies materials to already-loaded scenes.
   useEffect(() => {
     setIsLoading(true)
 
@@ -269,22 +272,7 @@ function ShirtModel({
       new Promise((resolve, reject) => {
         loader.load(
           path,
-          (gltf) => {
-            const scene = gltf.scene.clone()
-            applyShirtFabric(
-              scene,
-              customizations.fabricColor,
-              customizations.contrastEnabled,
-              customizations.contrastCollarTexture,
-              customizations.contrastCuffTexture,
-              customizations.fabricRepeatX,
-              customizations.fabricRepeatY,
-              customizations.fabricPbr,
-              customizations.fabricRepeatWidthCm,
-              customizations.fabricRepeatHeightCm,
-            )
-            resolve(scene)
-          },
+          (gltf) => resolve(gltf.scene.clone()),
           undefined,
           reject
         )
@@ -322,10 +310,32 @@ function ShirtModel({
         console.error("❌ Error loading shirt parts:", error)
         setIsLoading(false)
       })
+  }, [resolvedPaths.front, resolvedPaths.collar, resolvedPaths.sleeve, loader])
+
+  // ─── Separate fabric-apply effect ────────────────────────────────────────
+  // Runs whenever any loaded scene OR fabric props change.
+  // Never reloads GLTFs — just re-applies materials to existing scenes.
+  useEffect(() => {
+    const parts = [frontScene, collarScene, sleeveScene, pocketScene].filter(
+      (s): s is THREE.Group => s !== null
+    )
+    if (parts.length === 0) return
+    parts.forEach((scene) =>
+      applyShirtFabric(
+        scene,
+        customizations.fabricColor,
+        customizations.contrastEnabled,
+        customizations.contrastCollarTexture,
+        customizations.contrastCuffTexture,
+        customizations.fabricRepeatX,
+        customizations.fabricRepeatY,
+        customizations.fabricPbr,
+        customizations.fabricRepeatWidthCm,
+        customizations.fabricRepeatHeightCm,
+      )
+    )
   }, [
-    resolvedPaths.front,
-    resolvedPaths.collar,
-    resolvedPaths.sleeve,
+    frontScene, collarScene, sleeveScene, pocketScene,
     customizations.fabricColor,
     customizations.contrastEnabled,
     customizations.contrastCollarTexture,
@@ -335,10 +345,10 @@ function ShirtModel({
     customizations.fabricRepeatWidthCm,
     customizations.fabricRepeatHeightCm,
     customizations.fabricPbr,
-    loader,
   ])
 
   // ─── Load optional chest pocket ───
+  // Fabric is applied by the shared fabric-apply effect above once pocketScene is set.
   useEffect(() => {
     if (!resolvedPaths.pocket) {
       setPocketScene(null)
@@ -348,9 +358,7 @@ function ShirtModel({
     loader.load(
       resolvedPaths.pocket,
       (gltf) => {
-        const scene = gltf.scene.clone()
-        applyShirtFabric(scene, customizations.fabricColor, undefined, undefined, undefined, customizations.fabricRepeatX, customizations.fabricRepeatY, customizations.fabricPbr, customizations.fabricRepeatWidthCm, customizations.fabricRepeatHeightCm)
-        setPocketScene(scene)
+        setPocketScene(gltf.scene.clone())
         console.log("✅ Shirt chest pocket loaded")
       },
       undefined,
@@ -359,7 +367,7 @@ function ShirtModel({
         setPocketScene(null)
       }
     )
-  }, [resolvedPaths.pocket, customizations.fabricColor, customizations.fabricRepeatX, customizations.fabricRepeatY, customizations.fabricRepeatWidthCm, customizations.fabricRepeatHeightCm, customizations.fabricPbr, loader])
+  }, [resolvedPaths.pocket, loader])
 
   if (isLoading || !frontScene || !collarScene || !sleeveScene) {
     return <LoadingOverlay />

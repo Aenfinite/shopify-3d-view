@@ -38,6 +38,7 @@ import {
   type Product,
 } from "@/lib/supabase/service"
 import { GarmentModel, CameraUpdater, CAMERA_PRESETS } from "./garment-canvas"
+import MotifCalibrator from "./motif-calibrator"
 import {
   getGarmentDimensionsCm,
   getDefaultGarmentDimensionsCm,
@@ -99,8 +100,8 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
   // Products
   const [products, setProducts] = useState<Product[]>([])
 
-  // Step tracking
-  const [currentStep, setCurrentStep] = useState(isEditing ? 4 : 0)
+  // Step tracking — 6 steps total (0-5); editing jumps straight to step 5
+  const [currentStep, setCurrentStep] = useState(isEditing ? 5 : 0)
 
   // Form state
   const [productId, setProductId] = useState(editingFabric?.product_id || "")
@@ -150,6 +151,15 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
     getAllProducts().then(setProducts)
   }, [])
 
+  // When editing an existing fabric (no fresh upload), read the stored image's
+  // pixel dimensions so the motif calibrator and aspect logic still work.
+  useEffect(() => {
+    if (uploadedImagePixels || previewFile || !imageUrl || typeof window === "undefined") return
+    const img = new window.Image()
+    img.onload = () => setUploadedImagePixels({ w: img.naturalWidth, h: img.naturalHeight })
+    img.src = imageUrl
+  }, [imageUrl, previewFile, uploadedImagePixels])
+
   // Update PBR when fabric type or material category changes (only for new fabrics)
   useEffect(() => {
     if (!isEditing && fabricType) {
@@ -171,6 +181,12 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
   // Derived values
   const selectedProduct = products.find((p) => p.id === productId)
   const productType = selectedProduct?.type || "shirt"
+
+  // Reset lining category to outer whenever a non-jacket product is selected
+  useEffect(() => {
+    if (productType !== "jacket") setMaterialCategory("outer")
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productType])
 
   // Pull the real fabric-type options for the selected product from sample data
   const productFabricTypes = useMemo(() => {
@@ -198,35 +214,44 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
 
   // Step definitions
   const steps = [
-    { label: "Product", description: "Select product" },
-    { label: "Material Type", description: "Choose material" },
+    { label: "Product",      description: "Select product" },
+    { label: "Fabric For",   description: "Outer or lining" },
+    { label: "Material Type",description: "Choose material" },
     { label: "Fabric Style", description: "Pick style" },
-    { label: "Input", description: "Color or texture" },
-    { label: "Details", description: "Name, price & save" },
+    { label: "Input",        description: "Color or texture" },
+    { label: "Details",      description: "Name, price & save" },
   ]
+
+  // Step 1 ('Fabric For') is jacket-only — skip it for all other products
+  const isJacket = productType === "jacket"
 
   const canProceed = () => {
     switch (currentStep) {
       case 0: return !!productId
-      case 1: return !!fabricType
+      case 1: return isJacket                                     // only reachable for jackets
       case 2: return !!fabricType
-      case 3:
+      case 3: return !!fabricType
+      case 4:
         if (inputMode === "upload") return !!(imageUrl || previewFile)
         return !!colorHex
-      case 4: return !!name.trim()
+      case 5: return !!name.trim()
       default: return false
     }
   }
 
   const handleNext = () => {
     if (currentStep < steps.length - 1 && canProceed()) {
-      setCurrentStep((s) => s + 1)
+      const next = currentStep + 1
+      // Skip 'Fabric For' step for non-jacket products
+      setCurrentStep(next === 1 && !isJacket ? 2 : next)
     }
   }
 
   const handlePrev = () => {
     if (currentStep > 0) {
-      setCurrentStep((s) => s - 1)
+      const prev = currentStep - 1
+      // Skip 'Fabric For' step backwards for non-jacket products
+      setCurrentStep(prev === 1 && !isJacket ? 0 : prev)
     }
   }
 
@@ -336,49 +361,6 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
 
     return (
       <div className="space-y-4">
-        {/* Material Category — outer vs lining */}
-        <div className="rounded-lg border-2 border-dashed border-gray-200 p-3 bg-gray-50/50">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-            Material Category
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setMaterialCategory("outer")}
-              className={`rounded-md border-2 p-3 text-left transition-all ${
-                materialCategory === "outer"
-                  ? "border-primary bg-primary/5 ring-1 ring-primary"
-                  : "border-gray-200 bg-white hover:border-gray-400"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-xl">🧥</span>
-                <div>
-                  <p className="font-medium text-sm">Outer Fabric</p>
-                  <p className="text-[11px] text-muted-foreground leading-tight">Shell / visible surface</p>
-                </div>
-              </div>
-            </button>
-            <button
-              type="button"
-              onClick={() => setMaterialCategory("lining")}
-              className={`rounded-md border-2 p-3 text-left transition-all ${
-                materialCategory === "lining"
-                  ? "border-primary bg-primary/5 ring-1 ring-primary"
-                  : "border-gray-200 bg-white hover:border-gray-400"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-xl">🧵</span>
-                <div>
-                  <p className="font-medium text-sm">Lining</p>
-                  <p className="text-[11px] text-muted-foreground leading-tight">Interior surface, silky finish</p>
-                </div>
-              </div>
-            </button>
-          </div>
-        </div>
-
         <div>
           <h3 className="text-lg font-semibold">Select Product</h3>
           <p className="text-sm text-muted-foreground">Which product is this fabric for?</p>
@@ -716,6 +698,9 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
                                 ...prev,
                                 repeat_width_cm: wCm,
                                 repeat_height_cm: hCm,
+                                // Manual/DPI entry replaces any motif calibration
+                                scale_cm_per_px: undefined,
+                                motif_calibration: undefined,
                               }))
                             }}
                             className={`text-[10px] px-2 py-1 rounded border transition-colors ${
@@ -759,6 +744,8 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
                           ...prev,
                           repeat_width_cm: newWCm,
                           repeat_height_cm: newHCm,
+                          scale_cm_per_px: undefined,
+                          motif_calibration: undefined,
                         }))
                       }}
                     />
@@ -790,7 +777,7 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
                         const raw = parseFloat(e.target.value) || 0
                         const newHCm = fabricSizeUnit === "in" ? raw * 2.54 : raw
                         setFabricDpi(null)
-                        setPbrSettings((prev) => ({ ...prev, repeat_height_cm: newHCm }))
+                        setPbrSettings((prev) => ({ ...prev, repeat_height_cm: newHCm, scale_cm_per_px: undefined, motif_calibration: undefined }))
                       }}
                     />
                   </div>
@@ -811,6 +798,31 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
                   </p>
                 )}
               </div>
+            )}
+
+            {/* ── Motif calibration ── most accurate scaling: anchor to a real motif */}
+            {(previewFile || imageUrl) && uploadedImagePixels && (
+              <MotifCalibrator
+                imageSrc={(previewFile || imageUrl)!}
+                imagePixels={uploadedImagePixels}
+                value={pbrSettings.motif_calibration ?? null}
+                onApply={({ cmPerPx, repeatWidthCm, repeatHeightCm, calibration }) => {
+                  setFabricDpi(null)
+                  setFabricSizeUnit("cm")
+                  setArLocked(true)
+                  setPbrSettings((prev) => ({
+                    ...prev,
+                    repeat_width_cm: repeatWidthCm,
+                    repeat_height_cm: repeatHeightCm,
+                    scale_cm_per_px: cmPerPx,
+                    motif_calibration: calibration,
+                  }))
+                  toast({
+                    title: "Scale calibrated",
+                    description: `Repeat set to ${repeatWidthCm.toFixed(1)} × ${repeatHeightCm.toFixed(1)} cm from the motif.`,
+                  })
+                }}
+              />
             )}
 
             {/* Siblings preview — shows existing swatches for this category + new one */}
@@ -903,6 +915,8 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
             ...prev,
             repeat_width_cm: w,
             repeat_height_cm: h,
+            scale_cm_per_px: undefined,
+            motif_calibration: undefined,
           }))
         }}
         onChangeFineTune={(v) => setPbrSettings((prev) => ({ ...prev, fine_tune: v }))}
@@ -981,7 +995,65 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
     </div>
   )
 
-  const stepRenderers = [renderProductStep, renderFabricTypeStep, renderFabricStyleStep, renderInputStep, renderDetailsStep]
+  const renderFabricUseStep = () => (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-lg font-semibold">What is this fabric for?</h3>
+        <p className="text-sm text-muted-foreground">
+          Choose whether this fabric appears as the outer jacket surface or as the interior lining.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 gap-4">
+        <button
+          type="button"
+          onClick={() => setMaterialCategory("outer")}
+          className={`rounded-xl border-2 p-5 text-left transition-all ${
+            materialCategory === "outer"
+              ? "border-primary bg-primary/5 ring-2 ring-primary/30"
+              : "border-gray-200 bg-white hover:border-gray-400"
+          }`}
+        >
+          <div className="flex items-center gap-4">
+            <span className="text-4xl">🧥</span>
+            <div>
+              <p className="font-semibold text-base">Jacket Outer Fabric</p>
+              <p className="text-sm text-muted-foreground leading-snug mt-0.5">
+                The visible shell of the jacket — wool, linen, tweed, etc.
+              </p>
+            </div>
+            {materialCategory === "outer" && (
+              <Check className="h-5 w-5 text-primary ml-auto flex-shrink-0" />
+            )}
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMaterialCategory("lining")}
+          className={`rounded-xl border-2 p-5 text-left transition-all ${
+            materialCategory === "lining"
+              ? "border-primary bg-primary/5 ring-2 ring-primary/30"
+              : "border-gray-200 bg-white hover:border-gray-400"
+          }`}
+        >
+          <div className="flex items-center gap-4">
+            <span className="text-4xl">🧵</span>
+            <div>
+              <p className="font-semibold text-base">Jacket Lining Fabric</p>
+              <p className="text-sm text-muted-foreground leading-snug mt-0.5">
+                The interior lining — shown in half-lining and full-lining views simultaneously.
+              </p>
+            </div>
+            {materialCategory === "lining" && (
+              <Check className="h-5 w-5 text-primary ml-auto flex-shrink-0" />
+            )}
+          </div>
+        </button>
+      </div>
+    </div>
+  )
+
+  const stepRenderers = [renderProductStep, renderFabricUseStep, renderFabricTypeStep, renderFabricStyleStep, renderInputStep, renderDetailsStep]
 
   // ─── Layout ─────────────────────────────────────────────────
 
@@ -1008,7 +1080,7 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
       {/* Step Indicators */}
       <div className="flex items-center gap-2">
         {steps.map((step, i) => (
-          <div key={i} className="flex items-center gap-2 flex-1">
+          <div key={i} className={`flex items-center gap-2 flex-1 ${i === 1 && !isJacket ? "hidden" : ""}`}>
             <button
               onClick={() => i < currentStep && setCurrentStep(i)}
               disabled={i > currentStep}
@@ -1075,65 +1147,115 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
           {/* Top badge */}
           <div className="absolute top-3 left-3 z-10">
             <Badge variant="secondary" className="bg-white/80 backdrop-blur-sm text-xs">
-              3D Preview — {productType || "shirt"}
+              {materialCategory === "lining" && productType === "jacket"
+                ? "3D Lining Preview — Full & Half"
+                : `3D Preview — ${productType || "shirt"}`}
             </Badge>
           </div>
 
-          {/* Canvas — grows to fill the panel */}
-          <div className="h-[620px]">
-            <Canvas
-              shadows
-              camera={{
-                position: (CAMERA_PRESETS[productType] || CAMERA_PRESETS.shirt).position,
-                fov: (CAMERA_PRESETS[productType] || CAMERA_PRESETS.shirt).fov,
-              }}
-              gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-            >
-              <Suspense fallback={null}>
-                <color attach="background" args={["#f5f5f5"]} />
-                <CameraUpdater productType={productType} />
-
-                {/* Studio lighting matching the real website */}
-                <ambientLight intensity={0.55} />
-                <directionalLight
-                  position={[3, 8, 4]}
-                  intensity={0.8}
-                  castShadow
-                  shadow-mapSize-width={2048}
-                  shadow-mapSize-height={2048}
-                />
-                <directionalLight position={[-3, 5, 2]} intensity={0.45} />
-                <directionalLight position={[0, 4, -4]} intensity={0.20} />
-                <hemisphereLight args={["#f4efe8", "#3a3a3a", 0.28]} />
-                <Environment preset="studio" environmentIntensity={0.15} />
-
-                <GarmentModel
-                  productType={productType}
-                  fabricColor={fabricColorForPreview}
-                  fabricImageUrl={fabricImageForPreview}
-                  repeatX={pbrSettings.repeat_x}
-                  repeatY={pbrSettings.repeat_y}
-                  repeatWidthCm={pbrSettings.repeat_width_cm}
-                  repeatHeightCm={pbrSettings.repeat_height_cm}
-                  fineTune={pbrSettings.fine_tune ?? 5}
-                  zoomMultiplier={previewZoom}
-                  pbrSettings={{ ...pbrSettings, fabricMaterialType: fabricType }}
-                />
-
-                <OrbitControls
-                  enablePan={false}
-                  enableZoom={true}
-                  minDistance={0.8}
-                  maxDistance={10}
-                  maxPolarAngle={Math.PI / 1.4}
-                  minPolarAngle={Math.PI / 8}
-                  target={new THREE.Vector3(...(CAMERA_PRESETS[productType] || CAMERA_PRESETS.shirt).target)}
-                  autoRotate
-                  autoRotateSpeed={0.8}
-                />
-              </Suspense>
-            </Canvas>
-          </div>
+          {/* Canvas area */}
+          {materialCategory === "lining" && productType === "jacket" ? (
+            // ── Dual lining preview: full lining (top) + half lining (bottom) ──
+            <div className="flex flex-col h-[620px]">
+              {(["full", "half"] as const).map((mode) => (
+                <div key={mode} className="flex-1 relative">
+                  <div className="absolute top-2 left-2 z-10">
+                    <span className="text-[11px] font-semibold bg-black/50 text-white px-2 py-0.5 rounded-full">
+                      {mode === "full" ? "Full Lining" : "Half Lining"}
+                    </span>
+                  </div>
+                  <Canvas
+                    shadows
+                    camera={{ position: [0, 0.8, 7.0], fov: 45 }}
+                    gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+                  >
+                    <Suspense fallback={null}>
+                      <color attach="background" args={["#f0eeec"]} />
+                      <ambientLight intensity={0.55} />
+                      <directionalLight position={[3, 8, 4]} intensity={0.8} castShadow />
+                      <directionalLight position={[-3, 5, 2]} intensity={0.45} />
+                      <directionalLight position={[0, 4, -4]} intensity={0.20} />
+                      <hemisphereLight args={["#f4efe8", "#3a3a3a", 0.28]} />
+                      <Environment preset="studio" environmentIntensity={0.10} />
+                      <GarmentModel
+                        productType="jacket"
+                        fabricColor={fabricColorForPreview}
+                        fabricImageUrl={fabricImageForPreview}
+                        repeatWidthCm={pbrSettings.repeat_width_cm}
+                        repeatHeightCm={pbrSettings.repeat_height_cm}
+                        fineTune={pbrSettings.fine_tune ?? 5}
+                        zoomMultiplier={previewZoom}
+                        liningMode={mode}
+                      />
+                      <OrbitControls
+                        enablePan={false}
+                        enableZoom={true}
+                        minDistance={2}
+                        maxDistance={12}
+                        maxPolarAngle={Math.PI / 1.4}
+                        minPolarAngle={Math.PI / 8}
+                        target={new THREE.Vector3(0, 0.5, 0)}
+                        autoRotate
+                        autoRotateSpeed={0.6}
+                      />
+                    </Suspense>
+                  </Canvas>
+                </div>
+              ))}
+            </div>
+          ) : (
+            // ── Standard single preview ──
+            <div className="h-[620px]">
+              <Canvas
+                shadows
+                camera={{
+                  position: (CAMERA_PRESETS[productType] || CAMERA_PRESETS.shirt).position,
+                  fov: (CAMERA_PRESETS[productType] || CAMERA_PRESETS.shirt).fov,
+                }}
+                gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+              >
+                <Suspense fallback={null}>
+                  <color attach="background" args={["#f5f5f5"]} />
+                  <CameraUpdater productType={productType} />
+                  <ambientLight intensity={0.55} />
+                  <directionalLight
+                    position={[3, 8, 4]}
+                    intensity={0.8}
+                    castShadow
+                    shadow-mapSize-width={2048}
+                    shadow-mapSize-height={2048}
+                  />
+                  <directionalLight position={[-3, 5, 2]} intensity={0.45} />
+                  <directionalLight position={[0, 4, -4]} intensity={0.20} />
+                  <hemisphereLight args={["#f4efe8", "#3a3a3a", 0.28]} />
+                  <Environment preset="studio" environmentIntensity={0.15} />
+                  <GarmentModel
+                    productType={productType}
+                    fabricColor={fabricColorForPreview}
+                    fabricImageUrl={fabricImageForPreview}
+                    repeatX={pbrSettings.repeat_x}
+                    repeatY={pbrSettings.repeat_y}
+                    repeatWidthCm={pbrSettings.repeat_width_cm}
+                    repeatHeightCm={pbrSettings.repeat_height_cm}
+                    fineTune={pbrSettings.fine_tune ?? 5}
+                    zoomMultiplier={previewZoom}
+                    pbrSettings={{ ...pbrSettings, fabricMaterialType: fabricType }}
+                  />
+                  <OrbitControls
+                    enablePan={false}
+                    enableZoom={true}
+                    minDistance={0.8}
+                    maxDistance={10}
+                    maxPolarAngle={Math.PI / 1.4}
+                    minPolarAngle={Math.PI / 8}
+                    target={new THREE.Vector3(...(CAMERA_PRESETS[productType] || CAMERA_PRESETS.shirt).target)}
+                    autoRotate
+                    autoRotateSpeed={0.8}
+                  />
+                </Suspense>
+              </Canvas>
+            </div>
+          )}
 
           {/* Zoom control bar */}
           <div className="px-4 py-3 bg-white/90 backdrop-blur-sm border-t flex items-center gap-3">

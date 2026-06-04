@@ -58,6 +58,26 @@ export interface FabricRow {
     /** Real-cm repeat height of the fabric print tile. */
     repeat_height_cm?: number
     /**
+     * Single scale anchor: how many real centimetres one source-image pixel
+     * represents. When present, repeat_width_cm / repeat_height_cm are derived
+     * as (image_px × scale_cm_per_px), which FORCES their ratio to equal the
+     * image's pixel aspect ratio — making motif stretch mathematically
+     * impossible. Produced by the motif calibrator (draw a box over a motif,
+     * enter its real size). Optional; legacy fabrics simply omit it.
+     */
+    scale_cm_per_px?: number
+    /**
+     * Re-editable inputs behind scale_cm_per_px, so the calibration can be
+     * reopened and adjusted. `box` is in normalized [0..1] image coordinates
+     * (survives re-uploads / resizes); `real_cm` is the physical size of the
+     * box along `axis`; the other axis follows the box's pixel aspect ratio.
+     */
+    motif_calibration?: {
+      box: { x: number; y: number; w: number; h: number }
+      real_cm: number
+      axis: "w" | "h"
+    }
+    /**
      * Visual scale factor: higher = larger pattern on garment.
      * 1 = true production scale, 5 = default (5× larger). Saved per fabric.
      */
@@ -167,7 +187,7 @@ export async function getFabricsByType(fabricType: string): Promise<FabricRow[]>
   const { data, error } = await supabase
     .from("fabrics")
     .select("*")
-    .eq("fabric_type", fabricType)
+    .eq("fabric_type", fabricType as FabricRow["fabric_type"])
     .order("sort_order")
 
   if (error || !data) return []
