@@ -511,6 +511,60 @@ function softenTexture(tex: THREE.Texture, blendAlpha = 0.18, neutralL = 128): T
 }
 
 /**
+ * Largest dimension (px) we ever upload a user fabric image to the GPU at.
+ * Uploaded prints are often full-resolution scans (4000–6000px / many MB). Pushing
+ * those straight to the GPU — once per mesh, with a fresh copy on every re-apply —
+ * exhausts VRAM and causes the browser to drop the WebGL context (canvas goes blank,
+ * model disappears). 2048 is plenty for a tiled fabric and keeps memory bounded.
+ */
+const MAX_FABRIC_TEXTURE_PX = 2048
+
+/**
+ * Loads a fabric image (data URL or http URL) and returns a THREE texture that is
+ * downscaled to at most MAX_FABRIC_TEXTURE_PX on its longest side. This is the single
+ * guard that keeps user-uploaded prints from blowing up GPU memory.
+ */
+function loadScaledFabricTexture(
+  url: string,
+  onLoad: (tex: THREE.Texture) => void,
+  onError: (err: unknown) => void,
+) {
+  // SSR / no-DOM fallback: just use the plain loader (no canvas available to downscale).
+  if (typeof document === 'undefined') {
+    new THREE.TextureLoader().load(url, onLoad, undefined, onError)
+    return
+  }
+  const img = new Image()
+  img.crossOrigin = 'anonymous'
+  img.onload = () => {
+    try {
+      const iw = img.naturalWidth || img.width
+      const ih = img.naturalHeight || img.height
+      const maxSide = Math.max(iw, ih)
+      if (maxSide > MAX_FABRIC_TEXTURE_PX && iw > 0 && ih > 0) {
+        const scale = MAX_FABRIC_TEXTURE_PX / maxSide
+        const w = Math.max(1, Math.round(iw * scale))
+        const h = Math.max(1, Math.round(ih * scale))
+        const canvas = document.createElement('canvas')
+        canvas.width = w
+        canvas.height = h
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, w, h)
+        onLoad(new THREE.CanvasTexture(canvas))
+      } else {
+        const tex = new THREE.Texture(img)
+        tex.needsUpdate = true
+        onLoad(tex)
+      }
+    } catch (err) {
+      onError(err)
+    }
+  }
+  img.onerror = (err) => onError(err)
+  img.src = url
+}
+
+/**
  * Eagerly starts loading PBR maps and caches the promise.
  * Safe to call multiple times — only one load is ever started.
  */
@@ -776,7 +830,13 @@ function replaceMeshMaterial(
     mesh.material = physMat
   }
   const prevMat = mesh.userData._fabricPhysicalMat as THREE.MeshPhysicalMaterial | undefined
-  if (prevMat && prevMat !== physMat) prevMat.dispose()
+  if (prevMat && prevMat !== physMat) {
+    // Dispose the per-fabric color map we created for the previous material so it
+    // doesn't leak on the GPU. normalMap/roughnessMap etc. are shared cached PBR
+    // maps reused across meshes — never dispose those here.
+    if (prevMat.map) prevMat.map.dispose()
+    prevMat.dispose()
+  }
   mesh.userData._fabricPhysicalMat = physMat
 }
 
@@ -807,19 +867,18 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number =
         })
         replaceMeshMaterial(mesh, idx, isMaterialArray, matteMat as unknown as THREE.MeshPhysicalMaterial)
         if (isTexture) {
-          const textureLoader = new THREE.TextureLoader()
-          textureLoader.load(
+          loadScaledFabricTexture(
             color,
             (texture) => {
               texture.wrapS = THREE.RepeatWrapping
               texture.wrapT = THREE.RepeatWrapping
               texture.repeat.set(repeatX, repeatY)
               texture.colorSpace = THREE.SRGBColorSpace
+              if (matteMat.map) matteMat.map.dispose()
               matteMat.map = texture
               matteMat.needsUpdate = true
               console.log(`✅ Applied matte lining texture to ${mesh.name}`)
             },
-            undefined,
             (error) => {
               console.error(`❌ Error loading lining texture ${color}:`, error)
               matteMat.color.setHex(0x808080)
@@ -859,19 +918,18 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number =
           })
         }
 
-        const textureLoader = new THREE.TextureLoader()
-        textureLoader.load(
+        loadScaledFabricTexture(
           color,
           (texture) => {
             texture.wrapS = THREE.RepeatWrapping
             texture.wrapT = THREE.RepeatWrapping
             texture.repeat.set(repeatX, repeatY)
             texture.colorSpace = THREE.SRGBColorSpace
+            if (physMat.map) physMat.map.dispose()
             physMat.map = texture
             physMat.needsUpdate = true
             console.log(`✅ Applied fabric texture to ${mesh.name}`)
           },
-          undefined,
           (error) => {
             console.error(`❌ Error loading texture ${color}:`, error)
             physMat.color.setHex(0x808080)
