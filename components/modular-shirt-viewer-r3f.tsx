@@ -72,9 +72,10 @@ function applyShirtFabric(
   const DEFAULT_FABRIC_H_CM = 59.7   // ~23.5 inches — typical repeat height
   const effW = (fabricRepeatWidthCm && fabricRepeatWidthCm > 0) ? fabricRepeatWidthCm : DEFAULT_FABRIC_W_CM
   const effH = (fabricRepeatHeightCm && fabricRepeatHeightCm > 0) ? fabricRepeatHeightCm : DEFAULT_FABRIC_H_CM
-  // fineTune is an enlargement factor: 2 = pattern appears 2× larger (fewer repeats).
+  // fineTune is an enlargement knob centered at 1.0 (= exact cm scale): 2 = pattern 2× larger.
   // Pass 1/fineTune to computeCmBasedRepeats which uses a multiplier internally.
-  const userFineTune = Math.max(0.1, fabricPbr?.fineTune ?? 5)
+  // UV spans are normalized per-mesh in applyMaterialColor, so no global fudge is needed.
+  const userFineTune = Math.max(0.1, fabricPbr?.fineTune ?? 1)
   const r = computeCmBasedRepeats('shirt', effW, effH, 1 / userFineTune)
   const rX = r.repeatsX
   const rY = r.repeatsY

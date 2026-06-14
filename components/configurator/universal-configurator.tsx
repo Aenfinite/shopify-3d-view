@@ -829,7 +829,7 @@ export function UniversalConfigurator({
               sheen:       pbrRaw.sheen,
               darkness:    pbrRaw.darkness,
               materialType: (value as any).fabricType,
-              fineTune:    pbrRaw.fine_tune ?? 5,
+              fineTune:    pbrRaw.fine_tune ?? 1,
             }
             customizations.fabricRepeatX = pbrRaw.repeat_x
             customizations.fabricRepeatY = pbrRaw.repeat_y

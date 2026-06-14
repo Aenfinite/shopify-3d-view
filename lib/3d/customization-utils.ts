@@ -45,8 +45,9 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
   let _fabricRx = _fabricRxRaw
   let _fabricRy = _fabricRyRaw
   if (hasCmScaling(_fabricRepeatWidthCm, _fabricRepeatHeightCm)) {
-    // Match shirt formula: scale = 1/(fineTune??5) so all garments look identical
-    const userFineTune = Math.max(0.1, (_fabricPbr as any)?.fineTune ?? 5)
+    // fine-tune is a ±knob centered at 1.0 (= exact cm scale). UV spans are normalized
+    // per-mesh in applyMaterialColor, so no global fudge is needed here.
+    const userFineTune = Math.max(0.1, (_fabricPbr as any)?.fineTune ?? 1)
     const r = computeCmBasedRepeats('jacket', _fabricRepeatWidthCm!, _fabricRepeatHeightCm!, 1 / userFineTune)
     _fabricRx = r.repeatsX
     _fabricRy = r.repeatsY
@@ -62,8 +63,8 @@ export function applyCustomizations(object: THREE.Object3D, customizations: Basi
   let _liningRx = _liningRxRaw
   let _liningRy = _liningRyRaw
   if (hasCmScaling(_liningRepeatWidthCm, _liningRepeatHeightCm)) {
-    // Lining PBR is always stripped (matte), so default fineTune=5 matches shirt
-    const r = computeCmBasedRepeats('lining', _liningRepeatWidthCm!, _liningRepeatHeightCm!, 1 / 5)
+    // Exact cm scale (UV spans normalized per-mesh in applyMaterialColor).
+    const r = computeCmBasedRepeats('lining', _liningRepeatWidthCm!, _liningRepeatHeightCm!, 1)
     _liningRx = r.repeatsX
     _liningRy = r.repeatsY
   }
@@ -520,6 +521,46 @@ function softenTexture(tex: THREE.Texture, blendAlpha = 0.18, neutralL = 128): T
 const MAX_FABRIC_TEXTURE_PX = 2048
 
 /**
+ * Returns how far the mesh's UV coordinates span on each axis (uMax-uMin, vMax-vMin).
+ *
+ * CRITICAL for production-accurate print scale. The cm-based tiling system
+ * (`computeCmBasedRepeats`) assumes each fabric panel is UV-unwrapped to the
+ * unit square [0,1]. Several garment GLBs are NOT: e.g. the shirt front panel
+ * (`Tessuto` in boxplacket.gltf) spans u≈5.8 × v≈28.9, cuffs ≈13×10, pants ≈3.6×10.
+ * Because `texture.repeat.set()` multiplies the UVs, a non-unit span silently
+ * inflates the visible tile count by that span — making the print render far too
+ * small and, when u-span≠v-span, vertically/horizontally stretched (dots not round).
+ *
+ * Dividing the requested repeat by the real span normalizes any unwrap so the
+ * EFFECTIVE number of tiles across the panel equals the cm-intended value. For a
+ * panel already unwrapped to [0,1] the span is 1 and this is a no-op.
+ *
+ * Result is cached on geometry.userData so we scan each geometry's UVs only once.
+ */
+function getUvSpan(mesh: THREE.Mesh): { u: number; v: number } {
+  const geom = mesh.geometry as THREE.BufferGeometry | undefined
+  if (!geom) return { u: 1, v: 1 }
+  const cached = geom.userData?._uvSpan as { u: number; v: number } | undefined
+  if (cached) return cached
+  const uv = geom.attributes?.uv as THREE.BufferAttribute | undefined
+  let span = { u: 1, v: 1 }
+  if (uv && uv.count > 0) {
+    let uMin = Infinity, uMax = -Infinity, vMin = Infinity, vMax = -Infinity
+    for (let i = 0; i < uv.count; i++) {
+      const u = uv.getX(i), v = uv.getY(i)
+      if (u < uMin) uMin = u
+      if (u > uMax) uMax = u
+      if (v < vMin) vMin = v
+      if (v > vMax) vMax = v
+    }
+    span = { u: Math.max(1e-6, uMax - uMin), v: Math.max(1e-6, vMax - vMin) }
+  }
+  geom.userData = geom.userData || {}
+  geom.userData._uvSpan = span
+  return span
+}
+
+/**
  * Loads a fabric image (data URL or http URL) and returns a THREE texture that is
  * downscaled to at most MAX_FABRIC_TEXTURE_PX on its longest side. This is the single
  * guard that keeps user-uploaded prints from blowing up GPU memory.
@@ -872,12 +913,14 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number =
             (texture) => {
               texture.wrapS = THREE.RepeatWrapping
               texture.wrapT = THREE.RepeatWrapping
-              texture.repeat.set(repeatX, repeatY)
+              // Normalize by the panel's real UV span so non-[0,1] unwraps don't inflate the tile count.
+              const span = getUvSpan(mesh)
+              texture.repeat.set(repeatX / span.u, repeatY / span.v)
               texture.colorSpace = THREE.SRGBColorSpace
               if (matteMat.map) matteMat.map.dispose()
               matteMat.map = texture
               matteMat.needsUpdate = true
-              console.log(`✅ Applied matte lining texture to ${mesh.name}`)
+              console.log(`✅ Applied matte lining texture to ${mesh.name} (uvSpan ${span.u.toFixed(2)}×${span.v.toFixed(2)})`)
             },
             (error) => {
               console.error(`❌ Error loading lining texture ${color}:`, error)
@@ -923,12 +966,15 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number =
           (texture) => {
             texture.wrapS = THREE.RepeatWrapping
             texture.wrapT = THREE.RepeatWrapping
-            texture.repeat.set(repeatX, repeatY)
+            // Normalize by the panel's real UV span so non-[0,1] unwraps (shirt front ≈5.8×28.9,
+            // cuffs ≈13×10, etc.) don't inflate/stretch the print. Effective tiles == cm-intended.
+            const span = getUvSpan(mesh)
+            texture.repeat.set(repeatX / span.u, repeatY / span.v)
             texture.colorSpace = THREE.SRGBColorSpace
             if (physMat.map) physMat.map.dispose()
             physMat.map = texture
             physMat.needsUpdate = true
-            console.log(`✅ Applied fabric texture to ${mesh.name}`)
+            console.log(`✅ Applied fabric texture to ${mesh.name} (uvSpan ${span.u.toFixed(2)}×${span.v.toFixed(2)})`)
           },
           (error) => {
             console.error(`❌ Error loading texture ${color}:`, error)

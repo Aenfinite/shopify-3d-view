@@ -124,7 +124,7 @@ interface GarmentModelProps {
   repeatWidthCm?: number
   /** Real repeat height of the fabric print in cm. */
   repeatHeightCm?: number
-  /** Visual scale factor: >1 = larger pattern. Default 2. */
+  /** Fine-tune knob centered at 1.0 (= exact cm scale). >1 = larger pattern. */
   fineTune?: number
   zoomMultiplier?: number
   pbrSettings?: {
@@ -147,7 +147,7 @@ export function GarmentModel({
   repeatY = 6,
   repeatWidthCm,
   repeatHeightCm,
-  fineTune = 5,
+  fineTune = 1,
   zoomMultiplier = 1,
   pbrSettings,
   liningMode = null,

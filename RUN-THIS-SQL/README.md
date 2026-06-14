@@ -15,8 +15,11 @@
 | 2 | `02_measurements.sql` | measurements + version locking, SAFE CHINO sub-order fields |
 | 3 | `03_article_codes_and_package_items.sql` | article-code engine tables + package items |
 | 4 | `04_safe_chino_seed_packages.sql` | SEED DATA: 8 chino colors, 2 shirts, 2 belts, the 7 Early Bird packages |
+| 5 | `05_fix_fine_tune_scale.sql` | Fix print scale: reset old `fine_tune: 5` fudge → `1` (true cm size) so existing fabrics don't render 5× too large |
 
 All files are idempotent-safe on the seed data — but run each file only once if possible.
+
+`05` is only needed if you already saved fabrics before the UV-normalization fix; it's safe to run regardless (it touches only rows that still have the old `fine_tune: 5`).
 
 ## After running
 

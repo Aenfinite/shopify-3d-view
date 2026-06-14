@@ -136,10 +136,10 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
           ...existing,
           repeat_width_cm: existing.repeat_width_cm ?? 0,
           repeat_height_cm: existing.repeat_height_cm ?? 0,
-          fine_tune: existing.fine_tune ?? 5,
+          fine_tune: existing.fine_tune ?? 1,
           fabric_category: existing.fabric_category ?? initialCategory,
         }
-      : { ...base, repeat_width_cm: 0, repeat_height_cm: 0, fine_tune: 5, fabric_category: initialCategory }
+      : { ...base, repeat_width_cm: 0, repeat_height_cm: 0, fine_tune: 1, fabric_category: initialCategory }
   })
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -172,7 +172,7 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
         // Keep any cm values the admin already entered
         repeat_width_cm: prev.repeat_width_cm ?? 0,
         repeat_height_cm: prev.repeat_height_cm ?? 0,
-        fine_tune: prev.fine_tune ?? 5,
+        fine_tune: prev.fine_tune ?? 1,
         fabric_category: materialCategory,
       }))
     }
@@ -908,7 +908,7 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
         productType={productType}
         repeatWidthCm={pbrSettings.repeat_width_cm ?? 0}
         repeatHeightCm={pbrSettings.repeat_height_cm ?? 0}
-        fineTune={pbrSettings.fine_tune ?? 5}
+        fineTune={pbrSettings.fine_tune ?? 1}
         arLocked={arLocked}
         onChangeRepeat={(w, h) => {
           setPbrSettings((prev) => ({
@@ -1183,7 +1183,7 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
                         fabricImageUrl={fabricImageForPreview}
                         repeatWidthCm={pbrSettings.repeat_width_cm}
                         repeatHeightCm={pbrSettings.repeat_height_cm}
-                        fineTune={pbrSettings.fine_tune ?? 5}
+                        fineTune={pbrSettings.fine_tune ?? 1}
                         zoomMultiplier={previewZoom}
                         liningMode={mode}
                       />
@@ -1237,7 +1237,7 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
                     repeatY={pbrSettings.repeat_y}
                     repeatWidthCm={pbrSettings.repeat_width_cm}
                     repeatHeightCm={pbrSettings.repeat_height_cm}
-                    fineTune={pbrSettings.fine_tune ?? 5}
+                    fineTune={pbrSettings.fine_tune ?? 1}
                     zoomMultiplier={previewZoom}
                     pbrSettings={{ ...pbrSettings, fabricMaterialType: fabricType }}
                   />
@@ -1424,10 +1424,10 @@ function CmScalingSection({
           </Label>
           <button
             type="button"
-            onClick={() => onChangeFineTune(5)}
+            onClick={() => onChangeFineTune(1)}
             className="text-[10px] text-blue-600 hover:underline"
           >
-            Reset to 5×
+            Reset to 1× (true size)
           </button>
         </div>
         <Slider
@@ -1439,8 +1439,8 @@ function CmScalingSection({
         />
         <div className="flex justify-between text-[10px] text-blue-500">
           <span>0.25× (tiny)</span>
-          <span>1× (real)</span>
-          <span>2× (default)</span>
+          <span>1× (true / default)</span>
+          <span>2× (larger)</span>
           <span>8× (huge)</span>
         </div>
       </div>
