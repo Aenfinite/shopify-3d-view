@@ -836,8 +836,10 @@ function createFabricPhysicalMaterial(
     // Height map as bumpMap (shirt: scanned map preferred; others: no bump unless override says so; lining: never)
     bumpMap: garmentType === 'lining' ? undefined : (garmentType === 'shirt' ? (pbr?.bumpMap ?? getShirtSurfaceNoise()) : (bumpScale > 0 ? (pbr?.bumpMap ?? undefined) : undefined)),
     bumpScale: garmentType === 'lining' ? 0 : bumpScale,
-    // Specular: shirt cotton is non-reflective; lining is fully diffuse (zero specular)
-    specularIntensity: garmentType === 'shirt' ? 0.25 : garmentType === 'lining' ? 0.0 : 1.0,
+    // Specular: textiles are near-matte. Keep this low for ALL fabric garments —
+    // a high specular (1.0) made jacket/trouser fabric read as glossy/plastic.
+    // Lining is fully diffuse (zero specular).
+    specularIntensity: garmentType === 'lining' ? 0.0 : garmentType === 'shirt' ? 0.25 : 0.30,
     // Sheen: cross-fibre retro-reflection
     sheen,
     sheenRoughness: profile.sheenRoughness,
