@@ -26,9 +26,10 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { SAMPLE_PRODUCTS_WITH_CUSTOMIZATION } from "@/data/sample-products-with-customization"
 import { Canvas } from "@react-three/fiber"
-import { OrbitControls, Environment } from "@react-three/drei"
+import { OrbitControls } from "@react-three/drei"
 import * as THREE from "three"
 import { applyFabricCustomization, preloadFabricPBR, preloadShirtPBR } from "@/lib/3d/customization-utils"
+import { GarmentLights } from "@/components/garment-lights"
 import {
   getAllProducts,
   PBR_PRESETS,
@@ -1171,12 +1172,7 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
                   >
                     <Suspense fallback={null}>
                       <color attach="background" args={["#f0eeec"]} />
-                      <ambientLight intensity={0.55} />
-                      <directionalLight position={[3, 8, 4]} intensity={0.8} castShadow />
-                      <directionalLight position={[-3, 5, 2]} intensity={0.45} />
-                      <directionalLight position={[0, 4, -4]} intensity={0.20} />
-                      <hemisphereLight args={["#f4efe8", "#3a3a3a", 0.28]} />
-                      <Environment preset="studio" environmentIntensity={0.10} />
+                      <GarmentLights productType="jacket" />
                       <GarmentModel
                         productType="jacket"
                         fabricColor={fabricColorForPreview}
@@ -1217,18 +1213,7 @@ export default function FabricWizard({ editingFabric, onClose, onSaved }: Fabric
                 <Suspense fallback={null}>
                   <color attach="background" args={["#f5f5f5"]} />
                   <CameraUpdater productType={productType} />
-                  <ambientLight intensity={0.55} />
-                  <directionalLight
-                    position={[3, 8, 4]}
-                    intensity={0.8}
-                    castShadow
-                    shadow-mapSize-width={2048}
-                    shadow-mapSize-height={2048}
-                  />
-                  <directionalLight position={[-3, 5, 2]} intensity={0.45} />
-                  <directionalLight position={[0, 4, -4]} intensity={0.20} />
-                  <hemisphereLight args={["#f4efe8", "#3a3a3a", 0.28]} />
-                  <Environment preset="studio" environmentIntensity={0.15} />
+                  <GarmentLights productType={productType} />
                   <GarmentModel
                     productType={productType}
                     fabricColor={fabricColorForPreview}

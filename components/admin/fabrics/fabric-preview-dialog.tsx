@@ -12,9 +12,10 @@ import { Slider } from "@/components/ui/slider"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Canvas } from "@react-three/fiber"
-import { OrbitControls, Environment } from "@react-three/drei"
+import { OrbitControls } from "@react-three/drei"
 import type { FabricRow, Product } from "@/lib/supabase/service"
 import { GarmentModel, CameraUpdater, CAMERA_PRESETS } from "./garment-canvas"
+import { GarmentLights } from "@/components/garment-lights"
 
 interface FabricPreviewDialogProps {
   open: boolean
@@ -61,10 +62,7 @@ export function FabricPreviewDialog({
             >
               <Suspense fallback={null}>
                 <CameraUpdater productType={productType} />
-                <ambientLight intensity={0.5} />
-                <directionalLight position={[3, 8, 4]} intensity={0.8} />
-                <directionalLight position={[-3, 5, 2]} intensity={0.45} />
-                <Environment preset="studio" environmentIntensity={0.1} />
+                <GarmentLights productType={productType} />
                 <GarmentModel
                   productType={productType}
                   fabricColor={fabric.color_hex}

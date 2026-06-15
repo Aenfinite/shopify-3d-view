@@ -2,7 +2,8 @@
 
 import React, { Suspense, useEffect, useState, useMemo } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
-import { OrbitControls, Environment, Html } from "@react-three/drei"
+import { OrbitControls, Html } from "@react-three/drei"
+import { GarmentLights } from "@/components/garment-lights"
 import * as THREE from "three"
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js"
@@ -480,30 +481,9 @@ export default function ModularPantsViewerR3F({
         <color attach="background" args={["#f5f5f5"]} />
         <fog attach="fog" args={["#f5f5f5", 15, 40]} />
         
-        {/* Brighter lighting for fully-matte fabric */}
-        <ambientLight intensity={1.0} />
-
-        {/* Main key light — front-top-right */}
-        <directionalLight
-          position={[5, 8, 5]}
-          intensity={1.0}
-          castShadow
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
-          shadow-bias={-0.0001}
-        />
-
-        {/* Front fill light — softens shadows on the front */}
-        <directionalLight position={[-5, 3, 3]} intensity={0.5} />
-
-        {/* Back-fill: two soft, wide-angled diffuse lights instead of one
-            harsh rim light. This evenly illuminates the back without
-            creating specular highlights that read as plastic shine. */}
-        <directionalLight position={[-4, 4, -4]} intensity={0.35} />
-        <directionalLight position={[4, 4, -4]} intensity={0.35} />
-
-        {/* Bottom + sky hemisphere for soft global wrap */}
-        <hemisphereLight args={['#ffffff', '#888888', 0.45]} />
+        {/* Lighting — shared single-source rig (components/garment-lights.tsx)
+            so the admin fabric preview and this customer view match exactly. */}
+        <GarmentLights productType="pants" />
 
         <Suspense fallback={<LoadingOverlay />}>
           <PantsModel customizations={customizations} />
@@ -525,11 +505,6 @@ export default function ModularPantsViewerR3F({
           target={[0, -0.1, 0]}
         />
 
-        {/* Environment for soft global illumination — kept very low so HDRI
-            reflections don't create specular highlights on the back fabric.
-            "apartment" preset is more uniform than "studio" (no harsh studio
-            softboxes baked into the HDRI). */}
-        <Environment preset="apartment" environmentIntensity={0.08} />
       </Canvas>
     </div>
   )

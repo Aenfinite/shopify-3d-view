@@ -2,8 +2,9 @@
 
 import React, { Suspense, useEffect, useState, useMemo } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
-import { OrbitControls, Environment, Html } from "@react-three/drei"
+import { OrbitControls, Html } from "@react-three/drei"
 import * as THREE from "three"
+import { GarmentLights } from "@/components/garment-lights"
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js"
 import {
@@ -545,19 +546,9 @@ export default function ModularShirtViewerR3F({
         {/* Lighting — soft studio setup for premium cotton look.
              40% ambient reduction vs before creates real shadow depth.
              Key from top-right, warm hemisphere, studio env = no harsh reflections. */}
-        <ambientLight intensity={0.50} />
-        <directionalLight
-          position={[3, 8, 4]}
-          intensity={0.80}
-          castShadow
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
-          shadow-bias={-0.0001}
-        />
-        <directionalLight position={[-3, 5, 2]} intensity={0.45} />
-        <directionalLight position={[0, 4, -4]} intensity={0.20} />
-        <hemisphereLight args={["#f4efe8", "#3a3a3a", 0.28]} />
-        <Environment preset="studio" environmentIntensity={0.10} />
+        {/* Lighting — shared single-source rig (components/garment-lights.tsx)
+            so the admin fabric preview and this customer view match exactly. */}
+        <GarmentLights productType="shirt" />
 
         <Suspense fallback={<LoadingOverlay />}>
           <ShirtModel customizations={customizations} />
@@ -586,8 +577,6 @@ export default function ModularShirtViewerR3F({
           minPolarAngle={Math.PI / 8}
           target={[0, 0, 0]}
         />
-
-        <Environment preset="studio" environmentIntensity={0.2} />
       </Canvas>
     </div>
   )

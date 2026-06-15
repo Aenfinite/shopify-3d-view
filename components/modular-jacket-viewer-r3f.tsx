@@ -2,8 +2,9 @@
 
 import { Suspense, useEffect, useState, useMemo, useRef } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
-import { OrbitControls, Environment, Html } from "@react-three/drei"
+import { OrbitControls, Html } from "@react-three/drei"
 import * as THREE from "three"
+import { GarmentLights } from "@/components/garment-lights"
 import { useJacketPart, preloadAllParts } from "@/lib/3d/jacket-part-loader"
 import { useJacketPerformance } from "@/lib/3d/hooks/use-jacket-performance"
 import { jacketConfigs } from "@/lib/3d/configs"
@@ -648,35 +649,9 @@ export default function ModularJacketViewer({
             </>
           )}
           
-          {/* ── Lighting: tuned for natural textile appearance ─────────────── */}
-
-          {/* Soft ambient — even base without strong directionality */}
-          <ambientLight intensity={0.55} />
-
-          {/* Key light: reduced intensity + repositioned for gentler fabric shadows */}
-          <directionalLight
-            position={[3, 7, 4]}
-            intensity={0.72}
-            castShadow
-            shadow-mapSize-width={2048}
-            shadow-mapSize-height={2048}
-            shadow-bias={-0.0001}
-          />
-
-          {/* Wide fill from the opposite side — softens shadow terminator on fabric */}
-          <directionalLight position={[-4, 4, 2]} intensity={0.5} />
-
-          {/* Gentle overhead fill to simulate soft studio top light */}
-          <directionalLight position={[0, 8, 1]} intensity={0.28} />
-
-          {/* Slight rim from behind for shoulder/collar separation */}
-          <directionalLight position={[0, 2, -4]} intensity={0.18} />
-
-          {/* Hemisphere: warm sky / cool ground tones for cloth-friendly colour cast */}
-          <hemisphereLight args={['#f4efe8', '#3a3a3a', 0.30]} />
-
-          {/* Studio environment — lowered so it adds subtle sheen without gloss */}
-          <Environment preset="studio" environmentIntensity={0.12} />
+          {/* Lighting — shared single-source rig (components/garment-lights.tsx)
+              so the admin fabric preview and this customer view match exactly. */}
+          <GarmentLights productType="jacket" />
           <OrbitControls
             enablePan={true}
             enableZoom={true}
