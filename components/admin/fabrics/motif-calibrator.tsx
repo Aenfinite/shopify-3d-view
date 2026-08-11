@@ -165,7 +165,7 @@ export default function MotifCalibrator({
           {/* Motif box */}
           {box && (
             <div
-              className="absolute border-2 border-indigo-500 bg-indigo-400/15"
+              className="absolute border border-indigo-500 bg-indigo-400/10"
               style={{ left: pct(box.x), top: pct(box.y), width: pct(box.w), height: pct(box.h) }}
             >
               {cmPerPx > 0 && (
@@ -179,7 +179,7 @@ export default function MotifCalibrator({
           {/* 10 cm reference square — anchored bottom-right, for ruler verification */}
           {refFits && (
             <div
-              className="absolute border-2 border-dashed border-emerald-500 bg-emerald-400/10 pointer-events-none"
+              className="absolute border border-dashed border-emerald-500 bg-emerald-400/10 pointer-events-none"
               style={{ right: "2%", bottom: "2%", width: pct(refNX), height: pct(refNY) }}
             >
               <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-emerald-700">

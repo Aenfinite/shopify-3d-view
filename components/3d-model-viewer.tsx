@@ -1325,7 +1325,7 @@ export function ModelViewer({
       fabricPbr: customizations.fabricPbr,
       collarStyle: customizations.collarStyle || customizations["collar-style"] || "kent-collar",
       sleeveStyle: customizations.sleeveStyle || customizations["sleeve-style"] || "full-sleeve",
-      cuffStyle: customizations.cuffStyle || customizations["cuff-style"] || "rounded-cuff",
+      cuffStyle: customizations.cuffStyle || customizations["cuff-style"] || "rounded-cuff-2-buttons",
       chestPocket: customizations.chestPocket || customizations["chest-pocket"] || "no-pocket",
       frontStyle: customizations.frontStyle || customizations["front-style"] || "box-placket",
       contrastEnabled: customizations.contrastEnabled || customizations["contrast-enabled"] || false,

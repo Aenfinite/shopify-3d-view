@@ -7,7 +7,7 @@ import { GarmentLights } from "@/components/garment-lights"
 import * as THREE from "three"
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js"
-import { applyFabricCustomization } from "@/lib/3d/customization-utils"
+import { applyFabricCustomization, applyTrimMaterial } from "@/lib/3d/customization-utils"
 import { pantsConfigs, pantsFrontPocketConfigs, pantsBackPocketConfigs, pantsCuffConfigs, pantsWaistbandConfigs } from "@/lib/3d/pants-configs"
 import { computeCmBasedRepeats, hasCmScaling } from "@/lib/3d/garment-dimensions"
 
@@ -61,7 +61,7 @@ function forceDoubleSide(mesh: THREE.Mesh) {
 
 // Helper: Apply fabric styling to a loaded GLTF scene
 // Material values matched to jacket viewer for consistent appearance
-function applyPantsFabric(scene: THREE.Group, fabricColor?: string, fabricPbr?: { roughness?: number; normalScale?: number; bumpScale?: number; sheen?: number }, repeatX = 4, repeatY = 4, repeatWidthCm?: number, repeatHeightCm?: number) {
+function applyPantsFabric(scene: THREE.Group, fabricColor?: string, fabricPbr?: { roughness?: number; normalScale?: number; bumpScale?: number; sheen?: number }, repeatX = 4, repeatY = 4, repeatWidthCm?: number, repeatHeightCm?: number, buttonColor?: string) {
   // cm-based scaling when both values are provided; otherwise legacy multiplier.
   const useCm = hasCmScaling(repeatWidthCm, repeatHeightCm)
   let rX: number, rY: number
@@ -100,14 +100,9 @@ function applyPantsFabric(scene: THREE.Group, fabricColor?: string, fabricPbr?: 
         // Always force DoubleSide on fabric meshes so they render from inside too.
         forceDoubleSide(child)
       } else {
-        // Button / thread — keep original material, just ensure quality
-        materials.forEach((material) => {
-          if (!(material instanceof THREE.MeshStandardMaterial)) return
-          material.roughness = Math.max(material.roughness, 0.5)
-          material.metalness = Math.min(material.metalness ?? 0, 0.3)
-          material.envMapIntensity = 0.1
-          material.needsUpdate = true
-        })
+        // Button / thread — shared trim handler (pearl button + matte thread,
+        // never metallic, never tinted like the fabric).
+        applyTrimMaterial(child, buttonColor, fabricColor)
         // Buttons/thread also DoubleSide for safety on thin geometry.
         forceDoubleSide(child)
       }
@@ -363,8 +358,8 @@ function PantsModel({
       ...backPockets, bottomCuff, ...waistbandExtensions,
     ].filter((s): s is THREE.Group => s !== null)
     if (parts.length === 0) return
-    parts.forEach((scene) => applyPantsFabric(scene, customizations.fabricColor, customizations.fabricPbr, customizations.fabricRepeatX, customizations.fabricRepeatY, customizations.fabricRepeatWidthCm, customizations.fabricRepeatHeightCm))
-  }, [pantsStyle, beltLoops, waistband, frontPocket, backPockets, bottomCuff, waistbandExtensions, customizations.fabricColor, customizations.fabricPbr, customizations.fabricRepeatX, customizations.fabricRepeatY, customizations.fabricRepeatWidthCm, customizations.fabricRepeatHeightCm])
+    parts.forEach((scene) => applyPantsFabric(scene, customizations.fabricColor, customizations.fabricPbr, customizations.fabricRepeatX, customizations.fabricRepeatY, customizations.fabricRepeatWidthCm, customizations.fabricRepeatHeightCm, customizations.buttonColor))
+  }, [pantsStyle, beltLoops, waistband, frontPocket, backPockets, bottomCuff, waistbandExtensions, customizations.fabricColor, customizations.fabricPbr, customizations.fabricRepeatX, customizations.fabricRepeatY, customizations.fabricRepeatWidthCm, customizations.fabricRepeatHeightCm, customizations.buttonColor])
 
   if (isLoading || !pantsStyle || !beltLoops || !waistband) {
     return <LoadingOverlay />

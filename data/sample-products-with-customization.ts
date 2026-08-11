@@ -85,8 +85,8 @@ export const SAMPLE_PRODUCTS_WITH_CUSTOMIZATION = {
       type: "component" as const,
       category: "style",
       values: [
-        { id: "rounded-cuff", name: "Rounded 2 Buttons", value: "rounded-cuff", price: 0 },
-        { id: "french-cuff", name: "French Cuff", value: "french-cuff", price: 15 },
+        { id: "rounded-cuff-2-buttons", name: "Rounded Cuff 2 Buttons", value: "rounded-cuff-2-buttons", price: 0 },
+        { id: "square-cuff-2-buttons", name: "Square Cuff 2 Buttons", value: "square-cuff-2-buttons", price: 0 },
       ],
     },
     {
@@ -251,8 +251,8 @@ export const SAMPLE_PRODUCTS_WITH_CUSTOMIZATION = {
       type: "component" as const,
       category: "style",
       values: [
-        { id: "rounded-cuff", name: "Rounded 2 Buttons", value: "rounded-cuff", price: 0 },
-        { id: "french-cuff", name: "French Cuff", value: "french-cuff", price: 15 },
+        { id: "rounded-cuff-2-buttons", name: "Rounded Cuff 2 Buttons", value: "rounded-cuff-2-buttons", price: 0 },
+        { id: "square-cuff-2-buttons", name: "Square Cuff 2 Buttons", value: "square-cuff-2-buttons", price: 0 },
       ],
     },
     {

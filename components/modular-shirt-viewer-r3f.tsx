@@ -13,9 +13,11 @@ import {
   shirtCuffConfigs,
   shirtPocketConfigs,
   shirtFrontConfigs,
+  shirtBackConfig,
   defaultShirtConfig,
+  DEFAULT_SHIRT_CUFF,
 } from "@/lib/3d/shirt-configs"
-import { applyFabricCustomization, preloadFabricPBR, preloadShirtPBR } from "@/lib/3d/customization-utils"
+import { applyFabricCustomization, applyTrimMaterial, preloadFabricPBR, preloadShirtPBR } from "@/lib/3d/customization-utils"
 import type { PBROverride } from "@/lib/3d/customization-utils"
 import { computeCmBasedRepeats, hasCmScaling } from "@/lib/3d/garment-dimensions"
 
@@ -30,15 +32,9 @@ const SHIRT_BASE_COLOR = 0xeeeeee
 // Matches TEXTURE_REPEAT_SCALE['shirt'] in garment-canvas.tsx — keeps customer page in sync with admin preview
 const SHIRT_TEXTURE_SCALE = 0.18
 
-// Material names that are NOT fabric (buttons, threads, cufflinks, eyelets)
-const NON_FABRIC_MATERIALS = [
-  "filobottoni",
-  "bottone",
-  "filobottone",
-  "asola",
-  "gemelli",
-  "ricamo",
-]
+// Non-fabric trim (buttons, threads, cufflinks, buttonholes) is detected and
+// styled by applyTrimMaterial in customization-utils — shared with the pants
+// viewer and admin fabric preview so buttons look identical everywhere.
 
 // Any material whose name contains "contrast" (case-insensitive) is a contrast material.
 
@@ -61,6 +57,7 @@ function applyShirtFabric(
   fabricPbr?: PBROverride,
   fabricRepeatWidthCm?: number,
   fabricRepeatHeightCm?: number,
+  buttonColor?: string,
 ) {
   const defaultColor = `#${SHIRT_BASE_COLOR.toString(16).padStart(6, '0')}`
 
@@ -96,41 +93,23 @@ function applyShirtFabric(
       : [child.material as THREE.Material]
     ).map(m => m.name.toLowerCase())
 
-    // Non-fabric: buttons, thread, cufflinks — keep original material, just quality settings
-    const isNonFabric = NON_FABRIC_MATERIALS.some(
-      s => meshName.includes(s) || matNames.some(n => n.includes(s))
-    )
-    if (isNonFabric) {
-      // Distinguish button body from thread/eyelet so buttons stand out from fabric
-      const isButtonBody = ['bottone', 'gemelli'].some(
-        s => meshName.includes(s) || matNames.some(n => n.includes(s))
-      )
-      const mats = Array.isArray(child.material)
-        ? (child.material as THREE.Material[])
-        : [child.material as THREE.Material]
-      mats.forEach(m => {
-        if (m instanceof THREE.MeshStandardMaterial) {
-          if (isButtonBody) {
-            // Buttons: pearl-like finish — lower roughness + soft sheen separates them visually
-            m.roughness = 0.30
-            m.metalness = Math.max(m.metalness, 0.08)
-            m.envMapIntensity = 0.45
-          } else {
-            // Thread, eyelets, embroidery: stay matte, blend with fabric
-            m.roughness = Math.max(m.roughness, 0.55)
-            m.envMapIntensity = 0.08
-          }
-          m.needsUpdate = true
-        }
-      })
-      return
-    }
+    // Non-fabric trim: buttons, thread, buttonholes, cufflinks.
+    // Buttons get their own pearl/resin material (or the chosen buttonColor) —
+    // never the shirt fabric color — so they read as separate objects.
+    if (applyTrimMaterial(child, buttonColor, fabricColor)) return
 
-    // Contrast material detection
-    const isContrast = matNames.some(n => n.includes('contrast'))
+    // Contrast material detection.
+    // Two naming conventions coexist in the model set:
+    //   * Collars mark the contrast surface explicitly — "CollarContrast.00x".
+    //   * The 2-button cuffs expose the contrast surface as the cuff fabric mesh
+    //     itself ("cuff_outside" / material "cuff_Mat"); the cuff has no separate
+    //     contrast panel, the whole outer cuff takes the contrast fabric.
+    const isCuffSurface = matNames.some(n => n.includes('cuff')) || meshName.includes('cuff')
+    const isContrast = matNames.some(n => n.includes('contrast')) || isCuffSurface
     if (isContrast) {
       const isCollarContrast =
-        matNames.some(n => n.includes('collar')) || meshName.includes('collar')
+        !isCuffSurface &&
+        (matNames.some(n => n.includes('collar')) || meshName.includes('collar'))
       if (contrastEnabled) {
         const collarTex =
           contrastCollarTexture && contrastCollarTexture !== 'none'
@@ -167,7 +146,7 @@ export interface BasicShirtCustomization {
   fabricPbr?: PBROverride
   collarStyle?: string          // "kent-collar" | "button-down-collar" | "spread-collar"
   sleeveStyle?: string          // "half-sleeve" | "full-sleeve"
-  cuffStyle?: string            // "rounded-cuff" | "french-cuff"
+  cuffStyle?: string            // "rounded-cuff-2-buttons" | "square-cuff-2-buttons" (legacy ids fall back to rounded)
   chestPocket?: string          // "no-pocket" | "chest-pocket"
   frontStyle?: string           // "box-placket" | "french-placket"
   contrastEnabled?: boolean     // collar & cuff contrast yes/no
@@ -215,8 +194,10 @@ function ShirtModel({
   customizations: BasicShirtCustomization
 }) {
   const [frontScene, setFrontScene] = useState<THREE.Group | null>(null)
+  const [backScene, setBackScene] = useState<THREE.Group | null>(null)
   const [collarScene, setCollarScene] = useState<THREE.Group | null>(null)
   const [sleeveScene, setSleeveScene] = useState<THREE.Group | null>(null)
+  const [cuffScene, setCuffScene] = useState<THREE.Group | null>(null)
   const [pocketScene, setPocketScene] = useState<THREE.Group | null>(null)
   const [modelScale, setModelScale] = useState(1)
   const [modelYOffset, setModelYOffset] = useState(0)
@@ -234,16 +215,19 @@ function ShirtModel({
   const resolvedPaths = useMemo(() => {
     const collarKey = customizations.collarStyle || "kent-collar"
     const frontKey = customizations.frontStyle || "box-placket"
+    const isHalfSleeve = customizations.sleeveStyle === "half-sleeve"
 
-    // Determine sleeve/cuff path
-    let sleevePath: string
-    if (customizations.sleeveStyle === "half-sleeve") {
-      sleevePath = shirtSleeveConfigs["half-sleeve"]
-    } else {
-      // Full sleeve → use selected cuff, default rounded
-      const cuffKey = customizations.cuffStyle || "rounded-cuff"
-      sleevePath = shirtCuffConfigs[cuffKey] || shirtCuffConfigs["rounded-cuff"]
-    }
+    // Sleeve geometry (full or half). Full sleeves also load a cuff below;
+    // half sleeves have no cuff.
+    const sleevePath = isHalfSleeve
+      ? shirtSleeveConfigs["half-sleeve"]
+      : shirtSleeveConfigs["full-sleeve"]
+
+    // Cuff — only for full sleeves; default rounded 2-button.
+    const cuffKey = customizations.cuffStyle || DEFAULT_SHIRT_CUFF
+    const cuffPath = isHalfSleeve
+      ? null
+      : (shirtCuffConfigs[cuffKey] || shirtCuffConfigs[DEFAULT_SHIRT_CUFF])
 
     // Chest pocket
     const pocketKey = customizations.chestPocket || "no-pocket"
@@ -251,8 +235,10 @@ function ShirtModel({
 
     return {
       front: shirtFrontConfigs[frontKey] || defaultShirtConfig.priority.front,
+      back: shirtBackConfig,
       collar: shirtCollarConfigs[collarKey] || defaultShirtConfig.priority.collar,
       sleeve: sleevePath,
+      cuff: cuffPath,
       pocket: pocketPath,
     }
   }, [
@@ -282,10 +268,11 @@ function ShirtModel({
 
     Promise.all([
       loadPart(resolvedPaths.front),
+      loadPart(resolvedPaths.back),
       loadPart(resolvedPaths.collar),
       loadPart(resolvedPaths.sleeve),
     ])
-      .then(([front, collar, sleeve]) => {
+      .then(([front, back, collar, sleeve]) => {
         // Compute scale from the front piece and center model at y=0
         const bbox = new THREE.Box3().setFromObject(front)
         const size = bbox.getSize(new THREE.Vector3())
@@ -297,6 +284,7 @@ function ShirtModel({
         const yOffset = -center.y * computedScale
 
         setFrontScene(front)
+        setBackScene(back)
         setCollarScene(collar)
         setSleeveScene(sleeve)
         setModelScale(computedScale)
@@ -304,6 +292,7 @@ function ShirtModel({
         setIsLoading(false)
         console.log("✅ Shirt main parts loaded", {
           front: resolvedPaths.front,
+          back: resolvedPaths.back,
           collar: resolvedPaths.collar,
           sleeve: resolvedPaths.sleeve,
         })
@@ -312,13 +301,13 @@ function ShirtModel({
         console.error("❌ Error loading shirt parts:", error)
         setIsLoading(false)
       })
-  }, [resolvedPaths.front, resolvedPaths.collar, resolvedPaths.sleeve, loader])
+  }, [resolvedPaths.front, resolvedPaths.back, resolvedPaths.collar, resolvedPaths.sleeve, loader])
 
   // ─── Separate fabric-apply effect ────────────────────────────────────────
   // Runs whenever any loaded scene OR fabric props change.
   // Never reloads GLTFs — just re-applies materials to existing scenes.
   useEffect(() => {
-    const parts = [frontScene, collarScene, sleeveScene, pocketScene].filter(
+    const parts = [frontScene, backScene, collarScene, sleeveScene, cuffScene, pocketScene].filter(
       (s): s is THREE.Group => s !== null
     )
     if (parts.length === 0) return
@@ -334,10 +323,11 @@ function ShirtModel({
         customizations.fabricPbr,
         customizations.fabricRepeatWidthCm,
         customizations.fabricRepeatHeightCm,
+        customizations.buttonColor,
       )
     )
   }, [
-    frontScene, collarScene, sleeveScene, pocketScene,
+    frontScene, backScene, collarScene, sleeveScene, cuffScene, pocketScene,
     customizations.fabricColor,
     customizations.contrastEnabled,
     customizations.contrastCollarTexture,
@@ -347,6 +337,7 @@ function ShirtModel({
     customizations.fabricRepeatWidthCm,
     customizations.fabricRepeatHeightCm,
     customizations.fabricPbr,
+    customizations.buttonColor,
   ])
 
   // ─── Load optional chest pocket ───
@@ -371,15 +362,42 @@ function ShirtModel({
     )
   }, [resolvedPaths.pocket, loader])
 
-  if (isLoading || !frontScene || !collarScene || !sleeveScene) {
+  // ─── Load cuff (full sleeve only) ───
+  // Fabric is applied by the shared fabric-apply effect above once cuffScene is set.
+  useEffect(() => {
+    if (!resolvedPaths.cuff) {
+      setCuffScene(null)
+      return
+    }
+
+    loader.load(
+      resolvedPaths.cuff,
+      (gltf) => {
+        setCuffScene(gltf.scene.clone())
+        console.log("✅ Shirt cuff loaded", resolvedPaths.cuff)
+      },
+      undefined,
+      (error) => {
+        console.error("❌ Error loading shirt cuff:", error)
+        setCuffScene(null)
+      }
+    )
+  }, [resolvedPaths.cuff, loader])
+
+  if (isLoading || !frontScene || !backScene || !collarScene || !sleeveScene) {
     return <LoadingOverlay />
   }
 
+  // All parts share one origin and assemble at [0,0,0].
   return (
     <group position={[0, modelYOffset, 0]} scale={[modelScale, modelScale, modelScale]}>
       <primitive object={frontScene} position={[0, 0, 0]} />
+      <primitive object={backScene} position={[0, 0, 0]} />
       <primitive object={collarScene} position={[0, 0, 0]} />
       <primitive object={sleeveScene} position={[0, 0, 0]} />
+      {cuffScene && (
+        <primitive object={cuffScene} position={[0, 0, 0]} />
+      )}
       {pocketScene && (
         <primitive object={pocketScene} position={[0, 0, 0]} />
       )}

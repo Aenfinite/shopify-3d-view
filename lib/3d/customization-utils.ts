@@ -520,6 +520,93 @@ function softenTexture(tex: THREE.Texture, blendAlpha = 0.18, neutralL = 128): T
  */
 const MAX_FABRIC_TEXTURE_PX = 2048
 
+/** Below this, a UV axis carries no information at all (every vertex identical). */
+const DEGENERATE_UV_SPAN = 1e-3
+
+/**
+ * Rescues a panel whose UV map is unusable — one axis collapsed to a single
+ * value, which happens when a mesh is exported without being unwrapped. Such a
+ * panel samples one column of the fabric image and renders as vertical streaks.
+ *
+ * The replacement is a per-triangle box projection in model units: each face is
+ * projected onto the plane it most nearly lies in, using the two axes
+ * perpendicular to its geometric normal, divided by a reference size. Choosing
+ * the plane per FACE rather than per vertex matters — with a per-vertex choice,
+ * a triangle whose corners disagree gets stretched across two planes, which
+ * reproduces the very streaking this is meant to remove. That requires
+ * non-indexed geometry so each face owns its three UVs.
+ *
+ * The reference size is the mesh's SECOND-largest bounding-box extent, not the
+ * largest — a single mesh often holds two mirrored panels (both cuffs, both
+ * sleeves) sitting far apart, so the largest extent measures the gap between
+ * them rather than the size of a panel.
+ *
+ * This keeps printed fabrics readable, but it is an approximation: it leaves
+ * visible seams where neighbouring faces project onto different planes, and only
+ * a real unwrap makes cm-accurate print scale possible. Returns true when it
+ * repaired the geometry (and has stored the resulting span on geometry.userData).
+ */
+function repairDegenerateUVs(mesh: THREE.Mesh): boolean {
+  let geom = mesh.geometry as THREE.BufferGeometry
+  const uv = geom.attributes?.uv as THREE.BufferAttribute | undefined
+  if (!uv || !geom.attributes?.position || uv.count === 0) return false
+
+  let uMin = Infinity, uMax = -Infinity, vMin = Infinity, vMax = -Infinity
+  for (let i = 0; i < uv.count; i++) {
+    const u = uv.getX(i), v = uv.getY(i)
+    if (u < uMin) uMin = u
+    if (u > uMax) uMax = u
+    if (v < vMin) vMin = v
+    if (v > vMax) vMax = v
+  }
+  const deadU = uMax - uMin < DEGENERATE_UV_SPAN
+  if (!deadU && vMax - vMin >= DEGENERATE_UV_SPAN) return false
+
+  // One UV per face corner, so neighbouring faces can project differently.
+  if (geom.index) {
+    geom = geom.toNonIndexed()
+    mesh.geometry = geom
+  }
+  const pos = geom.attributes.position as THREE.BufferAttribute
+  if (pos.count % 3 !== 0) return false
+
+  geom.computeBoundingBox()
+  const bb = geom.boundingBox
+  if (!bb) return false
+  const extents = [bb.max.x - bb.min.x, bb.max.y - bb.min.y, bb.max.z - bb.min.z]
+  const ref = [...extents].sort((a, b) => b - a)[1] || extents[0]
+  if (!ref || ref <= 0) return false
+
+  const next = new Float32Array(pos.count * 2)
+  const ax = new THREE.Vector3(), bx = new THREE.Vector3(), cx = new THREE.Vector3()
+  const e1 = new THREE.Vector3(), e2 = new THREE.Vector3(), n = new THREE.Vector3()
+  for (let f = 0; f < pos.count; f += 3) {
+    ax.fromBufferAttribute(pos, f)
+    bx.fromBufferAttribute(pos, f + 1)
+    cx.fromBufferAttribute(pos, f + 2)
+    n.copy(e1.subVectors(bx, ax)).cross(e2.subVectors(cx, ax))
+    const nx = Math.abs(n.x), ny = Math.abs(n.y), nz = Math.abs(n.z)
+    // 0 = project ZY (face points along X), 1 = XZ (along Y), 2 = XY (along Z).
+    const plane = nx >= ny && nx >= nz ? 0 : ny >= nz ? 1 : 2
+    for (const [slot, p] of [[0, ax], [1, bx], [2, cx]] as const) {
+      const a = plane === 0 ? p.z : p.x
+      const b = plane === 1 ? p.z : p.y
+      next[(f + slot) * 2] = a / ref
+      next[(f + slot) * 2 + 1] = b / ref
+    }
+  }
+  geom.setAttribute('uv', new THREE.BufferAttribute(next, 2))
+  geom.userData = geom.userData || {}
+  // Treated as a clean unit unwrap of a panel `ref` units across, so the
+  // cm-based repeat maths downstream stays unchanged.
+  geom.userData._uvSpan = { u: 1, v: 1 }
+  console.warn(
+    `🧵 ${mesh.name || 'mesh'}: UV map has no usable ${deadU ? 'U' : 'V'} axis — ` +
+    `substituting a box projection. Unwrap this panel in the source model for accurate print scale.`
+  )
+  return true
+}
+
 /**
  * Returns how far the mesh's UV coordinates span on each axis (uMax-uMin, vMax-vMin).
  *
@@ -542,6 +629,13 @@ function getUvSpan(mesh: THREE.Mesh): { u: number; v: number } {
   if (!geom) return { u: 1, v: 1 }
   const cached = geom.userData?._uvSpan as { u: number; v: number } | undefined
   if (cached) return cached
+  // A panel exported without a real unwrap collapses one UV axis to a single
+  // value; every texel then samples the same column and the print renders as
+  // vertical streaks. Rebuild usable UVs before measuring the span. The repair
+  // may swap in a non-indexed geometry, so re-read it off the mesh.
+  if (repairDegenerateUVs(mesh)) {
+    return (mesh.geometry as THREE.BufferGeometry).userData._uvSpan as { u: number; v: number }
+  }
   const uv = geom.attributes?.uv as THREE.BufferAttribute | undefined
   let span = { u: 1, v: 1 }
   if (uv && uv.count > 0) {
@@ -745,16 +839,23 @@ const GARMENT_PROFILES: Record<GarmentType, GarmentProfile> = {
   shirt: {
     // Superellipse Cotton Poplin — photogrammetry-scanned PBR set.
     // normalScale 0.75: scanned normal maps need strong scale to be visible.
-    // roughness 0.72: cotton matte look (Astra spec: 0.68–0.75).
+    // roughness 0.82: TARGET cotton matte value — compensated for the roughness
+    // map multiply in createFabricPhysicalMaterial (see SHIRT_ROUGH_MAP_MEAN).
     useNormalMap: true,
     normalScale: 0.75,
     useRoughnessMap: true,
-    roughness: 0.72,
-    sheen: 0.18,
-    sheenRoughness: 0.98,
-    envMapIntensity: 0.08,
+    roughness: 0.82,
+    sheen: 0.20,
+    sheenRoughness: 0.95,
+    envMapIntensity: 0.05,
   },
 }
+
+// The scanned shirt roughness map averages ~0.78 and MULTIPLIES the base roughness
+// in the shader. Uncompensated, a 0.72 base landed at ~0.56 effective — semi-gloss,
+// which read as shiny plastic. Dividing the target by the map mean makes the
+// rendered roughness match the intended value (applies to profile AND admin override).
+const SHIRT_ROUGH_MAP_MEAN = 0.78
 
 // Optional PBR override — lets callers (admin wizard sliders) override the hard-coded
 // GARMENT_PROFILES values with user-configured values from pbr_settings.
@@ -802,7 +903,10 @@ function createFabricPhysicalMaterial(
 
   // pbrOverride values come from admin wizard sliders — use them when provided.
   // For lining, roughness and sheen are locked to the profile (no override allowed).
-  const roughness    = garmentType === 'lining' ? profile.roughness : (pbrOverride?.roughness    ?? profile.roughness)
+  let roughness      = garmentType === 'lining' ? profile.roughness : (pbrOverride?.roughness    ?? profile.roughness)
+  if (garmentType === 'shirt' && profile.useRoughnessMap) {
+    roughness = Math.min(1, roughness / SHIRT_ROUGH_MAP_MEAN)
+  }
   const normalScale  = pbrOverride?.normalScale  ?? profile.normalScale
   const bumpScale    = pbrOverride?.bumpScale    ?? (garmentType === 'shirt' ? 0.20 : 0)
   const sheen        = garmentType === 'lining' ? profile.sheen      : (pbrOverride?.sheen        ?? profile.sheen)
@@ -819,7 +923,7 @@ function createFabricPhysicalMaterial(
     }
   }
 
-  return new THREE.MeshPhysicalMaterial({
+  const physMat = new THREE.MeshPhysicalMaterial({
     color: finalColor,
     map,                                   // user-supplied fabric image (if any)
     roughness,
@@ -838,8 +942,8 @@ function createFabricPhysicalMaterial(
     bumpScale: garmentType === 'lining' ? 0 : bumpScale,
     // Specular: textiles are near-matte. Keep this low for ALL fabric garments —
     // a high specular (1.0) made jacket/trouser fabric read as glossy/plastic.
-    // Lining is fully diffuse (zero specular).
-    specularIntensity: garmentType === 'lining' ? 0.0 : garmentType === 'shirt' ? 0.25 : 0.30,
+    // Shirt cotton is the most matte of all (0.10). Lining is fully diffuse.
+    specularIntensity: garmentType === 'lining' ? 0.0 : garmentType === 'shirt' ? 0.10 : 0.30,
     // Sheen: cross-fibre retro-reflection
     sheen,
     sheenRoughness: profile.sheenRoughness,
@@ -851,6 +955,11 @@ function createFabricPhysicalMaterial(
     emissive: source.emissive ? source.emissive.clone() : new THREE.Color(0),
     emissiveMap: source.emissiveMap,
   })
+  // Keep the GLTF material name (e.g. "CollarContrast.007", "Tessuto.018") —
+  // contrast/zone detection re-reads material names on every fabric re-apply,
+  // so the name must survive material replacement.
+  physMat.name = source.name
+  return physMat
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -908,6 +1017,7 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number =
           envMapIntensity: 0.0,
           side: THREE.FrontSide,
         })
+        matteMat.name = material.name
         replaceMeshMaterial(mesh, idx, isMaterialArray, matteMat as unknown as THREE.MeshPhysicalMaterial)
         if (isTexture) {
           loadScaledFabricTexture(
@@ -1034,4 +1144,91 @@ export function applyFabricCustomization(
   pbrOverride?: PBROverride,
 ) {
   applyMaterialColor(mesh, color, baseColor, garmentType, repeatX, repeatY, pbrOverride)
+}
+
+// ─── Trim materials: buttons, button thread, buttonholes, cufflinks ──────────
+// Italian material names from the garment GLTF exports:
+//   Bottone/Bottoni = button, Gemelli = cufflinks, FIlobottoni = button thread,
+//   Asola/Asole = buttonhole stitching, Ricamo = embroidery.
+// Thread names are checked FIRST — "Filobottoni" contains "bottoni", so a plain
+// includes() against the button list would misclassify thread as a button.
+const TRIM_THREAD_NAMES = ['filobottoni', 'filobottone', 'asola', 'asole', 'ricamo']
+const TRIM_BUTTON_NAMES = ['bottone', 'bottoni', 'gemelli']
+
+/** Natural mother-of-pearl — default button shade when no explicit color is chosen. */
+export const DEFAULT_BUTTON_COLOR = '#efe8da'
+
+/**
+ * Styles non-fabric trim meshes (buttons, thread, buttonholes, cufflinks) and
+ * returns true when the mesh was trim (callers then skip fabric application).
+ *
+ * The shirt/pants GLTF exports carry NO pbrMetallicRoughness block on these
+ * materials, so glTF spec defaults apply — metalness 1.0 — which renders as dark
+ * shiny plastic that visually blends into the fabric tint. Buttons get a dedicated
+ * glossy resin/pearl MeshPhysicalMaterial so they always read as separate objects
+ * from the matte fabric; thread and buttonholes go matte, tinted to the button.
+ *
+ * @param buttonColor    Explicit button color ("standard"/undefined → pearl default,
+ *                       never the fabric color — buttons must stay distinct).
+ * @param fabricColorHint Solid fabric hex if known — used to tint buttonhole
+ *                       stitching like a real shirt. Ignored for texture fabrics.
+ */
+export function applyTrimMaterial(
+  mesh: THREE.Mesh,
+  buttonColor?: string,
+  fabricColorHint?: string,
+): boolean {
+  if (!mesh.material) return false
+  const meshName = (mesh.name || '').toLowerCase()
+  const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+  const matNames = mats.map((m) => (m?.name || '').toLowerCase())
+  const nameHits = (frags: string[]) =>
+    frags.some((s) => meshName.includes(s) || matNames.some((n) => n.includes(s)))
+
+  const isThread = nameHits(TRIM_THREAD_NAMES)
+  const isButton = !isThread && nameHits(TRIM_BUTTON_NAMES)
+  if (!isThread && !isButton) return false
+
+  const chosen =
+    buttonColor && buttonColor !== 'standard' ? buttonColor : DEFAULT_BUTTON_COLOR
+
+  if (isButton) {
+    // Replace once with a pearl/resin material, then only retint on re-apply.
+    let btnMat = mesh.userData._trimButtonMat as THREE.MeshPhysicalMaterial | undefined
+    if (!btnMat) {
+      btnMat = new THREE.MeshPhysicalMaterial({
+        metalness: 0.0,
+        roughness: 0.32,
+        clearcoat: 0.5,          // polished top layer — the classic button glint
+        clearcoatRoughness: 0.25,
+        envMapIntensity: 0.7,
+        specularIntensity: 0.5,
+        side: THREE.DoubleSide,
+      })
+      mesh.userData._trimButtonMat = btnMat
+      mesh.material = Array.isArray(mesh.material)
+        ? (mesh.material as THREE.Material[]).map(() => btnMat!)
+        : btnMat
+    }
+    btnMat.color.set(chosen)
+    btnMat.needsUpdate = true
+    return true
+  }
+
+  // Thread / buttonhole / embroidery — matte, never metallic.
+  const isButtonhole = nameHits(['asola', 'asole', 'ricamo'])
+  const fabricIsHex = !!fabricColorHint && /^#[0-9a-fA-F]{3,8}$/.test(fabricColorHint)
+  // Buttonholes match the shirt on real garments; button thread matches the button.
+  const threadColor = isButtonhole
+    ? new THREE.Color(fabricIsHex ? fabricColorHint! : '#d8d4cc')
+    : new THREE.Color(chosen).multiplyScalar(0.85)
+  mats.forEach((m) => {
+    if (!(m instanceof THREE.MeshStandardMaterial)) return
+    m.metalness = 0.0
+    m.roughness = Math.max(m.roughness, 0.75)
+    m.envMapIntensity = 0.12
+    m.color.copy(threadColor)
+    m.needsUpdate = true
+  })
+  return true
 }

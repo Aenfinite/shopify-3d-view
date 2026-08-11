@@ -9,6 +9,7 @@ import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js"
 import { Loader2 } from "lucide-react"
 import {
   applyFabricCustomization,
+  applyTrimMaterial,
   type PBROverride,
   type GarmentType,
 } from "@/lib/3d/customization-utils"
@@ -31,10 +32,11 @@ export const LINING_MODEL_PATHS: Record<"full" | "half", string[]> = {
 
 export const DEFAULT_MODEL_PATHS: Record<string, string[]> = {
   shirt: [
-    "/models/shirts/Front/boxplacket.gltf",
-    "/models/shirts/Collar/kentcollar.gltf",
-    "/models/shirts/Cuffs/roundedcuff.gltf",
-    "/models/shirts/Pocket/pocket.gltf",
+    "/models/Shirt/Front/Box.gltf",
+    "/models/Shirt/Back/Back.gltf",
+    "/models/Shirt/Collar/Kent.gltf",
+    "/models/Shirt/Sleeves/Full.gltf",
+    "/models/Shirt/Cuff/Round.gltf",
   ],
   jacket: [
     "/models/jackets/Front/Bottom/2Button/Curved.gltf",
@@ -65,11 +67,8 @@ export const CAMERA_PRESETS: Record<
   pants:  { position: [0, 0.4, 2.9], target: [0, -0.1, 0], fov: 45 },
 }
 
-// Mesh / material names that are NOT fabric — skip applying fabric color to these.
-const NON_FABRIC_NAMES = [
-  "bottoni", "bottone", "filobottoni", "filobottone",
-  "asola", "asole", "gemelli", "ricamo",
-]
+// Non-fabric trim (buttons, thread, buttonholes) is detected and styled by
+// applyTrimMaterial in customization-utils — shared with the customer viewers.
 
 // Per-product texture repeat scale so patterns look the same visual size regardless
 // of camera distance (jacket is the reference at 1.0).
@@ -282,10 +281,10 @@ export function GarmentModel({
           : [child.material as THREE.Material]
         const matNames = mats.map((m) => m.name.toLowerCase())
 
-        const isNonFabric = NON_FABRIC_NAMES.some(
-          (s) => meshName.includes(s) || matNames.some((n) => n.includes(s))
-        )
-        if (isNonFabric) return
+        // Buttons/thread/buttonholes — style them like the customer viewers do
+        // (pearl button, matte thread) instead of leaving the raw GLTF material,
+        // which has no PBR block and defaults to metalness 1 (dark plastic look).
+        if (applyTrimMaterial(child, undefined, fabricImageUrl ? undefined : fabricColor)) return
 
         if (liningMode) {
           const isLiningMesh = meshName.includes("lining")
