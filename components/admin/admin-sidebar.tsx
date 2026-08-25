@@ -13,6 +13,8 @@ import {
   ClipboardList,
   Boxes,
   Barcode,
+  Database,
+  Search,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -29,10 +31,12 @@ export function AdminSidebar() {
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Products", href: "/admin/products", icon: Shirt, perm: "fabrics:manage" },
     { name: "Fabrics", href: "/admin/fabrics", icon: Palette, perm: "fabrics:manage" },
+    { name: "Materials", href: "/admin/materials", icon: Database, perm: "articleCodes:manage" },
     { name: "Kickstarter", href: "/admin/kickstarter", icon: Rocket, perm: "imports:run" },
     { name: "Packages", href: "/admin/packages", icon: Boxes, perm: "packages:manage" },
     { name: "Orders", href: "/admin/orders", icon: ClipboardList },
     { name: "Article Codes", href: "/admin/article-codes", icon: Barcode, perm: "articleCodes:manage" },
+    { name: "SKU Lookup", href: "/admin/sku-lookup", icon: Search, perm: "articleCodes:manage" },
     { name: "Settings", href: "/admin/settings", icon: Settings, perm: "settings:manage" },
   ].filter((item) => !item.perm || can(item.perm))
 

@@ -280,6 +280,24 @@ export interface ExportSubOrder {
     locked: boolean
     locked_at: string | null
   } | null
+  material_specification?: {
+    spec_id: string
+    supplier_code: string | null
+    supplier_name: string | null
+    supplier_article_number: string | null
+    supplier_colour_number: string | null
+    supplier_colour_name: string | null
+    our_colour_code: string | null
+    our_colour_label: string | null
+    our_colour_family: string | null
+    fabric_type: string | null
+    fabric_composition: string | null
+    fabric_width: string | null
+    fabric_weight_gsm: string | null
+    fabric_construction: string | null
+    finishings: Array<{ code: string; label: string }>
+    notes: string | null
+  } | null
 }
 
 export interface ExportOrder {
@@ -297,6 +315,9 @@ export interface ExportOrder {
   sub_orders: ExportSubOrder[]
 }
 
+import { parseArticleCode } from "../article-code/engine"
+import { getMaterialSpecBySpecId } from "./material-spec-service"
+
 export async function getOrderForExport(id: string): Promise<ExportOrder | null> {
   const db = getSupabaseAdmin()
   const { data, error } = await db
@@ -313,7 +334,7 @@ export async function getOrderForExport(id: string): Promise<ExportOrder | null>
     .order("package_slot_index")
 
   const o = data as unknown as Record<string, any>
-  return {
+  const result: ExportOrder = {
     id: o.id,
     order_number: o.order_number,
     origin: o.origin,
@@ -347,6 +368,38 @@ export async function getOrderForExport(id: string): Promise<ExportOrder | null>
             locked_at: s.measurements.locked_at ?? null,
           }
         : null,
-    })),
+    }))
   }
+
+  // Fetch material specifications for each sub-order based on the SKU
+  for (const sub of result.sub_orders) {
+    if (sub.article_code_barcode) {
+      const parsed = parseArticleCode(sub.article_code_barcode)
+      if (parsed?.material_spec_id) {
+        const ms = await getMaterialSpecBySpecId(parsed.material_spec_id)
+        if (ms) {
+          sub.material_specification = {
+            spec_id: ms.spec_id,
+            supplier_code: ms.supplier_code,
+            supplier_name: ms.supplier_name,
+            supplier_article_number: ms.supplier_article_number,
+            supplier_colour_number: ms.supplier_colour_number,
+            supplier_colour_name: ms.supplier_colour_name,
+            our_colour_code: ms.our_colour_code,
+            our_colour_label: ms.our_colour_label,
+            our_colour_family: ms.our_colour_family,
+            fabric_type: ms.fabric_type,
+            fabric_composition: ms.fabric_composition,
+            fabric_width: ms.fabric_width,
+            fabric_weight_gsm: ms.fabric_weight_gsm,
+            fabric_construction: ms.fabric_construction,
+            finishings: ms.finishings.map((f: any) => ({ code: f.code, label: f.label })),
+            notes: ms.notes,
+          }
+        }
+      }
+    }
+  }
+
+  return result
 }

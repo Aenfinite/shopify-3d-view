@@ -30,3 +30,4 @@ next-env.d.ts
 
 # internal working notes
 /memory/
+.DS_Store

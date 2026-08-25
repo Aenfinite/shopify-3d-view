@@ -528,23 +528,30 @@ const DEGENERATE_UV_SPAN = 1e-3
  * value, which happens when a mesh is exported without being unwrapped. Such a
  * panel samples one column of the fabric image and renders as vertical streaks.
  *
- * The replacement is a per-triangle box projection in model units: each face is
- * projected onto the plane it most nearly lies in, using the two axes
- * perpendicular to its geometric normal, divided by a reference size. Choosing
- * the plane per FACE rather than per vertex matters — with a per-vertex choice,
- * a triangle whose corners disagree gets stretched across two planes, which
- * reproduces the very streaking this is meant to remove. That requires
- * non-indexed geometry so each face owns its three UVs.
+ * Only the collapsed axis is rebuilt. A panel usually has one good axis and one
+ * dead one, and the good axis carries the density the modeller intended — throw
+ * it away and the shared weave maps (which tile at a FIXED 4x4 in UV space, so
+ * visible detail = 4 x the panel's span) land at the wrong scale. Normalising a
+ * panel to a unit square drops it to 4 weave tiles where real panels carry 11-18,
+ * which renders the maps as broad light-to-dark blobs instead of cloth.
+ *
+ * The rebuilt axis is a per-triangle box projection: each face is projected onto
+ * the plane it most nearly lies in, using the axis perpendicular to its geometric
+ * normal, then scaled to the surviving axis's UV-per-model-unit so both
+ * directions carry matching detail. Choosing the plane per FACE rather than per
+ * vertex matters — with a per-vertex choice, a triangle whose corners disagree
+ * gets stretched across two planes, reproducing the very streaking this removes.
+ * That requires non-indexed geometry so each face owns its three UVs.
  *
  * The reference size is the mesh's SECOND-largest bounding-box extent, not the
  * largest — a single mesh often holds two mirrored panels (both cuffs, both
  * sleeves) sitting far apart, so the largest extent measures the gap between
  * them rather than the size of a panel.
  *
- * This keeps printed fabrics readable, but it is an approximation: it leaves
- * visible seams where neighbouring faces project onto different planes, and only
- * a real unwrap makes cm-accurate print scale possible. Returns true when it
- * repaired the geometry (and has stored the resulting span on geometry.userData).
+ * This keeps fabric readable, but it is an approximation: it leaves visible seams
+ * where neighbouring faces project onto different planes, and only a real unwrap
+ * makes cm-accurate print scale possible. Returns true when it repaired the
+ * geometry (and has stored the resulting span on geometry.userData).
  */
 function repairDegenerateUVs(mesh: THREE.Mesh): boolean {
   let geom = mesh.geometry as THREE.BufferGeometry
@@ -559,8 +566,11 @@ function repairDegenerateUVs(mesh: THREE.Mesh): boolean {
     if (v < vMin) vMin = v
     if (v > vMax) vMax = v
   }
-  const deadU = uMax - uMin < DEGENERATE_UV_SPAN
-  if (!deadU && vMax - vMin >= DEGENERATE_UV_SPAN) return false
+  const uSpan = uMax - uMin
+  const vSpan = vMax - vMin
+  const deadU = uSpan < DEGENERATE_UV_SPAN
+  const deadV = vSpan < DEGENERATE_UV_SPAN
+  if (!deadU && !deadV) return false
 
   // One UV per face corner, so neighbouring faces can project differently.
   if (geom.index) {
@@ -568,6 +578,7 @@ function repairDegenerateUVs(mesh: THREE.Mesh): boolean {
     mesh.geometry = geom
   }
   const pos = geom.attributes.position as THREE.BufferAttribute
+  const uv2 = geom.attributes.uv as THREE.BufferAttribute
   if (pos.count % 3 !== 0) return false
 
   geom.computeBoundingBox()
@@ -576,6 +587,11 @@ function repairDegenerateUVs(mesh: THREE.Mesh): boolean {
   const extents = [bb.max.x - bb.min.x, bb.max.y - bb.min.y, bb.max.z - bb.min.z]
   const ref = [...extents].sort((a, b) => b - a)[1] || extents[0]
   if (!ref || ref <= 0) return false
+
+  // UV units per model unit. Take it from the surviving axis so the rebuilt one
+  // carries the same detail; if both axes are dead there is nothing to copy, so
+  // fall back to a unit-square panel.
+  const density = deadU && deadV ? 1 / ref : (deadU ? vSpan : uSpan) / ref
 
   const next = new Float32Array(pos.count * 2)
   const ax = new THREE.Vector3(), bx = new THREE.Vector3(), cx = new THREE.Vector3()
@@ -589,20 +605,34 @@ function repairDegenerateUVs(mesh: THREE.Mesh): boolean {
     // 0 = project ZY (face points along X), 1 = XZ (along Y), 2 = XY (along Z).
     const plane = nx >= ny && nx >= nz ? 0 : ny >= nz ? 1 : 2
     for (const [slot, p] of [[0, ax], [1, bx], [2, cx]] as const) {
-      const a = plane === 0 ? p.z : p.x
-      const b = plane === 1 ? p.z : p.y
-      next[(f + slot) * 2] = a / ref
-      next[(f + slot) * 2 + 1] = b / ref
+      const i = f + slot
+      const projU = (plane === 0 ? p.z : p.x) * density
+      const projV = (plane === 1 ? p.z : p.y) * density
+      // Keep whichever authored axis still carries usable data.
+      next[i * 2] = deadU ? projU : uv2.getX(i)
+      next[i * 2 + 1] = deadV ? projV : uv2.getY(i)
     }
   }
   geom.setAttribute('uv', new THREE.BufferAttribute(next, 2))
+
+  // Span reported for the rebuilt axis is ONE panel's worth, not the full range of
+  // the projected coordinate. When a mesh holds two mirrored panels the gap between
+  // them inflates that range (the two cuffs sit ~65 units apart, giving a span of
+  // ~15 for panels only ~2.5 wide), and the fabric-image repeat is normalised by
+  // this number — so reporting the raw range would shrink the print several times
+  // over. `ref` is already the per-panel reference size, so scale it by the same
+  // density. The weave maps are unaffected: they tile against the real UVs, which
+  // are correct within each panel.
+  const rebuilt = Math.max(1e-6, ref * density)
   geom.userData = geom.userData || {}
-  // Treated as a clean unit unwrap of a panel `ref` units across, so the
-  // cm-based repeat maths downstream stays unchanged.
-  geom.userData._uvSpan = { u: 1, v: 1 }
+  geom.userData._uvSpan = {
+    u: deadU ? rebuilt : Math.max(1e-6, uSpan),
+    v: deadV ? rebuilt : Math.max(1e-6, vSpan),
+  }
   console.warn(
-    `🧵 ${mesh.name || 'mesh'}: UV map has no usable ${deadU ? 'U' : 'V'} axis — ` +
-    `substituting a box projection. Unwrap this panel in the source model for accurate print scale.`
+    `🧵 ${mesh.name || 'mesh'}: UV map has no usable ${deadU && deadV ? 'U or V' : deadU ? 'U' : 'V'} axis — ` +
+    `rebuilt by box projection (panel span ${geom.userData._uvSpan.u.toFixed(2)}×${geom.userData._uvSpan.v.toFixed(2)}). ` +
+    `Unwrap this panel in the source model for accurate print scale.`
   )
   return true
 }
@@ -997,6 +1027,13 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number =
     console.warn(`⚠️ No material found on mesh: ${mesh.name}`)
     return
   }
+
+  // Repair unusable UVs BEFORE any material is built. This must not be limited to
+  // the fabric-image path: the shared normal / roughness / bump / AO maps are read
+  // through the same UVs, so a panel with a collapsed axis renders wrong even on a
+  // plain colour — the maps sample one line of the texture and the panel goes flat
+  // and dark. Cached per geometry, so this is a no-op after the first call.
+  getUvSpan(mesh)
 
   const isTexture = color.startsWith('/') || color.startsWith('data:') || color.startsWith('https://') || color.startsWith('http://') || /\.(jpg|jpeg|png|webp)$/i.test(color)
   const isMaterialArray = Array.isArray(mesh.material)

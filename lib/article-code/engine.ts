@@ -1,11 +1,11 @@
 // ============================================================================
-// Article-code assembly engine (pure — no I/O). SAFE CHINO 8-segment model.
+// Article-code assembly engine (pure — no I/O). 22-digit Material Management model.
 // ----------------------------------------------------------------------------
-//   generateArticleCode({ target_group:'01', product_category:'02', ... })
-//     → { human:'01.02.07.01.021.02451.04', machine:'010207010210245104', segments }
+//   generateArticleCode({ target_group:'1', product_category:'01', ... })
+//     → { human:'1-01-01-01-005-143-000-000123', machine:'1010101005143000000123', segments }
 //
 // Each segment value is normalised (digits only) and zero-padded to its fixed
-// width. The optional `reserved` segment is omitted from both strings when blank.
+// width. All segments are required in the new model.
 // ============================================================================
 
 import { SEGMENTS, type SegmentKey } from "./segments"
@@ -44,12 +44,44 @@ export function generateArticleCode(input: ArticleCodeInput): ArticleCodeResult 
   const parts: ArticleCodeResult["segments"] = []
   for (const seg of SEGMENTS) {
     const code = normalizeSegment(input[seg.key], seg.width)
-    if (!code) continue // optional + empty → omit (reserved)
+    if (!code) continue
     parts.push({ no: seg.no, key: seg.key, name: seg.name, code })
   }
   return {
-    human: parts.map((p) => p.code).join("."),
+    human: parts.map((p) => p.code).join("-"),
     machine: parts.map((p) => p.code).join(""),
     segments: parts,
   }
+}
+
+/**
+ * Parse a 22-digit SKU (human or machine format) back into individual segment codes.
+ * Human format: '1-01-01-01-005-143-000-000123'
+ * Machine format: '1010101005143000000123'
+ */
+export function parseArticleCode(code: string): Partial<Record<SegmentKey, string>> | null {
+  // Try human format first (dash-separated)
+  const dashParts = code.split("-")
+  if (dashParts.length === SEGMENTS.length) {
+    const result: Partial<Record<SegmentKey, string>> = {}
+    for (let i = 0; i < SEGMENTS.length; i++) {
+      result[SEGMENTS[i].key] = dashParts[i]
+    }
+    return result
+  }
+
+  // Try machine format (concatenated digits)
+  const digits = code.replace(/\D/g, "")
+  const totalWidth = SEGMENTS.reduce((sum, s) => sum + s.width, 0)
+  if (digits.length === totalWidth) {
+    const result: Partial<Record<SegmentKey, string>> = {}
+    let pos = 0
+    for (const seg of SEGMENTS) {
+      result[seg.key] = digits.slice(pos, pos + seg.width)
+      pos += seg.width
+    }
+    return result
+  }
+
+  return null
 }

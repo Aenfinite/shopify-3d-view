@@ -4,6 +4,7 @@
 // One sheet per ORDER, a section per sub-order (garment): sub-order ref, item +
 // colour, article code + Code 128 barcode (vector rects, no plugin), the design
 // selections, and the body + production (locked) measurements. Returns a Buffer.
+// Includes Material Specification info derived from the SKU.
 // ============================================================================
 
 import { jsPDF } from "jspdf"
@@ -87,6 +88,34 @@ function garmentSection(doc: jsPDF, sub: ExportSubOrder, index: number, y: numbe
     doc.setTextColor(INK.r, INK.g, INK.b)
     doc.text(`Article: ${sub.article_code_human ?? "—"}`, MARGIN + 2, cursor)
     if (sub.article_code_barcode) drawBarcode(doc, sub.article_code_barcode, PAGE_W - MARGIN - 58, cursor - 4)
+    cursor += 6
+  }
+
+  // >> MATERIAL SPECIFICATION BLOCK <<
+  if (sub.material_specification) {
+    const ms = sub.material_specification
+    doc.setFontSize(8)
+    doc.setTextColor(MUTED.r, MUTED.g, MUTED.b)
+    
+    const matLine1 = [
+      `Supplier: ${ms.supplier_name ?? ms.supplier_code ?? "—"} (Art: ${ms.supplier_article_number ?? "—"})`,
+      `Colour: ${ms.supplier_colour_name ?? "—"} (Our: ${ms.our_colour_label ?? ms.our_colour_code ?? "—"})`
+    ].join("  |  ")
+    doc.text(matLine1, MARGIN + 2, cursor)
+    cursor += 4
+
+    const matLine2 = [
+      `Comp: ${ms.fabric_composition ?? "—"}`,
+      `Const: ${ms.fabric_construction ?? "—"}`,
+      `Wt: ${ms.fabric_weight_gsm ? ms.fabric_weight_gsm + " GSM" : "—"}`
+    ].join("  |  ")
+    doc.text(matLine2, MARGIN + 2, cursor)
+    
+    if (ms.finishings && ms.finishings.length > 0) {
+      cursor += 4
+      doc.text(`Finishings: ${ms.finishings.map((f: any) => f.label).join(", ")}`, MARGIN + 2, cursor)
+    }
+    
     cursor += 6
   }
 

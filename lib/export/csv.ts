@@ -3,12 +3,12 @@
 // ----------------------------------------------------------------------------
 // One row per SUB-ORDER (the production unit). UTF-8 BOM for Excel. Columns
 // cover the full production picture: refs, article code, design choices, and
-// the locked production measurements.
+// the locked production measurements. Includes Material Specification data.
 // ============================================================================
 
 import type { ExportOrder } from "../supabase/orders-service"
 
-const BOM = "﻿"
+const BOM = "\uFEFF"
 
 function escapeCell(value: unknown): string {
   const s = value == null ? "" : String(value)
@@ -31,6 +31,8 @@ function measure(m: Record<string, number> | undefined, unit: string): string {
 const HEADERS = [
   "Master order", "Kickstarter ref", "Sub-order ref", "Customer", "Email",
   "Package", "Item", "Colour", "Article (human)", "Article (machine)",
+  "Supplier", "Supplier Article #", "Supplier Colour #", "Supplier Colour Name",
+  "Our Colour", "Our Colour Family", "Composition", "Construction", "Weight", "Finishings",
   "Sub-order status", "Design choices",
   "Body measurements", "Production measurements", "Meas. version", "Locked", "Packing", "Created",
 ]
@@ -50,15 +52,26 @@ export function ordersToCsv(orders: ExportOrder[]): string {
       created: new Date(o.created_at).toISOString().slice(0, 10),
     }
     if (o.sub_orders.length === 0) {
-      rows.push([base.order, base.ksRef, "", base.customer, base.email, base.pkg, "", "", "", "", "", "", "", "", "", "", base.packing, base.created].map(escapeCell).join(","))
+      rows.push([base.order, base.ksRef, "", base.customer, base.email, base.pkg, "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", base.packing, base.created].map(escapeCell).join(","))
       continue
     }
     for (const s of o.sub_orders) {
       const m = s.measurement
+      const ms = s.material_specification
       rows.push([
         base.order, base.ksRef, s.sub_order_ref ?? "", base.customer, base.email, base.pkg,
         s.item_type ?? s.garment_type, s.color ?? "",
         s.article_code_human ?? "", s.article_code_barcode ?? "",
+        ms ? `${ms.supplier_name ?? ms.supplier_code ?? ""}` : "",
+        ms?.supplier_article_number ?? "",
+        ms?.supplier_colour_number ?? "",
+        ms?.supplier_colour_name ?? "",
+        ms?.our_colour_label ? `${ms.our_colour_label} (${ms.our_colour_code})` : (ms?.our_colour_code ?? ""),
+        ms?.our_colour_family ?? "",
+        ms?.fabric_composition ?? "",
+        ms?.fabric_construction ?? "",
+        ms?.fabric_weight_gsm ?? "",
+        ms ? (ms.finishings?.map(f => f.label).join(", ") ?? "") : "",
         s.status, selectionsSummary(s.configurator_selections),
         m ? measure(m.raw_values, m.unit) : "",
         m ? measure(m.production_values, m.unit) : "",

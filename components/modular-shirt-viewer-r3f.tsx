@@ -40,6 +40,37 @@ const SHIRT_TEXTURE_SCALE = 0.18
 
 // ─── Helpers ─────────────────────────────────────────────────
 
+/** Pin a mesh's material(s) to one face side, overriding the shared fabric default. */
+function forceMaterialSide(mesh: THREE.Mesh, side: THREE.Side) {
+  const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+  for (const m of mats) {
+    if (!m) continue
+    m.side = side
+    m.needsUpdate = true
+  }
+}
+
+/**
+ * The back-facing twin of a cuff surface — the inside of the cuff, visible at the
+ * opening. Shares the outside mesh's geometry (no duplicated vertex data) and is
+ * parented to it with an identity transform so it tracks the cuff exactly.
+ * Created once and cached; later fabric changes re-use the same mesh.
+ */
+function ensureCuffInsideMesh(outside: THREE.Mesh): THREE.Mesh {
+  const cached = outside.userData._cuffInsideMesh as THREE.Mesh | undefined
+  if (cached) return cached
+
+  const sourceMat = (Array.isArray(outside.material) ? outside.material[0] : outside.material) as THREE.Material
+  const inside = new THREE.Mesh(outside.geometry, sourceMat.clone())
+  inside.name = `${outside.name || 'cuff'}__inside`
+  inside.userData._isCuffInside = true
+  // Drawn after the outside surface so the opening reads cleanly.
+  inside.renderOrder = (outside.renderOrder || 0) + 1
+  outside.add(inside)
+  outside.userData._cuffInsideMesh = inside
+  return inside
+}
+
 /**
  * Apply fabric to every mesh in a shirt GLTF scene using the same
  * PBR material pipeline as the jacket (MeshPhysicalMaterial + linen maps).
@@ -84,8 +115,16 @@ function applyShirtFabric(
     (usingDefaults ? ` (fabric record has no cm values — using 60in defaults)` : '')
   )
 
+  // Collect first, then process. The cuff branch below adds an inside-surface mesh
+  // to the scene, and mutating the graph during traverse() would revisit it.
+  const meshes: THREE.Mesh[] = []
   scene.traverse((child) => {
-    if (!(child instanceof THREE.Mesh) || !child.material) return
+    if (child instanceof THREE.Mesh && child.material) meshes.push(child)
+  })
+
+  meshes.forEach((child) => {
+    // The generated cuff-inside surface is driven by its outside mesh, not on its own.
+    if (child.userData._isCuffInside) return
 
     const meshName = (child.name || '').toLowerCase()
     const matNames = (Array.isArray(child.material)
@@ -98,32 +137,38 @@ function applyShirtFabric(
     // never the shirt fabric color — so they read as separate objects.
     if (applyTrimMaterial(child, buttonColor, fabricColor)) return
 
-    // Contrast material detection.
-    // Two naming conventions coexist in the model set:
-    //   * Collars mark the contrast surface explicitly — "CollarContrast.00x".
-    //   * The 2-button cuffs expose the contrast surface as the cuff fabric mesh
-    //     itself ("cuff_outside" / material "cuff_Mat"); the cuff has no separate
-    //     contrast panel, the whole outer cuff takes the contrast fabric.
+    const cuffTex =
+      contrastEnabled && contrastCuffTexture && contrastCuffTexture !== 'none'
+        ? contrastCuffTexture
+        : fabricColor
+    const collarTex =
+      contrastEnabled && contrastCollarTexture && contrastCollarTexture !== 'none'
+        ? contrastCollarTexture
+        : fabricColor
+
+    // ── Cuff ────────────────────────────────────────────────────────────────
+    // The collar model carries a dedicated inner panel ("CollarContrast.00x") so
+    // its contrast surface is real geometry. The cuff is a single-walled tube —
+    // one mesh, no inner panel — so its "inside" is the back of the same surface.
+    // Rendering it once double-sided means outside and inside can never differ.
+    // Instead the outside is drawn front-facing, and a second mesh sharing the
+    // same geometry is drawn back-facing for the inside, which is what shows at
+    // the cuff opening. That gives the cuff the same inside-contrast behaviour
+    // the collar already has.
     const isCuffSurface = matNames.some(n => n.includes('cuff')) || meshName.includes('cuff')
-    const isContrast = matNames.some(n => n.includes('contrast')) || isCuffSurface
-    if (isContrast) {
-      const isCollarContrast =
-        !isCuffSurface &&
-        (matNames.some(n => n.includes('collar')) || meshName.includes('collar'))
-      if (contrastEnabled) {
-        const collarTex =
-          contrastCollarTexture && contrastCollarTexture !== 'none'
-            ? contrastCollarTexture
-            : fabricColor
-        const cuffTex =
-          contrastCuffTexture && contrastCuffTexture !== 'none'
-            ? contrastCuffTexture
-            : fabricColor
-        const texToUse = isCollarContrast ? collarTex : cuffTex
-        applyFabricCustomization(child, texToUse ?? defaultColor, 0xffffff, 'shirt', rX, rY, fabricPbr)
-      } else {
-        applyFabricCustomization(child, fabricColor ?? defaultColor, 0xffffff, 'shirt', rX, rY, fabricPbr)
-      }
+    if (isCuffSurface) {
+      applyFabricCustomization(child, fabricColor ?? defaultColor, 0xffffff, 'shirt', rX, rY, fabricPbr)
+      forceMaterialSide(child, THREE.FrontSide)
+
+      const inside = ensureCuffInsideMesh(child)
+      applyFabricCustomization(inside, cuffTex ?? defaultColor, 0xffffff, 'shirt', rX, rY, fabricPbr)
+      forceMaterialSide(inside, THREE.BackSide)
+      return
+    }
+
+    // ── Collar contrast (dedicated panel in the model) ──────────────────────
+    if (matNames.some(n => n.includes('contrast'))) {
+      applyFabricCustomization(child, collarTex ?? defaultColor, 0xffffff, 'shirt', rX, rY, fabricPbr)
       return
     }
 
