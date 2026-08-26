@@ -16,6 +16,7 @@
 | 3 | `03_article_codes_and_package_items.sql` | article-code engine tables + package items |
 | 4 | `04_safe_chino_seed_packages.sql` | SEED DATA: 8 chino colors, 2 shirts, 2 belts, the 7 Early Bird packages |
 | 5 | `05_fix_fine_tune_scale.sql` | Fix print scale: reset old `fine_tune: 5` fudge → `1` (true cm size) so existing fabrics don't render 5× too large |
+| 6 | `06_material_management.sql` | Material Management: finishing_master (20 finishes), colour_master (22 families), material_specifications, 22-digit product_skus |
 
 All files are idempotent-safe on the seed data — but run each file only once if possible.
 
