@@ -1,22 +1,43 @@
 -- ============================================================================
 -- Migration 006 — Material Management System (Phase 1 + Colour + Finishings)
 -- ----------------------------------------------------------------------------
--- New tables:
---   finishing_master              — 20 standard finishings, central list
---   colour_master                 — 3-digit colour taxonomy, 22 families (010–229)
---   material_specifications      — central material database, auto-generated 6-digit ID
---   material_specification_finishings — join table for multi-select finishings
---
--- Schema changes:
---   product_skus — add our_colour_code, material_spec_id; relax old required cols
---   article_segment_values — allow segment_no up to 8 (unchanged check)
---
--- 22-digit SKU model:
---   Target(1) - Category(2) - FabricFamily(2) - FabricType(2) - Supplier(3)
---   - OurColour(3) - Reserved(3) - MaterialSpecID(6) = 22 digits
+-- Self-contained migration:
+--   * finishing_master              — 20 standard finishings, central list
+--   * colour_master                 — 3-digit colour taxonomy, 22 families (010–229)
+--   * material_specifications      — central material database, auto-generated 6-digit ID
+--   * material_specification_finishings — join table for multi-select finishings
+--   * article_segment_values       — 8-segment lookup table
+--   * product_skus                 — 22-digit SKU registry
 -- ============================================================================
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Helper function for auto-updating timestamps
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ─── Article Segment Values (Lookups for Segments 1-5, 7) ───────────────────
+CREATE TABLE IF NOT EXISTS article_segment_values (
+  id            uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  segment_no    int  NOT NULL CHECK (segment_no BETWEEN 1 AND 8),
+  code          text NOT NULL,                 -- zero-padded digits matching segment width
+  label         text NOT NULL,
+  supplier_code text,
+  sort_order    int  NOT NULL DEFAULT 0,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  updated_at    timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (segment_no, code, supplier_code)
+);
+CREATE INDEX IF NOT EXISTS idx_asv_segment ON article_segment_values (segment_no);
+
+DROP TRIGGER IF EXISTS article_segment_values_updated_at ON article_segment_values;
+CREATE TRIGGER article_segment_values_updated_at BEFORE UPDATE ON article_segment_values
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- ─── Finishing Master ────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS finishing_master (
@@ -28,6 +49,7 @@ CREATE TABLE IF NOT EXISTS finishing_master (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+DROP TRIGGER IF EXISTS finishing_master_updated_at ON finishing_master;
 CREATE TRIGGER finishing_master_updated_at BEFORE UPDATE ON finishing_master
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
@@ -67,6 +89,7 @@ CREATE TABLE IF NOT EXISTS colour_master (
   updated_at        timestamptz NOT NULL DEFAULT now()
 );
 
+DROP TRIGGER IF EXISTS colour_master_updated_at ON colour_master;
 CREATE TRIGGER colour_master_updated_at BEFORE UPDATE ON colour_master
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
@@ -165,7 +188,6 @@ INSERT INTO colour_master (code, label, family_label, family_range_start, sort_o
 ON CONFLICT (code) DO NOTHING;
 
 -- ─── Material Specifications ─────────────────────────────────────────────────
--- Auto-incrementing 6-digit ID via a Postgres sequence
 CREATE SEQUENCE IF NOT EXISTS material_spec_id_seq START 1;
 
 CREATE TABLE IF NOT EXISTS material_specifications (
@@ -192,6 +214,7 @@ CREATE INDEX IF NOT EXISTS idx_matspec_supplier ON material_specifications (supp
 CREATE INDEX IF NOT EXISTS idx_matspec_colour ON material_specifications (our_colour_code);
 CREATE INDEX IF NOT EXISTS idx_matspec_spec_id ON material_specifications (spec_id);
 
+DROP TRIGGER IF EXISTS material_specifications_updated_at ON material_specifications;
 CREATE TRIGGER material_specifications_updated_at BEFORE UPDATE ON material_specifications
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
@@ -202,43 +225,98 @@ CREATE TABLE IF NOT EXISTS material_specification_finishings (
   PRIMARY KEY (material_spec_id, finishing_id)
 );
 
--- ─── product_skus — add new columns for 22-digit model ──────────────────────
+-- ─── Product SKU Registry (22-Digit Model) ───────────────────────────────────
+CREATE TABLE IF NOT EXISTS product_skus (
+  id                   uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  sku_key              text NOT NULL UNIQUE,   -- e.g. 'chino:midnight-navy'
+  product_category     text NOT NULL,          -- chino | shirt | belt
+  color                text,
+  label                text,
+  fabric_composition   text,
+  target_group_code    text NOT NULL,
+  product_category_code text NOT NULL,
+  fabric_family_code   text NOT NULL,
+  fabric_type_code     text NOT NULL,
+  supplier_code        text NOT NULL,
+  supplier_article_code text,
+  specs_code           text,
+  our_colour_code      text,
+  reserved_code        text DEFAULT '000',
+  material_spec_id     text,
+  article_human        text NOT NULL,
+  article_machine      text NOT NULL,
+  created_at           timestamptz NOT NULL DEFAULT now(),
+  updated_at           timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_skus_category ON product_skus (product_category);
+
+DROP TRIGGER IF EXISTS product_skus_updated_at ON product_skus;
+CREATE TRIGGER product_skus_updated_at BEFORE UPDATE ON product_skus
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- If product_skus was already created previously, safely ensure new columns exist:
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'product_skus' AND column_name = 'our_colour_code') THEN
-    ALTER TABLE product_skus ADD COLUMN our_colour_code text;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'product_skus') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'product_skus' AND column_name = 'our_colour_code') THEN
+      ALTER TABLE product_skus ADD COLUMN our_colour_code text;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'product_skus' AND column_name = 'material_spec_id') THEN
+      ALTER TABLE product_skus ADD COLUMN material_spec_id text;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'product_skus' AND column_name = 'reserved_code') THEN
+      ALTER TABLE product_skus ADD COLUMN reserved_code text DEFAULT '000';
+    END IF;
+    -- Make old legacy columns nullable if they exist
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'product_skus' AND column_name = 'supplier_article_code') THEN
+      ALTER TABLE product_skus ALTER COLUMN supplier_article_code DROP NOT NULL;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'product_skus' AND column_name = 'specs_code') THEN
+      ALTER TABLE product_skus ALTER COLUMN specs_code DROP NOT NULL;
+    END IF;
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'product_skus' AND column_name = 'material_spec_id') THEN
-    ALTER TABLE product_skus ADD COLUMN material_spec_id text;
-  END IF;
-  -- Make old columns nullable (they are no longer in the new SKU model)
-  ALTER TABLE product_skus ALTER COLUMN supplier_article_code DROP NOT NULL;
-  ALTER TABLE product_skus ALTER COLUMN specs_code DROP NOT NULL;
 END $$;
 
--- ─── RLS policies ────────────────────────────────────────────────────────────
+-- ─── Row Level Security ──────────────────────────────────────────────────────
+ALTER TABLE article_segment_values        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE finishing_master              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE colour_master                 ENABLE ROW LEVEL SECURITY;
 ALTER TABLE material_specifications       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE material_specification_finishings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_skus                  ENABLE ROW LEVEL SECURITY;
 
--- Public read for all catalog tables
+-- Public read for all catalog & lookup tables
+DO $$
+BEGIN
+  DROP POLICY IF EXISTS "Public read article_segment_values" ON article_segment_values;
+  DROP POLICY IF EXISTS "Public read finishing_master" ON finishing_master;
+  DROP POLICY IF EXISTS "Public read colour_master" ON colour_master;
+  DROP POLICY IF EXISTS "Public read material_specifications" ON material_specifications;
+  DROP POLICY IF EXISTS "Public read material_specification_finishings" ON material_specification_finishings;
+  DROP POLICY IF EXISTS "Public read product_skus" ON product_skus;
+END $$;
+
+CREATE POLICY "Public read article_segment_values"        ON article_segment_values        FOR SELECT USING (true);
 CREATE POLICY "Public read finishing_master"              ON finishing_master              FOR SELECT USING (true);
 CREATE POLICY "Public read colour_master"                 ON colour_master                 FOR SELECT USING (true);
 CREATE POLICY "Public read material_specifications"       ON material_specifications       FOR SELECT USING (true);
 CREATE POLICY "Public read material_specification_finishings" ON material_specification_finishings FOR SELECT USING (true);
+CREATE POLICY "Public read product_skus"                  ON product_skus                  FOR SELECT USING (true);
 
--- Admin-only write access
+-- Admin write policies
 DO $$
 DECLARE t text;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['finishing_master','colour_master','material_specifications','material_specification_finishings']
+  FOREACH t IN ARRAY ARRAY['article_segment_values', 'finishing_master', 'colour_master', 'material_specifications', 'material_specification_finishings', 'product_skus']
   LOOP
-    EXECUTE format($f$
-      CREATE POLICY "Admin all %1$s" ON %1$s
-        FOR ALL
-        USING (auth.uid() IN (SELECT auth_user_id FROM admin_users))
-        WITH CHECK (auth.uid() IN (SELECT auth_user_id FROM admin_users));
-    $f$, t);
+    EXECUTE format('DROP POLICY IF EXISTS "Admin all %1$s" ON %1$s', t);
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'admin_users') THEN
+      EXECUTE format($f$
+        CREATE POLICY "Admin all %1$s" ON %1$s
+          FOR ALL
+          USING (auth.uid() IN (SELECT auth_user_id FROM admin_users))
+          WITH CHECK (auth.uid() IN (SELECT auth_user_id FROM admin_users));
+      $f$, t);
+    END IF;
   END LOOP;
 END $$;
