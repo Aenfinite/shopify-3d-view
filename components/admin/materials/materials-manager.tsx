@@ -486,11 +486,34 @@ export function MaterialsManager() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Fabric Type</Label>
-                <Input value={form.fabric_type} onChange={(e) => setForm({ ...form, fabric_type: e.target.value })} placeholder="e.g. Woven Solid" />
+                <Select
+                  value={form.fabric_type || "none"}
+                  onValueChange={(v) => setForm({ ...form, fabric_type: v === "none" ? "" : v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select fabric type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Select fabric type —</SelectItem>
+                    {fabricTypes.map((ft) => (
+                      <SelectItem key={ft.code} value={ft.label}>
+                        {ft.code} — {ft.label}
+                      </SelectItem>
+                    ))}
+                    {form.fabric_type &&
+                      !fabricTypes.some((ft) => ft.label === form.fabric_type || ft.code === form.fabric_type) && (
+                        <SelectItem value={form.fabric_type}>{form.fabric_type}</SelectItem>
+                      )}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label>Fabric Composition</Label>
-                <Input value={form.fabric_composition} onChange={(e) => setForm({ ...form, fabric_composition: e.target.value })} placeholder="e.g. 100% Cotton" />
+                <Input
+                  value={form.fabric_composition}
+                  onChange={(e) => setForm({ ...form, fabric_composition: e.target.value })}
+                  placeholder="e.g. 100% Cotton"
+                />
               </div>
             </div>
 
