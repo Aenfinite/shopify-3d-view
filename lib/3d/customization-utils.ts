@@ -654,65 +654,6 @@ function repairDegenerateUVs(mesh: THREE.Mesh): boolean {
  *
  * Result is cached on geometry.userData so we scan each geometry's UVs only once.
  */
-/**
- * Calculates the exact calibrated texture repeat for any garment mesh.
- * For shirts: uses calibrated panel texel density and orientation so that
- * all pattern pieces (front, back, sleeves, collar, cuffs, placket, pocket)
- * have 100% uniform physical scale in cm with ZERO aspect-ratio distortion!
- */
-function getCalibratedTextureRepeat(
-  mesh: THREE.Mesh,
-  garmentType: GarmentType,
-  repeatX: number,
-  repeatY: number,
-): { repeatU: number; repeatV: number } {
-  if (garmentType === 'shirt') {
-    const FRONT_BODY_SPAN_U = 6.797
-    const FRONT_BODY_SPAN_V = 4.544
-    const baseRepeatU = repeatX / FRONT_BODY_SPAN_U
-    const baseRepeatV = repeatY / FRONT_BODY_SPAN_V
-
-    const meshName = (mesh.name || '').toLowerCase()
-    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-    const matNames = mats.map(m => (m?.name || '').toLowerCase())
-
-    // 1. Cuff
-    const isCuff = meshName.includes('cuff') || matNames.some(m => m.includes('cuff'))
-    if (isCuff) {
-      // Cuff has UV span 1.0 covering ~22cm in 3D (versus front body's 6.8 span covering ~53cm).
-      // Scaling factor of 3.65 normalizes the 1.0 UV box to match the chest dots 1:1 in physical size.
-      return {
-        repeatU: baseRepeatU * 3.65,
-        repeatV: baseRepeatV * 3.65,
-      }
-    }
-
-    // 2. Collar
-    const isCollar = meshName.includes('collar') || matNames.some(m => m.includes('collar') || m.includes('tessuto'))
-    if (isCollar) {
-      // Collar UV is oriented with U along width and V along length.
-      // Rotate texture repeats and apply scale normalization so dots are perfectly round and 1:1 scale.
-      return {
-        repeatU: baseRepeatV * 1.05,
-        repeatV: baseRepeatU * 1.05,
-      }
-    }
-
-    // 3. Sleeves, Front Body, Back Body, Placket, Pocket
-    // All share the standard 0.0446 texel density - perfectly matched across chest, sleeves, and back!
-    return {
-      repeatU: baseRepeatU,
-      repeatV: baseRepeatV,
-    }
-  }
-
-  // Fallback for jackets/trousers: normalize by raw UV bounding box span
-  const span = getUvSpan(mesh)
-  return {
-    repeatU: repeatX / span.u,
-    repeatV: repeatY / span.v,
-  }
-}
 
 function getUvSpan(mesh: THREE.Mesh): { u: number; v: number } {
   const geom = mesh.geometry as THREE.BufferGeometry | undefined
@@ -1117,13 +1058,14 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number =
             color,
             (texture) => {
               texture.wrapS = THREE.RepeatWrapping
-              const { repeatU, repeatV } = getCalibratedTextureRepeat(mesh, 'lining', repeatX, repeatY)
-              texture.repeat.set(repeatU, repeatV)
+              texture.wrapT = THREE.RepeatWrapping
+              const span = getUvSpan(mesh)
+              texture.repeat.set(repeatX / span.u, repeatY / span.v)
               texture.colorSpace = THREE.SRGBColorSpace
               if (matteMat.map) matteMat.map.dispose()
               matteMat.map = texture
               matteMat.needsUpdate = true
-              console.log(`✅ Applied matte lining texture to ${mesh.name} (repeat ${repeatU.toFixed(2)}×${repeatV.toFixed(2)})`)
+              console.log(`✅ Applied matte lining texture to ${mesh.name} (uvSpan ${span.u.toFixed(2)}×${span.v.toFixed(2)})`)
             },
             (error) => {
               console.error(`❌ Error loading lining texture ${color}:`, error)
@@ -1168,14 +1110,14 @@ function applyMaterialColor(mesh: THREE.Mesh, color: string, baseColor: number =
           color,
           (texture) => {
             texture.wrapS = THREE.RepeatWrapping
-            // Apply calibrated physical texture repeat (1:1 uniform scale on chest, sleeves, collar, cuffs)
-            const { repeatU, repeatV } = getCalibratedTextureRepeat(mesh, garmentType, repeatX, repeatY)
-            texture.repeat.set(repeatU, repeatV)
+            texture.wrapT = THREE.RepeatWrapping
+            const span = getUvSpan(mesh)
+            texture.repeat.set(repeatX / span.u, repeatY / span.v)
             texture.colorSpace = THREE.SRGBColorSpace
             if (physMat.map) physMat.map.dispose()
             physMat.map = texture
             physMat.needsUpdate = true
-            console.log(`✅ Applied calibrated fabric texture to ${mesh.name} (repeat ${repeatU.toFixed(2)}×${repeatV.toFixed(2)})`)
+            console.log(`✅ Applied fabric texture to ${mesh.name} (uvSpan ${span.u.toFixed(2)}×${span.v.toFixed(2)})`)
           },
           (error) => {
             console.error(`❌ Error loading texture ${color}:`, error)
